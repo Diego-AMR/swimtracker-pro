@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SwimTracker Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,300&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1a6fc4">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SwimTracker">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+:root {
+  --bg: #eef2f7;
+  --bg2: #ffffff;
+  --bg3: #f5f7fa;
+  --card: #ffffff;
+  --border: #dce5ef;
+  --cyan: #1a6fc4;
+  --cyan2: #1560aa;
+  --teal: #0897a7;
+  --gold: #d4880a;
+  --red: #d93025;
+  --green: #1a8a45;
+  --text: #1c2d3e;
+  --text2: #4a627a;
+  --text3: #8299b0;
+  --font-head: 'Bebas Neue', cursive;
+  --font-body: 'DM Sans', sans-serif;
+  --radius: 10px;
+  --radius2: 16px;
+  --shadow: 0 2px 12px rgba(26,47,76,0.09);
+  --glow: 0 0 0 3px rgba(26,111,196,0.12);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+body::before {
+  content:''; position:fixed; inset:0;
+  background: radial-gradient(ellipse 70% 50% at 15% -5%, rgba(26,111,196,0.07) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 40% at 85% 105%, rgba(8,151,167,0.05) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+/* SIDEBAR */
+#sidebar {
+  position:fixed; left:0; top:0; bottom:0; width:220px;
+  background:#1c3050; display:flex; flex-direction:column; z-index:100;
+  box-shadow:2px 0 16px rgba(26,47,76,0.15);
+}
+.sidebar-logo { padding:28px 24px 20px; border-bottom:1px solid rgba(255,255,255,0.1); }
+.sidebar-logo h1 { font-family:var(--font-head); font-size:28px; letter-spacing:2px; color:#fff; line-height:1; }
+.sidebar-logo h1 span { color:#5bc8e8; }
+.sidebar-logo p { font-size:10px; color:rgba(255,255,255,0.45); letter-spacing:3px; text-transform:uppercase; margin-top:4px; }
+.sidebar-nav { flex:1; padding:16px 0; overflow-y:auto; }
+.nav-item {
+  display:flex; align-items:center; gap:12px; padding:12px 24px;
+  cursor:pointer; color:rgba(255,255,255,0.6); font-size:13.5px; font-weight:500;
+  letter-spacing:0.3px; transition:all 0.2s; border-left:3px solid transparent;
+}
+.nav-item:hover { color:rgba(255,255,255,0.9); background:rgba(255,255,255,0.07); }
+.nav-item.active { color:#fff; background:rgba(91,200,232,0.18); border-left-color:#5bc8e8; }
+.nav-icon { font-size:18px; width:24px; text-align:center; }
+.sidebar-footer { padding:16px 24px; border-top:1px solid rgba(255,255,255,0.1); }
+.sidebar-footer button { width:100%; padding:9px 0; border:1px solid rgba(255,255,255,0.15); border-radius:var(--radius); background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.7); font-size:12px; font-family:var(--font-body); cursor:pointer; transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:6px; }
+.sidebar-footer button:hover { background:rgba(255,255,255,0.12); color:#fff; }
+/* MAIN */
+#main { margin-left:220px; min-height:100vh; position:relative; z-index:1; }
+.tab-content { display:none; padding:32px; animation:fadeIn 0.3s ease; }
+.tab-content.active { display:block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+/* PAGE HEADER */
+.page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:32px; flex-wrap:wrap; gap:12px; }
+.page-title { font-family:var(--font-head); font-size:36px; letter-spacing:2px; color:var(--text); }
+.page-subtitle { font-size:13px; color:var(--text3); margin-top:2px; }
+/* BUTTONS */
+.btn { display:inline-flex; align-items:center; gap:8px; padding:10px 20px; border-radius:var(--radius); font-family:var(--font-body); font-size:13.5px; font-weight:600; cursor:pointer; border:none; transition:all 0.2s; letter-spacing:0.3px; }
+.btn-primary { background:linear-gradient(135deg,var(--cyan),var(--cyan2)); color:#001a2e; }
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(26,111,196,0.35); }
+.btn-secondary { background:#fff; color:var(--text2); border:1px solid var(--border); }
+.btn-secondary:hover { color:var(--text); border-color:var(--cyan); background:#f5f8fd; }
+.btn-danger { background:rgba(217,48,37,0.07); color:var(--red); border:1px solid rgba(217,48,37,0.25); }
+.btn-danger:hover { background:rgba(217,48,37,0.14); }
+.btn-success { background:rgba(26,138,69,0.09); color:var(--green); border:1px solid rgba(26,138,69,0.28); }
+.btn-success:hover { background:rgba(26,138,69,0.16); }
+.btn-sm { padding:7px 14px; font-size:12px; }
+/* CARDS */
+.card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:24px; box-shadow:var(--shadow); }
+/* GRID */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+/* FORMS */
+.form-group { margin-bottom:16px; }
+.form-label { display:block; font-size:12px; font-weight:600; color:var(--text2); letter-spacing:0.5px; text-transform:uppercase; margin-bottom:6px; }
+.form-input,.form-select,.form-textarea { width:100%; background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; color:var(--text); font-family:var(--font-body); font-size:14px; transition:border-color 0.2s; outline:none; }
+.form-input:focus,.form-select:focus,.form-textarea:focus { border-color:var(--cyan); box-shadow:0 0 0 3px rgba(26,111,196,0.1); }
+.form-select option { background:var(--bg3); }
+.form-textarea { resize:vertical; min-height:80px; }
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(20,40,70,0.55); backdrop-filter:blur(3px); z-index:1000; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius2); width:90%; max-width:600px; max-height:90vh; overflow-y:auto; box-shadow:0 16px 48px rgba(20,40,70,0.22),var(--glow); animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+.modal-lg { max-width:900px; }
+.modal-xl { max-width:1100px; }
+@keyframes modalIn { from{opacity:0;transform:scale(0.9) translateY(-20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:24px 28px 20px; border-bottom:1px solid var(--border); }
+.modal-title { font-family:var(--font-head); font-size:24px; letter-spacing:1px; }
+.modal-close { background:none; border:none; color:var(--text3); font-size:22px; cursor:pointer; padding:4px; line-height:1; transition:color 0.2s; }
+.modal-close:hover { color:var(--text); }
+.modal-body { padding:24px 28px; }
+.modal-footer { padding:16px 28px 24px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap; }
+/* SWIMMER CARDS */
+.swimmer-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
+.swimmer-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+.swimmer-card:hover { border-color:var(--cyan); transform:translateY(-2px); box-shadow:0 8px 24px rgba(26,111,196,0.12); }
+.swimmer-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg,var(--cyan),var(--teal)); }
+.swimmer-avatar { width:72px; height:72px; border-radius:50%; margin:0 auto 12px; background:linear-gradient(135deg,var(--cyan),var(--teal)); display:flex; align-items:center; justify-content:center; font-size:28px; overflow:hidden; border:2px solid var(--border); }
+.swimmer-avatar img { width:100%; height:100%; object-fit:cover; }
+.swimmer-name { font-weight:700; font-size:15px; margin-bottom:4px; }
+.swimmer-meta { font-size:11px; color:var(--text3); }
+.category-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-top:6px; background:rgba(26,111,196,0.1); color:var(--cyan); border:1px solid rgba(26,111,196,0.2); }
+/* STAT CARDS */
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; display:flex; align-items:center; gap:16px; }
+.stat-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; background:rgba(26,111,196,0.1); flex-shrink:0; }
+.stat-value { font-family:var(--font-head); font-size:28px; letter-spacing:1px; color:var(--cyan); line-height:1; }
+.stat-label { font-size:12px; color:var(--text3); margin-top:2px; }
+/* TABLES */
+.table-wrap { overflow-x:auto; border-radius:var(--radius); }
+table { width:100%; border-collapse:collapse; font-size:13.5px; }
+th { padding:12px 16px; text-align:left; font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--text3); background:var(--bg3); border-bottom:1px solid var(--border); }
+td { padding:12px 16px; border-bottom:1px solid rgba(220,229,239,0.7); color:var(--text2); }
+tr:hover td { background:rgba(26,111,196,0.04); color:var(--text); }
+tr:last-child td { border-bottom:none; }
+/* TIME BADGE */
+.time-badge { font-family:var(--font-head); font-size:18px; letter-spacing:1px; color:var(--cyan); }
+/* CHRONOMETER */
+#chrono-display { font-family:var(--font-head); font-size:56px; letter-spacing:4px; color:var(--cyan); text-align:center; padding:20px; background:var(--bg3); border-radius:var(--radius); border:1px solid var(--border); margin-bottom:16px; }
+#chrono-display.running { background:rgba(26,111,196,0.06); border-color:rgba(26,111,196,0.3); }
+.chrono-controls { display:flex; gap:12px; justify-content:center; margin-bottom:16px; flex-wrap:wrap; }
+.parciales-list { background:var(--bg3); border-radius:var(--radius); padding:12px; border:1px solid var(--border); max-height:160px; overflow-y:auto; font-size:13px; }
+.parcial-item { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid var(--border); color:var(--text2); }
+/* ANALYSIS */
+.analysis-selector { display:flex; gap:12px; align-items:center; margin-bottom:24px; flex-wrap:wrap; }
+.chart-container { position:relative; height:220px; width:100%; }
+.style-pill { display:inline-flex; align-items:center; padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; background:var(--bg3); border:1px solid var(--border); color:var(--text2); cursor:pointer; transition:all 0.2s; margin:4px; }
+.style-pill:hover,.style-pill.active { background:rgba(26,111,196,0.1); border-color:var(--cyan); color:var(--cyan); }
+/* Sub-pestañas de Análisis */
+.asub-bar { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:22px; border-bottom:2px solid var(--border); }
+.asub-tab { padding:10px 18px; font-size:13.5px; font-weight:600; color:var(--text3); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.2s; white-space:nowrap; }
+.asub-tab:hover { color:var(--cyan); }
+.asub-tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
+/* CALENDAR */
+.tournament-upcoming { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
+.tournament-upcoming:hover { border-color:var(--cyan); }
+.days-badge { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:700; background:rgba(26,111,196,0.1); color:var(--cyan); border:1px solid rgba(26,111,196,0.2); white-space:nowrap; }
+.days-badge.urgent { background:rgba(217,48,37,0.1); color:var(--red); border-color:rgba(217,48,37,0.25); }
+.days-badge.today { background:rgba(8,151,167,0.1); color:var(--teal); border-color:rgba(8,151,167,0.25); }
+/* GOAL TIMES GRID */
+.goal-times-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; margin-top:12px; }
+.goal-time-item { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:10px; }
+.goal-time-item label { display:block; font-size:11px; color:var(--text3); margin-bottom:4px; }
+/* ALERTS */
+.alert { padding:14px 18px; border-radius:var(--radius); margin-bottom:16px; font-size:13.5px; display:flex; align-items:center; gap:10px; }
+.alert-success { background:rgba(26,138,69,0.08); border:1px solid rgba(26,138,69,0.25); color:var(--green); }
+.alert-error { background:rgba(217,48,37,0.08); border:1px solid rgba(217,48,37,0.25); color:var(--red); }
+.alert-info { background:rgba(26,111,196,0.08); border:1px solid rgba(26,111,196,0.2); color:var(--cyan); }
+/* EMPTY STATE */
+.empty-state { text-align:center; padding:60px 20px; color:var(--text3); }
+.empty-state .empty-icon { font-size:48px; margin-bottom:16px; opacity:0.4; }
+.empty-state p { font-size:15px; }
+/* TOAST */
+#toast-container { position:fixed; bottom:32px; right:32px; z-index:9999; display:flex; flex-direction:column; gap:8px; }
+.toast-item { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:14px 20px; font-size:13.5px; color:var(--text); box-shadow:0 4px 20px rgba(26,47,76,0.15); animation:toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards; min-width:240px; display:flex; align-items:center; gap:10px; }
+.toast-item.success { border-left:3px solid var(--green); }
+.toast-item.error { border-left:3px solid var(--red); }
+.toast-item.info { border-left:3px solid var(--cyan); }
+@keyframes toastIn { from{opacity:0;transform:translateX(40px)} to{opacity:1;transform:translateX(0)} }
+@keyframes toastOut { from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(40px)} }
+.divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+/* Connection status */
+.conn-status { font-size:11px; font-weight:600; letter-spacing:0.3px; display:flex; align-items:center; gap:5px; padding:6px 10px; border-radius:8px; margin-bottom:6px; }
+.conn-online { background:rgba(34,197,94,0.12); color:#16a34a; }
+.conn-offline { background:rgba(239,68,68,0.12); color:#dc2626; }
+.conn-connecting { background:rgba(245,158,11,0.12); color:#d97706; }
+.conn-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.conn-online .conn-dot { background:#22c55e; box-shadow:0 0 5px #22c55e; }
+.conn-offline .conn-dot { background:#ef4444; }
+.conn-connecting .conn-dot { background:#f59e0b; animation:blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.section-title { font-family:var(--font-head); font-size:18px; letter-spacing:1px; color:var(--text2); margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+.section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+.photo-upload { width:80px; height:80px; border-radius:50%; border:2px dashed var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:24px; transition:all 0.2s; overflow:hidden; position:relative; }
+.photo-upload:hover { border-color:var(--cyan); }
+.photo-upload img { width:100%; height:100%; object-fit:cover; }
+.pred-arrow { font-size:24px; display:inline-block; }
+.pred-arrow.up { color:var(--green); } .pred-arrow.down { color:var(--red); }
+.tags { display:flex; flex-wrap:wrap; gap:6px; }
+.tag { display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; background:rgba(26,111,196,0.08); color:var(--cyan); border:1px solid rgba(26,111,196,0.18); }
+.cv-indicator { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600; }
+.cv-excellent { background:rgba(26,138,69,0.1); color:var(--green); }
+.cv-good { background:rgba(26,111,196,0.1); color:var(--cyan); }
+.cv-regular { background:rgba(212,136,10,0.1); color:var(--gold); }
+.cv-poor { background:rgba(217,48,37,0.1); color:var(--red); }
+::-webkit-scrollbar { width:6px; height:6px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#c5d4e3; border-radius:3px; }
+::-webkit-scrollbar-thumb:hover { background:#a0b4c8; }
+
+/* ── MOBILE HEADER (hidden on desktop) ── */
+#mobile-header {
+  display:none;
+  position:fixed; top:0; left:0; right:0; height:56px;
+  background:#1c3050; z-index:200;
+  align-items:center; justify-content:space-between;
+  padding:0 16px;
+  box-shadow:0 2px 12px rgba(26,47,76,0.25);
+}
+#mobile-header h1 { font-family:var(--font-head); font-size:22px; letter-spacing:2px; color:#fff; }
+#mobile-header h1 span { color:#5bc8e8; }
+#mobile-header-actions { display:flex; gap:8px; }
+#mobile-header-actions button {
+  background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2);
+  border-radius:8px; color:#fff; font-size:18px; width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+
+/* ── BOTTOM NAV (hidden on desktop) ── */
+#bottom-nav {
+  display:none;
+  position:fixed; bottom:0; left:0; right:0; height:64px;
+  background:#1c3050;
+  z-index:200;
+  box-shadow:0 -2px 16px rgba(26,47,76,0.2);
+  border-top:1px solid rgba(255,255,255,0.08);
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+#bottom-nav::-webkit-scrollbar { display:none; }
+.bottom-nav-inner {
+  display:flex; align-items:stretch; height:100%;
+  min-width:100%; width:max-content;
+  padding:0 4px;
+}
+.bottom-nav-item {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; padding:8px 14px; cursor:pointer; min-width:64px;
+  color:rgba(255,255,255,0.5); transition:all 0.2s;
+  border-top:2px solid transparent; flex-shrink:0;
+}
+.bottom-nav-item .bnav-icon { font-size:20px; line-height:1; }
+.bottom-nav-item .bnav-label { font-size:10px; font-weight:600; letter-spacing:0.3px; white-space:nowrap; }
+.bottom-nav-item.active { color:#5bc8e8; border-top-color:#5bc8e8; }
+.bottom-nav-item:active { background:rgba(255,255,255,0.07); }
+
+/* ── BACKUP DRAWER (mobile) ── */
+#backup-drawer {
+  display:none; position:fixed; inset:0; z-index:1500;
+  background:rgba(20,40,70,0.6); backdrop-filter:blur(4px);
+  align-items:flex-end;
+}
+#backup-drawer.open { display:flex; }
+#backup-drawer-panel {
+  background:#fff; width:100%; border-radius:20px 20px 0 0;
+  padding:20px 20px 32px; animation:slideUp 0.3s cubic-bezier(0.34,1.2,0.64,1);
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+#backup-drawer-panel h3 { font-family:var(--font-head); font-size:22px; margin-bottom:4px; }
+#backup-drawer-panel p { font-size:13px; color:var(--text3); margin-bottom:16px; }
+#backup-drawer-panel button { width:100%; margin-bottom:10px; justify-content:center; }
+
+/* ── RESPONSIVE BREAKPOINTS ── */
+@media (max-width:768px) {
+  /* Show mobile UI, hide desktop sidebar */
+  #sidebar { display:none !important; }
+  #mobile-header { display:flex; }
+  #bottom-nav { display:flex; }
+  
+  /* Adjust main content */
+  #main { margin-left:0; padding-top:56px; padding-bottom:64px; }
+  .tab-content { padding:14px; }
+  
+  /* All grids → single column */
+  .grid-2,.grid-3,.grid-4 { grid-template-columns:1fr !important; }
+  
+  /* Page headers — stack vertically */
+  .page-header { flex-direction:column; align-items:flex-start; margin-bottom:20px; }
+  .page-header > div:last-child { width:100%; }
+  .page-header .btn { width:100%; justify-content:center; }
+  .page-header > div:last-child > div,
+  .page-header > div[style*="flex"] { flex-direction:column; width:100%; }
+  .page-header > div[style*="flex"] .btn { width:100%; justify-content:center; }
+
+  /* Cards padding */
+  .card { padding:16px; border-radius:12px; }
+  
+  /* Page title smaller */
+  .page-title { font-size:26px; }
+  
+  /* Stat cards */
+  .stat-card { padding:14px; }
+  .stat-value { font-size:22px; }
+
+  /* Swimmer grid — 2 cols on phone */
+  .swimmer-grid { grid-template-columns:repeat(2,1fr) !important; gap:10px; }
+  .swimmer-card { padding:14px; }
+  .swimmer-avatar { width:56px; height:56px; font-size:22px; }
+  .swimmer-name { font-size:13px; }
+
+  /* Chronometer */
+  #chrono-display { font-size:42px; padding:14px; }
+  .chrono-controls { gap:8px; }
+  .chrono-controls .btn { padding:10px 12px; font-size:12px; flex:1; justify-content:center; }
+
+  /* Buttons */
+  .btn { padding:11px 16px; font-size:13px; }
+  .btn-sm { padding:8px 12px; font-size:12px; }
+
+  /* Tables — horizontal scroll */
+  .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:8px; }
+  table { min-width:480px; font-size:13px; }
+  th, td { padding:10px 12px; }
+  
+  /* Modals — full screen on mobile */
+  .modal-overlay { align-items:flex-end; padding:0; }
+  .modal { width:100%; max-width:100%; max-height:92vh; border-radius:20px 20px 0 0; }
+  .modal-lg, .modal-xl { max-width:100%; border-radius:20px 20px 0 0; }
+  .modal-header { padding:18px 20px 16px; }
+  .modal-body { padding:16px 20px; }
+  .modal-footer { padding:12px 20px 20px; flex-direction:column-reverse; }
+  .modal-footer .btn { width:100%; justify-content:center; }
+
+  /* Toast — bottom center */
+  #toast-container { bottom:76px; right:12px; left:12px; align-items:stretch; }
+  .toast-item { min-width:unset; }
+
+  /* Analysis selector */
+  .analysis-selector { flex-direction:column; align-items:stretch; }
+  .analysis-selector select { max-width:100% !important; }
+
+  /* Style pills wrap */
+  #style-pills { display:flex; flex-wrap:wrap; }
+  .style-pill { font-size:11px; padding:5px 10px; margin:3px; }
+
+  /* Charts */
+  .chart-container { height:180px !important; }
+
+  /* Section title */
+  .section-title { font-size:16px; }
+
+  /* Goal time grid */
+  .goal-times-grid { grid-template-columns:repeat(2,1fr); }
+
+  /* Calendar items */
+  .tournament-upcoming { flex-direction:column; align-items:flex-start; gap:8px; }
+  .days-badge { align-self:flex-start; }
+
+  /* Analysis buttons */
+  #tab-analisis .page-header > div:last-child { display:flex; flex-direction:row; gap:8px; }
+  #tab-analisis .page-header .btn { flex:1; font-size:12px; padding:10px 8px; }
+
+  /* Forms */
+  .form-input, .form-select, .form-textarea { font-size:16px !important; } /* prevents iOS zoom */
+
+  /* Calendar responsive */
+  .cal-semester-grid { grid-template-columns:repeat(2,1fr) !important; }
+  .cal-year-grid { grid-template-columns:repeat(3,1fr) !important; }
+  .cal-view-btn { padding:6px 10px; font-size:12px; }
+}
+
+/* CALENDAR VIEW BUTTONS */
+.cal-view-btn {
+  padding:7px 16px; border:none; background:transparent; border-radius:8px;
+  font-family:var(--font-body); font-size:13px; font-weight:600;
+  color:var(--text2); cursor:pointer; transition:all 0.2s;
+}
+.cal-view-btn.active {
+  background:var(--card); color:var(--cyan);
+  box-shadow:0 2px 8px rgba(26,47,76,0.12);
+}
+.cal-view-btn:hover:not(.active) { color:var(--text); background:rgba(255,255,255,0.6); }
+
+/* CALENDAR DAY CELL */
+.cal-day {
+  min-height:36px; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; border-radius:8px; cursor:default;
+  padding:3px; position:relative; transition:background 0.15s;
+}
+.cal-day.has-tour { cursor:pointer; }
+.cal-day.has-tour:hover { background:rgba(26,111,196,0.15) !important; }
+.cal-day-num { font-size:13px; line-height:1; }
+.cal-tour-dot { width:5px; height:5px; border-radius:50%; background:var(--cyan); margin-top:2px; flex-shrink:0; }
+
+/* SEMESTER / YEAR grids */
+.cal-semester-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.cal-year-grid    { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+
+/* SPLIT HISTORY CHART */
+#parciales-hist-container { animation:fadeIn 0.3s ease; }
+
+/* Small phones */
+@media (max-width:375px) {
+  .swimmer-grid { grid-template-columns:1fr 1fr !important; }
+  .swimmer-card { padding:10px; }
+  .swimmer-name { font-size:12px; }
+  #chrono-display { font-size:36px; }
+  .chrono-controls .btn { font-size:11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#1c3050,#0f1d33)">
+  <div style="width:100%;max-width:350px;background:#fff;border-radius:16px;padding:28px 24px;box-shadow:0 16px 48px rgba(0,0,0,0.4)">
+    <div style="text-align:center;margin-bottom:6px">
+      <div style="font-family:'Bebas Neue',cursive;font-size:34px;letter-spacing:2px;color:#1c3050;line-height:1">🏊 SWIM<span style="color:#1a6fc4">TRACKER</span></div>
+      <div style="font-size:11px;color:#8299b0;letter-spacing:3px;text-transform:uppercase;margin-top:2px">PRO</div>
+    </div>
+    <div style="text-align:center;font-size:13px;color:#8299b0;margin:14px 0 20px">Inicia sesión para continuar</div>
+    <label style="font-size:11px;font-weight:700;color:#8299b0;text-transform:uppercase;letter-spacing:0.5px">Correo</label>
+    <input id="login-email" type="email" autocomplete="username" placeholder="tu@correo.com" style="width:100%;margin:5px 0 14px;padding:11px 14px;border:1px solid #dce5ef;border-radius:10px;font-size:14px;outline:none">
+    <label style="font-size:11px;font-weight:700;color:#8299b0;text-transform:uppercase;letter-spacing:0.5px">Contraseña</label>
+    <input id="login-pass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" style="width:100%;margin:5px 0 6px;padding:11px 14px;border:1px solid #dce5ef;border-radius:10px;font-size:14px;outline:none">
+    <div id="login-error" style="color:#d93025;font-size:12.5px;min-height:18px;margin-bottom:8px"></div>
+    <button id="login-btn" onclick="doLogin()" style="width:100%;padding:12px;background:#1a6fc4;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">Entrar</button>
+    <div style="text-align:center;margin-top:14px"><span onclick="resetPassword()" style="font-size:12px;color:#1a6fc4;cursor:pointer;text-decoration:underline">¿Olvidaste tu contraseña?</span></div>
+  </div>
+  <div style="margin-top:16px;font-size:11px;color:rgba(255,255,255,0.45)">🔒 Datos protegidos</div>
+</div>
+
+<!-- MOBILE HEADER -->
+<header id="mobile-header">
+  <h1>🏊 SWIM<span>TRACKER</span></h1>
+  <div id="mobile-header-actions">
+    <span id="conn-mobile" style="font-size:18px" title="Estado conexión">🟡</span>
+    <button onclick="openBackupDrawer()" title="Respaldo">💾</button>
+  </div>
+</header>
+
+<!-- BOTTOM NAV (mobile only) -->
+<nav id="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bottom-nav-item active" data-tab="nadadores" onclick="switchTab('nadadores')">
+      <span class="bnav-icon">👥</span><span class="bnav-label">Nadadores</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="torneos" onclick="switchTab('torneos')">
+      <span class="bnav-icon">🏆</span><span class="bnav-label">Torneos</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="metas" onclick="switchTab('metas')">
+      <span class="bnav-icon">🎯</span><span class="bnav-label">Metas</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="tiempos" onclick="switchTab('tiempos')">
+      <span class="bnav-icon">⏱️</span><span class="bnav-label">Tiempos</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="analisis" onclick="switchTab('analisis')">
+      <span class="bnav-icon">📊</span><span class="bnav-label">Análisis</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="estilos" onclick="switchTab('estilos')">
+      <span class="bnav-icon">🏊</span><span class="bnav-label">Estilos</span>
+    </div>
+    <div class="bottom-nav-item" data-tab="calendario" onclick="switchTab('calendario')">
+      <span class="bnav-icon">📅</span><span class="bnav-label">Calendario</span>
+    </div>
+  </div>
+</nav>
+
+<!-- BACKUP DRAWER (mobile) -->
+<div id="backup-drawer" onclick="if(event.target===this)closeBackupDrawer()">
+  <div id="backup-drawer-panel">
+    <div style="width:36px;height:4px;background:#dce5ef;border-radius:2px;margin:0 auto 16px"></div>
+    <h3>💾 Datos</h3>
+    <p>Exporta un respaldo o restaura tus datos desde un archivo previo.</p>
+    <button class="btn btn-primary" onclick="exportBackup();closeBackupDrawer()">💾 Exportar respaldo JSON</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('restore-file-mobile').click()">📂 Restaurar desde respaldo</button>
+    <input type="file" id="restore-file-mobile" accept=".json" style="display:none" onchange="importBackup(this)">
+    <button class="btn btn-secondary" onclick="logout()" style="margin-top:4px;color:#d93025;border-color:#f3c9c5">🚪 Cerrar sesión</button>
+    <button class="btn btn-secondary" onclick="closeBackupDrawer()" style="margin-top:4px;color:var(--text3)">Cancelar</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h1>🏊 SWIM<br>TRACKER</h1>
+    <p>Performance Pro</p>
+  </div>
+  <div class="sidebar-nav">
+    <div class="nav-item active" data-tab="nadadores" onclick="switchTab('nadadores')">
+      <span class="nav-icon">👥</span><span>Nadadores</span>
+    </div>
+    <div class="nav-item" data-tab="torneos" onclick="switchTab('torneos')">
+      <span class="nav-icon">🏆</span><span>Torneos</span>
+    </div>
+    <div class="nav-item" data-tab="metas" onclick="switchTab('metas')">
+      <span class="nav-icon">🎯</span><span>Metas</span>
+    </div>
+    <div class="nav-item" data-tab="tiempos" onclick="switchTab('tiempos')">
+      <span class="nav-icon">⏱️</span><span>Registrar Tiempos</span>
+    </div>
+    <div class="nav-item" data-tab="analisis" onclick="switchTab('analisis')">
+      <span class="nav-icon">📊</span><span>Análisis</span>
+    </div>
+    <div class="nav-item" data-tab="estilos" onclick="switchTab('estilos')">
+      <span class="nav-icon">🏊</span><span>Estilos</span>
+    </div>
+    <div class="nav-item" data-tab="calendario" onclick="switchTab('calendario')">
+      <span class="nav-icon">📅</span><span>Calendario</span>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="conn-status conn-connecting" id="conn-sidebar"><span class="conn-dot"></span>Conectando...</div>
+    <button onclick="exportBackup()">💾 Exportar respaldo</button>
+    <button onclick="document.getElementById('restore-file').click()">📂 Restaurar datos</button>
+    <input type="file" id="restore-file" accept=".json" style="display:none" onchange="importBackup(this)">
+  </div>
+</nav>
+
+<main id="main">
+
+<!-- 1. NADADORES -->
+<div id="tab-nadadores" class="tab-content active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">👥 NADADORES</div>
+      <div class="page-subtitle">Perfiles y datos del equipo</div>
+    </div>
+    <button class="btn btn-primary" onclick="openSwimmerModal()">+ Nuevo Nadador</button>
+  </div>
+  <div id="swimmers-grid" class="swimmer-grid"></div>
+  <div id="swimmers-empty" class="empty-state" style="display:none">
+    <div class="empty-icon">🏊</div>
+    <p>No hay nadadores registrados.<br>Agrega el primero haciendo clic en "Nuevo Nadador".</p>
+  </div>
+</div>
+
+<!-- 2. TORNEOS -->
+<div id="tab-torneos" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏆 TORNEOS</div>
+      <div class="page-subtitle">Organización de competencias</div>
+    </div>
+    <button class="btn btn-primary" onclick="openTournamentModal()">+ Nuevo Torneo</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Fecha</th><th>Ciudad</th><th>Estilos</th><th>Acciones</th></tr></thead>
+        <tbody id="tournaments-body"></tbody>
+      </table>
+    </div>
+    <div id="tournaments-empty" class="empty-state" style="display:none">
+      <div class="empty-icon">🏆</div><p>No hay torneos registrados.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 3. METAS -->
+<div id="tab-metas" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🎯 METAS</div>
+      <div class="page-subtitle">Objetivos de tiempo por estilo</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="downloadGoalTemplate()">⬇ Plantilla Excel</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('goal-import-file').click()">⬆ Importar Excel</button>
+      <input type="file" id="goal-import-file" accept=".xlsx,.xls" style="display:none" onchange="importGoalExcel(this)">
+      <button class="btn btn-primary" onclick="openGoalModal()">+ Nueva Meta</button>
+    </div>
+  </div>
+  <div class="alert alert-info">
+    ℹ️ Descarga la plantilla Excel, llena los tiempos en formato <strong>MM:SS.cc</strong> (ej: 1:25.50) o <strong>SS.cc</strong> (ej: 25.50) y luego impórtala.
+  </div>
+  <div id="goals-container"></div>
+  <div id="goals-empty" class="empty-state" style="display:none">
+    <div class="empty-icon">🎯</div><p>No hay metas definidas.</p>
+  </div>
+</div>
+
+<!-- 4. TIEMPOS -->
+<div id="tab-tiempos" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">⏱️ REGISTRAR TIEMPOS</div>
+      <div class="page-subtitle">Cronómetro y registro de tiempos</div>
+    </div>
+  </div>
+  <div class="grid-2" style="gap:24px">
+    <div>
+      <div class="card" style="margin-bottom:24px">
+        <div class="section-title">📝 Selección</div>
+        <div class="form-group">
+          <label class="form-label">Nadador *</label>
+          <select class="form-select" id="tr-swimmer" onchange="checkChronoReady()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Torneo *</label>
+          <select class="form-select" id="tr-tournament" onchange="filterStyles();checkChronoReady()"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estilo *</label>
+          <select class="form-select" id="tr-style" onchange="checkChronoReady()"></select>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:24px">
+        <div class="section-title">⏱️ Cronómetro en Vivo</div>
+        <div id="chrono-lock-notice" class="alert alert-info" style="margin-bottom:12px">
+          🔒 Selecciona nadador, torneo y estilo para habilitar el cronómetro.
+        </div>
+        <div id="chrono-display" style="opacity:0.45">00:00.00</div>
+        <div class="chrono-controls">
+          <button class="btn btn-primary" id="btn-chrono-start" onclick="chronoStart()" disabled>▶ Iniciar</button>
+          <button class="btn btn-secondary" id="btn-chrono-split" onclick="chronoSplit()" disabled>⚑ Parcial</button>
+          <button class="btn btn-secondary" onclick="chronoReset()">↺ Reiniciar</button>
+          <button class="btn btn-success" id="btn-chrono-use" onclick="chronoUse()" disabled>✓ Usar Tiempo</button>
+        </div>
+        <div id="parciales-container" style="display:none">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase">Parciales registrados (cada 50m)</div>
+          <div class="parciales-list" id="parciales-list"></div>
+        </div>
+      </div>
+      <div class="card" id="parciales-hist-container" style="margin-bottom:24px;display:none">
+        <div class="section-title">📊 Parciales históricos — <span id="parciales-hist-style" style="color:var(--cyan)"></span></div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Splits registrados en pruebas anteriores del mismo estilo. Cada línea = una competencia.</div>
+        <div class="chart-container" style="height:200px"><canvas id="chart-parciales-hist"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-title">⌨️ Ingresar Tiempo</div>
+        <div class="form-group">
+          <label class="form-label">Tiempo * (ej: 1:25.50 o 25.50)</label>
+          <input class="form-input" id="tr-time" type="text" placeholder="1:25.50">
+        </div>
+        <button class="btn btn-primary" onclick="saveTime()" style="width:100%">💾 Guardar Tiempo</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="section-title">📋 Tiempos Registrados</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Nadador</th><th>Torneo</th><th>Estilo</th><th>Tiempo</th><th></th></tr></thead>
+          <tbody id="times-body"></tbody>
+        </table>
+      </div>
+      <div id="times-empty" class="empty-state" style="display:none">
+        <div class="empty-icon">⏱️</div><p>No hay tiempos registrados.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. ANÁLISIS -->
+<div id="tab-analisis" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📊 ANÁLISIS</div>
+      <div class="page-subtitle">Rendimiento y estadísticas avanzadas</div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="exportExcel()">📊 Exportar Excel</button>
+      <button class="btn btn-primary" onclick="exportPDF()">📄 Exportar PDF</button>
+    </div>
+  </div>
+  <div class="analysis-selector">
+    <select class="form-select" id="analysis-swimmer" onchange="loadAnalysis()" style="max-width:260px">
+      <option value="">— Seleccionar nadador —</option>
+    </select>
+  </div>
+  <div id="analysis-content" style="display:none">
+    <div class="asub-bar">
+      <div class="asub-tab active" data-asec="resumen" onclick="switchAnalysisSection('resumen')">👤 Resumen</div>
+      <div class="asub-tab" data-asec="metas" onclick="switchAnalysisSection('metas')">🎯 Metas</div>
+      <div class="asub-tab" data-asec="estilo" onclick="switchAnalysisSection('estilo')">🏊 Por Estilo</div>
+      <div class="asub-tab" data-asec="ritmo" onclick="switchAnalysisSection('ritmo')">🚀 Ritmo Objetivo</div>
+    </div>
+
+    <!-- SECCIÓN: RESUMEN -->
+    <div class="asec" id="asec-resumen">
+      <div class="grid-2" style="margin-bottom:24px">
+        <div class="card" id="analysis-profile"></div>
+        <div class="card">
+          <div class="section-title">📈 Actividad Mensual</div>
+          <div class="chart-container"><canvas id="chart-monthly"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">📋 Estadísticas Generales</div>
+        <div id="consistency-table"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: METAS -->
+    <div class="asec" id="asec-metas" style="display:none">
+      <div class="card" id="goals-dashboard" style="display:none">
+        <div class="section-title">🎯 Comparación con Metas — Resumen General</div>
+        <div id="goals-dashboard-content"></div>
+      </div>
+      <div class="empty-state" id="goals-dashboard-empty" style="display:none">
+        <div class="empty-icon">🎯</div>
+        <p>Crea metas (en la pestaña «Metas») para ver la comparación aquí.</p>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: POR ESTILO -->
+    <div class="asec" id="asec-estilo" style="display:none">
+      <div class="card" style="margin-bottom:24px">
+        <div class="section-title">🏊 Análisis por Estilo</div>
+        <div id="style-pills"></div>
+        <div id="style-analysis-content" style="margin-top:20px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin-bottom:2px">📊 Progreso por Estilo — Último vs Penúltimo</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">
+          Compara tu <strong>último tiempo</strong> contra el <strong>anterior (penúltimo)</strong> en cada estilo, para ver cómo vienes respecto a tu marca más reciente.
+          <span style="color:var(--green);font-weight:600">■ Verde</span> = bajaste el tiempo (mejoraste) &nbsp;
+          <span style="color:var(--red);font-weight:600">■ Rojo</span> = subiste el tiempo (empeoraste)
+        </div>
+        <div class="chart-container" style="height:320px"><canvas id="chart-improvements"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: RITMO OBJETIVO -->
+    <div class="asec" id="asec-ritmo" style="display:none">
+      <div class="card">
+        <div class="section-title">🚀 Ritmo Objetivo por Parcial (50m)</div>
+        <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">Elige una meta y un margen de seguridad. Te calculo el <strong>ritmo que debes mantener en cada largo</strong> para llegar a la meta (menos el margen), tanto si entrenas en <strong>piscina de 50&nbsp;m</strong> como de <strong>25&nbsp;m</strong>. La «ventaja de salida» solo aplica a estilos que salen del partidor (Libre, Pecho, Mariposa); en Espalda se ignora. Combinado no se incluye.</div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px">
+          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Meta</div><select class="form-select" id="ritmo-goal" onchange="renderRitmo()" style="max-width:220px"></select></div>
+          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Margen por debajo (%)</div><input class="form-input" id="ritmo-pct" type="number" value="5" min="0" max="30" step="0.5" oninput="renderRitmo()" style="max-width:140px"></div>
+          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Ventaja de salida (s)</div><input class="form-input" id="ritmo-dive" type="number" value="0" min="0" step="0.5" oninput="renderRitmo()" style="max-width:140px"></div>
+        </div>
+        <div id="ritmo-content"></div>
+      </div>
+    </div>
+  </div>
+  <div id="analysis-empty" class="empty-state">
+    <div class="empty-icon">📊</div>
+    <p>Selecciona un nadador para ver su análisis de rendimiento.</p>
+  </div>
+</div>
+
+<!-- 6. CALENDARIO -->
+<div id="tab-calendario" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">📅 CALENDARIO</div>
+      <div class="page-subtitle">Torneos programados</div>
+    </div>
+  </div>
+  <!-- View switcher + navigation -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+    <div style="display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;border:1px solid var(--border)">
+      <button class="cal-view-btn active" id="cal-btn-mes"       onclick="setCalView('mes')">📅 Mes</button>
+      <button class="cal-view-btn"        id="cal-btn-semestre"  onclick="setCalView('semestre')">📆 Semestre</button>
+      <button class="cal-view-btn"        id="cal-btn-año"       onclick="setCalView('año')">🗓 Año</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="calNav(-1)">◀</button>
+      <span id="cal-period-label" style="font-family:var(--font-head);font-size:20px;letter-spacing:1px;min-width:180px;text-align:center"></span>
+      <button class="btn btn-secondary btn-sm" onclick="calNav(1)">▶</button>
+      <button class="btn btn-secondary btn-sm" onclick="calToday()">Hoy</button>
+    </div>
+  </div>
+  <div id="cal-container"></div>
+</div>
+<!-- 7. ESTILOS -->
+<div id="tab-estilos" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏊 ESTILOS</div>
+      <div class="page-subtitle">Comparación de parciales por estilo y prueba</div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+      <div class="form-group" style="margin:0;flex:1;min-width:200px">
+        <label class="form-label">Estilo</label>
+        <select class="form-select" id="estilos-style" onchange="loadEstilosTab()">
+          <option value="">— Seleccionar estilo —</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;flex:1;min-width:200px">
+        <label class="form-label">Nadador (opcional)</label>
+        <select class="form-select" id="estilos-swimmer" onchange="loadEstilosTab()">
+          <option value="">— Todos los nadadores —</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="estilos-content" style="display:none"></div>
+  <div id="estilos-empty" class="empty-state">
+    <div class="empty-icon">🏊</div>
+    <p>Selecciona un estilo para ver la comparación de parciales entre pruebas.</p>
+  </div>
+</div>
+
+</main>
+
+<!-- ═══════════════════ MODALS ═══════════════════════ -->
+
+<!-- Swimmer Modal -->
+<div class="modal-overlay" id="swimmer-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="swimmer-modal-title">Nuevo Nadador</div>
+      <button class="modal-close" onclick="closeModal('swimmer-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="sw-id">
+      <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">
+        <div class="photo-upload" id="sw-photo-preview" onclick="document.getElementById('sw-photo-input').click()">📷</div>
+        <input type="file" id="sw-photo-input" accept="image/*" style="display:none" onchange="handlePhoto(this)">
+        <div style="flex:1">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Nombre completo *</label>
+            <input class="form-input" id="sw-name" type="text" placeholder="Ej: Juan García">
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Fecha de nacimiento</label>
+          <input class="form-input" id="sw-birthdate" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de sangre</label>
+          <select class="form-select" id="sw-blood">
+            <option value="">— Seleccionar —</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Peso (kg)</label>
+          <input class="form-input" id="sw-weight" type="number" step="0.1" placeholder="65.5">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Altura (cm)</label>
+          <input class="form-input" id="sw-height" type="number" step="0.1" placeholder="175">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Envergadura (cm)</label>
+          <input class="form-input" id="sw-wingspan" type="number" step="0.1" placeholder="178">
+        </div>
+      </div>
+      <hr class="divider">
+      <div class="form-group">
+        <label class="form-label">Alergias</label>
+        <input class="form-input" id="sw-allergies" type="text" placeholder="Ninguna conocida">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Lesiones / condiciones</label>
+        <textarea class="form-textarea" id="sw-injuries" placeholder="Lesiones previas o condiciones médicas"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Seguro médico / póliza</label>
+        <input class="form-input" id="sw-insurance" type="text">
+      </div>
+      <hr class="divider">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Contacto de emergencia</label>
+          <input class="form-input" id="sw-emname" type="text" placeholder="Nombre y relación">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono emergencia</label>
+          <input class="form-input" id="sw-emphone" type="tel" placeholder="+57 300 000 0000">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="sw-delete-btn" onclick="deleteSwimmer()" style="display:none">🗑 Eliminar</button>
+      <button class="btn btn-secondary" onclick="closeModal('swimmer-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSwimmer()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tournament Modal -->
+<div class="modal-overlay" id="tournament-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="tournament-modal-title">Nuevo Torneo</div>
+      <button class="modal-close" onclick="closeModal('tournament-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="tn-id">
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Nombre del torneo *</label>
+          <input class="form-input" id="tn-name" type="text" placeholder="Ej: Nacional Infantil">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ciudad</label>
+          <input class="form-input" id="tn-city" type="text" placeholder="Ej: Bogotá, Medellín">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha inicio *</label>
+          <input class="form-input" id="tn-date" type="date">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de fin</label>
+          <input class="form-input" id="tn-end-date" type="date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estilos que se compiten</label>
+        <div id="styles-checkboxes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="tn-delete-btn" onclick="deleteTournament()" style="display:none">🗑 Eliminar</button>
+      <button class="btn btn-secondary" onclick="closeModal('tournament-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTournament()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goal Modal -->
+<div class="modal-overlay" id="goal-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="goal-modal-title">Nueva Meta</div>
+      <button class="modal-close" onclick="closeModal('goal-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="gl-id">
+      <div class="form-group">
+        <label class="form-label">Nombre de la meta *</label>
+        <input class="form-input" id="gl-name" type="text" placeholder="Ej: Clasificación Nacional">
+      </div>
+      <div class="section-title">Tiempos objetivo por estilo</div>
+      <div class="goal-times-grid" id="goal-times-grid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="gl-delete-btn" onclick="deleteGoal()" style="display:none">🗑 Eliminar</button>
+      <button class="btn btn-secondary" onclick="closeModal('goal-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveGoal()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Time Edit Modal -->
+<div class="modal-overlay" id="time-edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Editar Tiempo</div>
+      <button class="modal-close" onclick="closeModal('time-edit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="te-id">
+      <div id="te-info" style="margin-bottom:14px;padding:12px 16px;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border)"></div>
+      <div class="form-group">
+        <label class="form-label">Tiempo (MM:SS.cc o SS.cc)</label>
+        <input class="form-input" id="te-time" type="text" placeholder="1:25.50">
+      </div>
+      <div id="te-splits-section" style="display:none">
+        <div class="section-title">⚑ Parciales registrados</div>
+        <div id="te-splits-list" class="parciales-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteTime()">🗑 Eliminar</button>
+      <button class="btn btn-secondary" onclick="closeModal('time-edit-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="updateTime()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF Preview Modal -->
+<div class="modal-overlay" id="pdf-modal">
+  <div class="modal modal-xl">
+    <div class="modal-header">
+      <div class="modal-title">📄 Vista previa PDF</div>
+      <button class="modal-close" onclick="closeModal('pdf-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <div id="pdf-content" style="background:#fff;padding:24px;border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('pdf-modal')">Cerrar</button>
+      <button class="btn btn-primary" onclick="downloadPDF()">⬇ Descargar PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════════════════
+const ALL_STYLES = [
+  'Libre 50m','Libre 100m','Libre 200m','Libre 400m','Libre 800m','Libre 1500m',
+  'Espalda 50m','Espalda 100m','Espalda 200m',
+  'Pecho 50m','Pecho 100m','Pecho 200m',
+  'Mariposa 50m','Mariposa 100m','Mariposa 200m',
+  'Combinado 200m','Combinado 400m'
+];
+const GOAL_PALETTE = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
+
+// ════════════════════════════════════════════════════════════
+// FIREBASE INIT
+// ════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyB__TYUly11LiwpAAZY0s66Fp6uKnfi6p0",
+  authDomain: "swimtracker-pro.firebaseapp.com",
+  databaseURL: "https://swimtracker-pro-default-rtdb.firebaseio.com",
+  projectId: "swimtracker-pro",
+  storageBucket: "swimtracker-pro.firebasestorage.app",
+  messagingSenderId: "662677087562",
+  appId: "1:662677087562:web:8ce18727dcfe0e9d61cdb3"
+};
+firebase.initializeApp(firebaseConfig);
+const fbDB = firebase.database();
+const fbAuth = firebase.auth();
+let _listenersStarted = false;
+
+// Convert Firebase snapshot to array with id
+function snapToArray(snap) {
+  const val = snap.val();
+  if (!val) return [];
+  return Object.entries(val).map(([id, data]) => ({...data, id}));
+}
+
+// Raw time records (no join) kept in sync by listener
+let timesRaw = [];
+
+// Get time records joined with swimmer/tournament names
+function getTimesJoined(swimmer_id = null) {
+  const sid = swimmer_id != null ? String(swimmer_id) : null;
+  return timesRaw
+    .filter(r => !sid || String(r.swimmer_id) === sid)
+    .map(r => {
+      const sw = swimmers.find(s => String(s.id) === String(r.swimmer_id)) || {};
+      const tn = tournaments.find(t => String(t.id) === String(r.tournament_id)) || {};
+      return {...r, swimmer_name: sw.name||'?', tournament_name: tn.name||'?', tournament_date: tn.date||''};
+    })
+    .sort((a,b) => (b.tournament_date||'').localeCompare(a.tournament_date||''));
+}
+
+// Connection status
+function setConnectionStatus(status) {
+  const configs = {
+    online:     { cls:'conn-online',      text:'Sincronizado ✓',  emoji:'🟢' },
+    offline:    { cls:'conn-offline',     text:'Sin conexión',    emoji:'🔴' },
+    connecting: { cls:'conn-connecting',  text:'Conectando...',   emoji:'🟡' }
+  };
+  const c = configs[status] || configs.connecting;
+  const sidebar = document.getElementById('conn-sidebar');
+  const mobile  = document.getElementById('conn-mobile');
+  if (sidebar) { sidebar.className = `conn-status ${c.cls}`; sidebar.innerHTML = `<span class="conn-dot"></span>${c.text}`; }
+  if (mobile)  { mobile.textContent = c.emoji; mobile.title = c.text; }
+}
+
+// Real-time listeners — called once on init
+function setupListeners() {
+  setConnectionStatus('connecting');
+
+  // Connection state
+  fbDB.ref('.info/connected').on('value', snap => {
+    setConnectionStatus(snap.val() ? 'online' : 'offline');
+  });
+
+  // Swimmers
+  fbDB.ref('swimmers').on('value', snap => {
+    swimmers = snapToArray(snap).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    renderSwimmers();
+    refreshAllSelects();
+    times = getTimesJoined(); renderTimes();
+  });
+
+  // Tournaments
+  fbDB.ref('tournaments').on('value', snap => {
+    tournaments = snapToArray(snap).sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    renderTournaments();
+    refreshAllSelects();
+    times = getTimesJoined(); renderTimes();
+  });
+
+  // Goals
+  fbDB.ref('goals').on('value', snap => {
+    goals = snapToArray(snap).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    renderGoals();
+  });
+
+  // Time records
+  fbDB.ref('time_records').on('value', snap => {
+    timesRaw = snapToArray(snap);
+    times = getTimesJoined();
+    renderTimes();
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════
+let swimmers = [], tournaments = [], goals = [], times = [];
+let currentEditId = null, currentPhotoData = null, currentAnalysis = null;
+let chronoRunning = false, chronoInterval = null, chronoStartTime = 0, chronoElapsed = 0;
+let parciales = [], parcialesBase = 0;
+let analysisCharts = {}, activeGoalLines = {};
+let currentAnalysisSection = 'resumen';
+
+// ════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════
+function parseTime(str) {
+  str = String(str).trim().replace(',','.');
+  if (str.includes(':')) {
+    const [m, s] = str.split(':');
+    return parseFloat(m) * 60 + parseFloat(s);
+  }
+  return parseFloat(str);
+}
+function formatTime(seconds) {
+  if (seconds == null || isNaN(seconds)) return '—';
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m > 0) return `${m}:${s.toFixed(2).padStart(5,'0')}`;
+  return s.toFixed(2);
+}
+function formatDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function getAge(birthdate) {
+  if (!birthdate) return null;
+  const diff = Date.now() - new Date(birthdate).getTime();
+  return Math.floor(diff / (1000*60*60*24*365.25));
+}
+function getCategory(birthdate) {
+  const age = getAge(birthdate);
+  if (!age) return 'Sin categoría';
+  if (age < 10) return 'Menores (- 10)';
+  if (age <= 11) return 'Infantil A (10-11)';
+  if (age <= 13) return 'Infantil B (12-13)';
+  if (age <= 15) return 'Juvenil A (14-15)';
+  if (age <= 17) return 'Juvenil B (16-17)';
+  if (age <= 19) return 'Junior (18-19)';
+  return 'Mayores (20+)';
+}
+function calcIMC(w, h) {
+  if (!w || !h) return null;
+  return (w / ((h/100)**2)).toFixed(1);
+}
+function imcLabel(imc) {
+  if (!imc) return '';
+  const v = parseFloat(imc);
+  if (v < 18.5) return 'Bajo peso';
+  if (v < 25) return 'Normal';
+  if (v < 30) return 'Sobrepeso';
+  return 'Obesidad';
+}
+function cvLabel(cv) {
+  if (cv <= 2) return { label: '🟢 Excelente', cls: 'cv-excellent' };
+  if (cv <= 5) return { label: '🔵 Buena', cls: 'cv-good' };
+  if (cv <= 10) return { label: '🟡 Regular', cls: 'cv-regular' };
+  return { label: '🔴 Baja', cls: 'cv-poor' };
+}
+function showToast(msg, type = 'info') {
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast-item ${type}`;
+  el.innerHTML = `<span>${icons[type]||''}</span> ${msg}`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ════════════════════════════════════════════════════════════
+// NAV
+// ════════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  const sidebarItem = document.querySelector(`#sidebar [data-tab="${tab}"]`);
+  if (sidebarItem) sidebarItem.classList.add('active');
+  const bottomItem = document.querySelector(`#bottom-nav [data-tab="${tab}"]`);
+  if (bottomItem) {
+    bottomItem.classList.add('active');
+    bottomItem.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
+  }
+  // Scroll to top on mobile
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (tab === 'tiempos') refreshTimeSelects();
+  if (tab === 'calendario') renderCalendar();
+  if (tab === 'analisis') refreshAnalysisSelect();
+  if (tab === 'estilos') refreshEstilosSelects();
+}
+function openBackupDrawer() { document.getElementById('backup-drawer').classList.add('open'); }
+function closeBackupDrawer() { document.getElementById('backup-drawer').classList.remove('open'); }
+
+// ════════════════════════════════════════════════════════════
+// MODAL HELPERS
+// ════════════════════════════════════════════════════════════
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.addEventListener('click', e => {
+  if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('open');
+});
+
+// ════════════════════════════════════════════════════════════
+// SWIMMERS
+// ════════════════════════════════════════════════════════════
+function loadSwimmers() { /* handled by Firebase listener */ }
+function renderSwimmers() {
+  const grid = document.getElementById('swimmers-grid');
+  const empty = document.getElementById('swimmers-empty');
+  if (!swimmers.length) { grid.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = swimmers.map(s => {
+    const age = getAge(s.birthdate);
+    const cat = getCategory(s.birthdate);
+    return `<div class="swimmer-card" onclick="openSwimmerModal('${s.id}')">
+      <div class="swimmer-avatar">${s.photo ? `<img src="${s.photo}">` : '🏊'}</div>
+      <div class="swimmer-name">${s.name}</div>
+      <div class="swimmer-meta">${age ? age+' años' : ''}</div>
+      <div class="category-badge">${cat}</div>
+    </div>`;
+  }).join('');
+}
+function openSwimmerModal(id = null) {
+  currentEditId = id; currentPhotoData = null;
+  document.getElementById('sw-photo-preview').innerHTML = '📷';
+  if (id) {
+    const s = swimmers.find(x => x.id === id);
+    document.getElementById('swimmer-modal-title').textContent = 'Editar Nadador';
+    document.getElementById('sw-id').value = s.id;
+    document.getElementById('sw-name').value = s.name || '';
+    document.getElementById('sw-birthdate').value = s.birthdate || '';
+    document.getElementById('sw-blood').value = s.blood_type || '';
+    document.getElementById('sw-weight').value = s.weight || '';
+    document.getElementById('sw-height').value = s.height || '';
+    document.getElementById('sw-wingspan').value = s.wingspan || '';
+    document.getElementById('sw-allergies').value = s.allergies || '';
+    document.getElementById('sw-injuries').value = s.injuries || '';
+    document.getElementById('sw-insurance').value = s.insurance || '';
+    document.getElementById('sw-emname').value = s.emergency_name || '';
+    document.getElementById('sw-emphone').value = s.emergency_phone || '';
+    if (s.photo) { currentPhotoData = s.photo; document.getElementById('sw-photo-preview').innerHTML = `<img src="${s.photo}">`; }
+    document.getElementById('sw-delete-btn').style.display = '';
+  } else {
+    document.getElementById('swimmer-modal-title').textContent = 'Nuevo Nadador';
+    ['sw-id','sw-name','sw-birthdate','sw-weight','sw-height','sw-wingspan','sw-allergies','sw-injuries','sw-insurance','sw-emname','sw-emphone'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('sw-blood').value = '';
+    document.getElementById('sw-delete-btn').style.display = 'none';
+  }
+  openModal('swimmer-modal');
+}
+function handlePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 300;
+      let w = img.width, h = img.height;
+      if (w > h && w > MAX) { h = h * MAX / w; w = MAX; }
+      else if (h > MAX) { w = w * MAX / h; h = MAX; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      currentPhotoData = canvas.toDataURL('image/jpeg', 0.75);
+      document.getElementById('sw-photo-preview').innerHTML = `<img src="${currentPhotoData}">`;
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+async function saveSwimmer() {
+  const name = document.getElementById('sw-name').value.trim();
+  if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+  const data = {
+    name,
+    birthdate: document.getElementById('sw-birthdate').value || null,
+    photo: currentPhotoData || null,
+    blood_type: document.getElementById('sw-blood').value || null,
+    weight: parseFloat(document.getElementById('sw-weight').value) || null,
+    height: parseFloat(document.getElementById('sw-height').value) || null,
+    wingspan: parseFloat(document.getElementById('sw-wingspan').value) || null,
+    allergies: document.getElementById('sw-allergies').value || null,
+    injuries: document.getElementById('sw-injuries').value || null,
+    insurance: document.getElementById('sw-insurance').value || null,
+    emergency_name: document.getElementById('sw-emname').value || null,
+    emergency_phone: document.getElementById('sw-emphone').value || null,
+  };
+  try {
+    if (currentEditId) {
+      await fbDB.ref(`swimmers/${currentEditId}`).update(data);
+      showToast('Nadador actualizado ✓', 'success');
+    } else {
+      data.created_at = new Date().toISOString();
+      await fbDB.ref('swimmers').push(data);
+      showToast('Nadador creado ✓', 'success');
+    }
+    closeModal('swimmer-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function deleteSwimmer() {
+  if (!confirm('¿Eliminar este nadador? Se borrarán también sus tiempos.')) return;
+  try {
+    await fbDB.ref(`swimmers/${currentEditId}`).remove();
+    const toDelete = timesRaw.filter(r => r.swimmer_id === currentEditId);
+    await Promise.all(toDelete.map(r => fbDB.ref(`time_records/${r.id}`).remove()));
+    showToast('Nadador eliminado', 'info');
+    closeModal('swimmer-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// TOURNAMENTS
+// ════════════════════════════════════════════════════════════
+function loadTournaments() { /* handled by Firebase listener */ }
+function renderTournaments() {
+  const tbody = document.getElementById('tournaments-body');
+  const empty = document.getElementById('tournaments-empty');
+  if (!tournaments.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = tournaments.map(t => {
+    const styles = t.styles || [];
+    const dateRange = t.end_date && t.end_date !== t.date
+      ? `${formatDate(t.date)} → ${formatDate(t.end_date)}`
+      : formatDate(t.date);
+    return `<tr>
+      <td><strong>${t.name}</strong></td>
+      <td>${dateRange}</td>
+      <td style="font-size:12px;color:var(--text2)">${t.city || '—'}</td>
+      <td><div class="tags">${styles.slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('')}${styles.length>4?`<span class="tag">+${styles.length-4}</span>`:''}</div></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="openTournamentModal('${t.id}')">✏️ Editar</button></td>
+    </tr>`;
+  }).join('');
+}
+function openTournamentModal(id = null) {
+  currentEditId = id;
+  const checks = document.getElementById('styles-checkboxes');
+  checks.innerHTML = ALL_STYLES.map(s =>
+    `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text2)">
+      <input type="checkbox" class="style-check" value="${s}" style="accent-color:var(--cyan)"> ${s}
+    </label>`
+  ).join('');
+  if (id) {
+    const t = tournaments.find(x => x.id === id);
+    document.getElementById('tournament-modal-title').textContent = 'Editar Torneo';
+    document.getElementById('tn-id').value = t.id;
+    document.getElementById('tn-name').value = t.name;
+    document.getElementById('tn-date').value = t.date;
+    document.getElementById('tn-end-date').value = t.end_date || '';
+    document.getElementById('tn-city').value = t.city || '';
+    const selectedStyles = t.styles || [];
+    document.querySelectorAll('.style-check').forEach(cb => { cb.checked = selectedStyles.includes(cb.value); });
+    document.getElementById('tn-delete-btn').style.display = '';
+  } else {
+    document.getElementById('tournament-modal-title').textContent = 'Nuevo Torneo';
+    document.getElementById('tn-id').value = '';
+    document.getElementById('tn-name').value = '';
+    document.getElementById('tn-date').value = '';
+    document.getElementById('tn-end-date').value = '';
+    document.getElementById('tn-city').value = '';
+    document.getElementById('tn-delete-btn').style.display = 'none';
+  }
+  openModal('tournament-modal');
+}
+async function saveTournament() {
+  const name = document.getElementById('tn-name').value.trim();
+  const date = document.getElementById('tn-date').value;
+  if (!name || !date) { showToast('Nombre y fecha son obligatorios', 'error'); return; }
+  const end_date = document.getElementById('tn-end-date').value || null;
+  const city = document.getElementById('tn-city').value.trim() || null;
+  const styles = [...document.querySelectorAll('.style-check:checked')].map(c => c.value);
+  try {
+    if (currentEditId) {
+      await fbDB.ref(`tournaments/${currentEditId}`).update({ name, date, end_date, city, styles });
+      showToast('Torneo actualizado ✓', 'success');
+    } else {
+      await fbDB.ref('tournaments').push({ name, date, end_date, city, styles, created_at: new Date().toISOString() });
+      showToast('Torneo creado ✓', 'success');
+    }
+    closeModal('tournament-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function deleteTournament() {
+  if (!confirm('¿Eliminar este torneo? Se borrarán también sus tiempos.')) return;
+  try {
+    await fbDB.ref(`tournaments/${currentEditId}`).remove();
+    const toDelete = timesRaw.filter(r => r.tournament_id === currentEditId);
+    await Promise.all(toDelete.map(r => fbDB.ref(`time_records/${r.id}`).remove()));
+    showToast('Torneo eliminado', 'info');
+    closeModal('tournament-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// GOALS
+// ════════════════════════════════════════════════════════════
+function loadGoals() { /* handled by Firebase listener */ }
+function renderGoals() {
+  const container = document.getElementById('goals-container');
+  const empty = document.getElementById('goals-empty');
+  if (!goals.length) { container.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  container.innerHTML = goals.map(g => {
+    const gtimes = g.times || {};
+    const items = Object.entries(gtimes).filter(([,v]) => v).map(([k,v]) =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <span style="color:var(--text2)">${k}</span>
+        <span class="time-badge">${formatTime(v)}</span>
+      </div>`
+    ).join('');
+    return `<div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title" style="margin-bottom:0">🎯 ${g.name}</div>
+        <button class="btn btn-secondary btn-sm" onclick="openGoalModal('${g.id}')">✏️ Editar</button>
+      </div>
+      <div class="grid-2">${items || '<p style="color:var(--text3);font-size:13px">Sin tiempos definidos</p>'}</div>
+    </div>`;
+  }).join('');
+}
+function openGoalModal(id = null) {
+  currentEditId = id;
+  const grid = document.getElementById('goal-times-grid');
+  grid.innerHTML = ALL_STYLES.map(s => `
+    <div class="goal-time-item">
+      <label>${s}</label>
+      <input class="form-input" data-style="${s}" type="text" placeholder="1:25.50" style="padding:6px 10px;font-size:12px">
+    </div>`).join('');
+  if (id) {
+    const g = goals.find(x => x.id === id);
+    document.getElementById('goal-modal-title').textContent = 'Editar Meta';
+    document.getElementById('gl-id').value = g.id;
+    document.getElementById('gl-name').value = g.name;
+    const gtimes = g.times || {};
+    grid.querySelectorAll('[data-style]').forEach(inp => {
+      const v = gtimes[inp.dataset.style];
+      if (v) inp.value = formatTime(v);
+    });
+    document.getElementById('gl-delete-btn').style.display = '';
+  } else {
+    document.getElementById('goal-modal-title').textContent = 'Nueva Meta';
+    document.getElementById('gl-id').value = '';
+    document.getElementById('gl-name').value = '';
+    document.getElementById('gl-delete-btn').style.display = 'none';
+  }
+  openModal('goal-modal');
+}
+async function saveGoal() {
+  const name = document.getElementById('gl-name').value.trim();
+  if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
+  const times = {};
+  document.querySelectorAll('#goal-times-grid [data-style]').forEach(inp => {
+    const v = inp.value.trim();
+    if (v) { try { times[inp.dataset.style] = parseTime(v); } catch {} }
+  });
+  try {
+    if (currentEditId) {
+      await fbDB.ref(`goals/${currentEditId}`).update({ name, times });
+      showToast('Meta actualizada ✓', 'success');
+    } else {
+      await fbDB.ref('goals').push({ name, times, created_at: new Date().toISOString() });
+      showToast('Meta creada ✓', 'success');
+    }
+    closeModal('goal-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+async function deleteGoal() {
+  if (!confirm('¿Eliminar esta meta?')) return;
+  try {
+    await fbDB.ref(`goals/${currentEditId}`).remove();
+    showToast('Meta eliminada', 'info');
+    closeModal('goal-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// EXCEL GOAL TEMPLATE & IMPORT
+// ════════════════════════════════════════════════════════════
+function downloadGoalTemplate() {
+  const wb = XLSX.utils.book_new();
+  const wsData = [
+    ['NOMBRE DE LA META', 'Escribe aquí el nombre (ej: Oro Nacional)'],
+    ['⚠ Usa formato MM:SS.cc (ej: 1:25.50) o sólo segundos (ej: 25.50). Deja en blanco los estilos que no apliquen.', ''],
+    ['ESTILO', 'TIEMPO OBJETIVO'],
+    ...ALL_STYLES.map(s => [s, ''])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [{wch:30},{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws, 'Metas');
+  XLSX.writeFile(wb, 'plantilla_metas_swimtracker.xlsx');
+  showToast('Plantilla descargada', 'success');
+}
+async function importGoalExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    if (!rows.length) { showToast('El archivo está vacío', 'error'); return; }
+    const name = String(rows[0][1] || '').trim();
+    if (!name || name.toLowerCase().includes('escribe aquí')) {
+      showToast('Escribe el nombre de la meta en la celda B1 del Excel', 'error'); return;
+    }
+    const times = {};
+    for (let i = 3; i < rows.length; i++) {
+      const style = String(rows[i][0] || '').trim();
+      const timeCell = String(rows[i][1] || '').trim();
+      if (style && timeCell && ALL_STYLES.includes(style)) {
+        try { times[style] = parseTime(timeCell); } catch {}
+      }
+    }
+    const filled = Object.keys(times).length;
+    if (!filled) { showToast('No se encontraron tiempos válidos en el archivo', 'error'); return; }
+    await fbDB.ref('goals').push({ name, times, created_at: new Date().toISOString() });
+    showToast(`Meta "${name}" importada con ${filled} estilos ✓`, 'success');
+  } catch(e) { showToast('Error al leer el Excel: ' + e.message, 'error'); }
+  input.value = '';
+}
+
+// ════════════════════════════════════════════════════════════
+// CHRONOMETER
+// ════════════════════════════════════════════════════════════
+function chronoTick() {
+  const elapsed = chronoElapsed + (Date.now() - chronoStartTime);
+  const cs = Math.floor(elapsed / 10) % 100;
+  const s = Math.floor(elapsed / 1000) % 60;
+  const m = Math.floor(elapsed / 60000);
+  document.getElementById('chrono-display').textContent =
+    `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+}
+function chronoStart() {
+  if (chronoRunning) {
+    chronoElapsed += Date.now() - chronoStartTime;
+    clearInterval(chronoInterval); chronoRunning = false;
+    document.getElementById('btn-chrono-start').textContent = '▶ Continuar';
+    document.getElementById('btn-chrono-use').disabled = false;
+    document.getElementById('chrono-display').classList.remove('running');
+  } else {
+    chronoStartTime = Date.now();
+    chronoInterval = setInterval(chronoTick, 10);
+    chronoRunning = true;
+    document.getElementById('btn-chrono-start').textContent = '⏸ Pausar';
+    document.getElementById('btn-chrono-split').disabled = false;
+    document.getElementById('btn-chrono-use').disabled = true;
+    document.getElementById('chrono-display').classList.add('running');
+  }
+}
+function chronoSplit() {
+  const elapsed = chronoElapsed + (Date.now() - chronoStartTime);
+  const splitTime = elapsed - parcialesBase;
+  parcialesBase = elapsed;
+  parciales.push(splitTime / 1000);
+  const list = document.getElementById('parciales-list');
+  document.getElementById('parciales-container').style.display = '';
+  const prev = parciales.length > 1 ? parciales[parciales.length-2] : null;
+  const diff = prev ? (splitTime/1000 - prev) : null;
+  list.innerHTML += `<div class="parcial-item">
+    <span>Parcial ${parciales.length} (${(parciales.length)*50}m)</span>
+    <span style="color:var(--cyan)">${formatTime(splitTime/1000)}</span>
+    ${diff !== null ? `<span style="color:${diff<=0?'var(--green)':'var(--red)'}">Δ${diff>=0?'+':''}${diff.toFixed(2)}s</span>` : ''}
+  </div>`;
+  list.scrollTop = list.scrollHeight;
+}
+function chronoReset() {
+  clearInterval(chronoInterval); chronoRunning = false; chronoElapsed = 0; parcialesBase = 0; parciales = [];
+  document.getElementById('chrono-display').textContent = '00:00.00';
+  document.getElementById('chrono-display').classList.remove('running');
+  document.getElementById('btn-chrono-start').textContent = '▶ Iniciar';
+  document.getElementById('btn-chrono-split').disabled = true;
+  document.getElementById('btn-chrono-use').disabled = true;
+  document.getElementById('parciales-list').innerHTML = '';
+  document.getElementById('parciales-container').style.display = 'none';
+}
+function chronoUse() {
+  const elapsed = chronoElapsed;
+  const m = Math.floor(elapsed / 60000);
+  const s = (elapsed % 60000) / 1000;
+  const timeStr = m > 0 ? `${m}:${s.toFixed(2).padStart(5,'0')}` : s.toFixed(2);
+  document.getElementById('tr-time').value = timeStr;
+  showToast('Tiempo transferido al formulario', 'info');
+}
+
+// ════════════════════════════════════════════════════════════
+// TIME RECORDS
+// ════════════════════════════════════════════════════════════
+function loadTimes() { /* handled by Firebase listener */ }
+function renderTimes() {
+  const tbody = document.getElementById('times-body');
+  const empty = document.getElementById('times-empty');
+  if (!times.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = times.map(t => `<tr>
+    <td>${t.swimmer_name}</td>
+    <td style="font-size:12px;color:var(--text3)">${t.tournament_name}</td>
+    <td><span class="tag">${t.style}</span></td>
+    <td><span class="time-badge">${formatTime(t.time_seconds)}</span>${t.splits?.length ? `<span style="font-size:11px;color:var(--text3);margin-left:4px">(${t.splits.length} parciales)</span>` : ''}</td>
+    <td><button class="btn btn-secondary btn-sm" onclick="openTimeEdit('${t.id}')">✏️</button></td>
+  </tr>`).join('');
+}
+function refreshAllSelects() {
+  refreshTimeSelects();
+  refreshAnalysisSelect();
+  refreshEstilosSelects();
+}
+function refreshTimeSelects() {
+  const swimSel = document.getElementById('tr-swimmer');
+  const trnSel = document.getElementById('tr-tournament');
+  swimSel.innerHTML = '<option value="">— Nadador —</option>' +
+    swimmers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  trnSel.innerHTML = '<option value="">— Torneo —</option>' +
+    tournaments.map(t => `<option value="${t.id}" data-styles='${JSON.stringify(t.styles||[])}'>${t.name} (${t.date})</option>`).join('');
+  filterStyles(); checkChronoReady();
+}
+function checkChronoReady() {
+  const sw = document.getElementById('tr-swimmer').value;
+  const tn = document.getElementById('tr-tournament').value;
+  const st = document.getElementById('tr-style').value;
+  const ready = sw && tn && st;
+  document.getElementById('btn-chrono-start').disabled = !ready;
+  const lock = document.getElementById('chrono-lock-notice');
+  if (lock) lock.style.display = ready ? 'none' : '';
+  document.getElementById('chrono-display').style.opacity = ready ? '1' : '0.45';
+  // Show parcials history chart for the selected style
+  renderParcialesHistChart(st);
+}
+function filterStyles() {
+  const trnSel = document.getElementById('tr-tournament');
+  const styleSel = document.getElementById('tr-style');
+  const opt = trnSel.selectedOptions[0];
+  let styles = opt ? JSON.parse(opt.dataset.styles || '[]') : [];
+  if (!styles.length) styles = ALL_STYLES;
+  styleSel.innerHTML = '<option value="">— Estilo —</option>' +
+    styles.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+async function saveTime() {
+  const swimmer_id = document.getElementById('tr-swimmer').value;
+  const tournament_id = document.getElementById('tr-tournament').value;
+  const style = document.getElementById('tr-style').value;
+  const timeStr = document.getElementById('tr-time').value;
+  if (!swimmer_id || !tournament_id || !style || !timeStr) { showToast('Completa todos los campos', 'error'); return; }
+  // Check duplicate
+  const dup = timesRaw.find(r => String(r.swimmer_id) === String(swimmer_id) && String(r.tournament_id) === String(tournament_id) && r.style === style);
+  if (dup) { showToast('Ya existe un registro para este nadador, torneo y estilo', 'error'); return; }
+  try {
+    const time_seconds = parseTime(timeStr);
+    const splits = parciales.map((t, i) => ({ split_number: i+1, split_time: t }));
+    await fbDB.ref('time_records').push({ swimmer_id, tournament_id, style, time_seconds, splits, created_at: new Date().toISOString() });
+    showToast('Tiempo registrado ✓', 'success');
+    document.getElementById('tr-time').value = '';
+    chronoReset();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+function openTimeEdit(id) {
+  const t = times.find(x => x.id === id);
+  currentEditId = id;
+  document.getElementById('te-id').value = id;
+  document.getElementById('te-time').value = formatTime(t.time_seconds);
+  document.getElementById('te-info').innerHTML = `
+    <strong>${t.swimmer_name}</strong> — ${t.tournament_name} (${t.tournament_date})<br>
+    <span class="tag" style="margin-top:4px">${t.style}</span>`;
+  const splitsSec = document.getElementById('te-splits-section');
+  const splitsList = document.getElementById('te-splits-list');
+  if (t.splits && t.splits.length) {
+    splitsSec.style.display = '';
+    splitsList.innerHTML = t.splits.map((s,i) => `<div class="parcial-item">
+      <span>Parcial ${i+1} — ${(i+1)*50}m</span>
+      <span style="color:var(--cyan);font-weight:600">${formatTime(s.split_time)}s</span>
+    </div>`).join('');
+  } else { splitsSec.style.display = 'none'; }
+  openModal('time-edit-modal');
+}
+async function updateTime() {
+  const timeStr = document.getElementById('te-time').value;
+  try {
+    const time_seconds = parseTime(timeStr);
+    await fbDB.ref(`time_records/${currentEditId}`).update({ time_seconds });
+    showToast('Tiempo actualizado ✓', 'success');
+    closeModal('time-edit-modal');
+  } catch(e) { showToast('Formato de tiempo inválido', 'error'); }
+}
+async function deleteTime() {
+  if (!confirm('¿Eliminar este tiempo?')) return;
+  try {
+    await fbDB.ref(`time_records/${currentEditId}`).remove();
+    showToast('Tiempo eliminado', 'info');
+    closeModal('time-edit-modal');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════
+// CALENDAR — Month / Semester / Year views
+// ════════════════════════════════════════════════════════════
+let calView = 'mes';       // 'mes' | 'semestre' | 'año'
+let calYear  = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-11
+let calSemester = new Date().getMonth() < 6 ? 0 : 1; // 0=Jan-Jun, 1=Jul-Dec
+
+function setCalView(view) {
+  calView = view;
+  ['mes','semestre','año'].forEach(v => {
+    document.getElementById(`cal-btn-${v}`).classList.toggle('active', v === view);
+  });
+  renderCalendar();
+}
+function calNav(dir) {
+  if (calView === 'mes')      { calMonth += dir; if (calMonth > 11) { calMonth=0; calYear++; } else if (calMonth < 0) { calMonth=11; calYear--; } }
+  else if (calView === 'semestre') { calSemester += dir; if (calSemester > 1) { calSemester=0; calYear++; } else if (calSemester < 0) { calSemester=1; calYear--; } }
+  else if (calView === 'año') { calYear += dir; }
+  renderCalendar();
+}
+function calToday() {
+  const now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth();
+  calSemester = calMonth < 6 ? 0 : 1;
+  renderCalendar();
+}
+function renderCalendar() {
+  if (calView === 'mes')      renderCalMes();
+  else if (calView === 'semestre') renderCalSemestre();
+  else                        renderCalAño();
+}
+
+// Build a map of date-string → tournaments[]
+function buildTourMap() {
+  const map = {};
+  tournaments.forEach(t => {
+    const start = t.date;
+    const end   = (t.end_date && t.end_date >= start) ? t.end_date : start;
+    let cur = new Date(start + 'T00:00:00');
+    const endD = new Date(end + 'T00:00:00');
+    while (cur <= endD) {
+      const key = cur.toISOString().slice(0,10);
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+      cur.setDate(cur.getDate()+1);
+    }
+  });
+  return map;
+}
+
+// ── Single month mini-calendar
+function renderMonthMini(year, month, tourMap, showMonthTitle=true) {
+  const todayStr = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const monthName = new Date(year, month).toLocaleDateString('es',{month:'long',year:'numeric'});
+  const DAY_LABELS = ['Do','Lu','Ma','Mi','Ju','Vi','Sá'];
+  let html = '';
+  if (showMonthTitle) html += `<div style="font-family:var(--font-head);font-size:16px;letter-spacing:1px;color:var(--text);margin-bottom:10px;text-transform:capitalize">${monthName}</div>`;
+  html += `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px">`;
+  DAY_LABELS.forEach(d => { html += `<div style="text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding-bottom:4px">${d}</div>`; });
+  html += `</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;">`;
+  // Empty cells before first day (Sun=0 → 0 blanks, Mon=1 → 1 blank, …)
+  for (let i=0; i<firstDay; i++) html += `<div class="cal-day"></div>`;
+  for (let d=1; d<=daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const tours = tourMap[dateStr] || [];
+    const isToday = dateStr === todayStr;
+    let bg = 'transparent';
+    let numColor = 'var(--text2)';
+    let numWeight = '400';
+    if (isToday) { bg='var(--cyan)'; numColor='#fff'; numWeight='700'; }
+    else if (tours.length) { bg='rgba(26,111,196,0.12)'; numColor='var(--cyan)'; numWeight='700'; }
+    const onclick = tours.length ? `onclick="showCalDayPopup('${dateStr}')"` : '';
+    const title = tours.map(t=>t.name).join(', ');
+    html += `<div class="cal-day ${tours.length?'has-tour':''}" ${onclick} title="${title}" style="background:${bg}">
+      <span class="cal-day-num" style="color:${numColor};font-weight:${numWeight}">${d}</span>
+      ${tours.length && !isToday ? `<span class="cal-tour-dot"></span>` : ''}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderCalMes() {
+  const tourMap = buildTourMap();
+  const monthName = new Date(calYear, calMonth).toLocaleDateString('es',{month:'long',year:'numeric'});
+  document.getElementById('cal-period-label').textContent = monthName.charAt(0).toUpperCase()+monthName.slice(1);
+  // List of tournaments that touch this month
+  const startOfMonth = `${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
+  const endOfMonth   = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${new Date(calYear,calMonth+1,0).getDate().toString().padStart(2,'0')}`;
+  const monthTours = tournaments.filter(t => t.date <= endOfMonth && (t.end_date||t.date) >= startOfMonth)
+    .sort((a,b) => a.date.localeCompare(b.date));
+  const todayStr = new Date().toISOString().slice(0,10);
+  const daysDiff = d => Math.round((new Date(d)-new Date())/86400000);
+  const listHTML = monthTours.length ? monthTours.map(t => {
+    const diff = daysDiff(t.date);
+    const past = t.date < todayStr;
+    const dateRange = (t.end_date && t.end_date !== t.date) ? `${formatDate(t.date)} → ${formatDate(t.end_date)}` : formatDate(t.date);
+    const badge = past ? `<span class="days-badge" style="opacity:0.6">Pasado</span>` :
+      diff===0 ? `<span class="days-badge today">¡HOY!</span>` :
+      diff<=7  ? `<span class="days-badge urgent">En ${diff}d</span>` :
+                 `<span class="days-badge">En ${diff}d</span>`;
+    return `<div class="tournament-upcoming" style="opacity:${past?'0.7':'1'}">
+      <div>
+        <div style="font-weight:700;font-size:14px">${t.name}</div>
+        <div style="font-size:12px;color:var(--text3)">${dateRange}${t.city?` · 📍 ${t.city}`:''}</div>
+        <div class="tags" style="margin-top:6px">${(t.styles||[]).slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+      </div>${badge}
+    </div>`;
+  }).join('') : `<div class="empty-state" style="padding:24px"><div class="empty-icon" style="font-size:36px">📅</div><p style="font-size:14px">Sin torneos este mes</p></div>`;
+  document.getElementById('cal-container').innerHTML = `
+    <div class="grid-2" style="gap:24px">
+      <div class="card">${renderMonthMini(calYear, calMonth, tourMap)}</div>
+      <div>
+        <div class="section-title">🏆 Torneos del mes</div>
+        ${listHTML}
+      </div>
+    </div>`;
+}
+
+function renderCalSemestre() {
+  const tourMap = buildTourMap();
+  const startM = calSemester === 0 ? 0 : 6;
+  const label = calSemester === 0 ? `Ene – Jun ${calYear}` : `Jul – Dic ${calYear}`;
+  document.getElementById('cal-period-label').textContent = label;
+  let html = `<div class="cal-semester-grid">`;
+  for (let m = startM; m < startM+6; m++) {
+    html += `<div class="card" style="padding:16px">${renderMonthMini(calYear, m, tourMap)}</div>`;
+  }
+  html += `</div>`;
+  // Legend
+  const s1 = `${calYear}-${String(startM+1).padStart(2,'0')}-01`;
+  const e1 = `${calYear}-${String(startM+6).padStart(2,'0')}-${new Date(calYear,startM+6,0).getDate().toString().padStart(2,'0')}`;
+  const semTours = tournaments.filter(t => t.date <= e1 && (t.end_date||t.date) >= s1)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  if (semTours.length) {
+    html += `<div class="card" style="margin-top:16px"><div class="section-title">🏆 Torneos del semestre</div>`;
+    html += semTours.map(t => {
+      const dateRange = (t.end_date&&t.end_date!==t.date)?`${formatDate(t.date)} → ${formatDate(t.end_date)}`:formatDate(t.date);
+      return `<div class="tournament-upcoming">
+        <div><div style="font-weight:700;font-size:14px">${t.name}</div>
+        <div style="font-size:12px;color:var(--text3)">${dateRange}${t.city?` · 📍 ${t.city}`:''}</div></div>
+        <div class="tags">${(t.styles||[]).slice(0,3).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+      </div>`;
+    }).join('');
+    html += `</div>`;
+  }
+  document.getElementById('cal-container').innerHTML = html;
+}
+
+function renderCalAño() {
+  const tourMap = buildTourMap();
+  document.getElementById('cal-period-label').textContent = `${calYear}`;
+  let html = `<div class="cal-year-grid">`;
+  for (let m=0; m<12; m++) {
+    html += `<div class="card" style="padding:14px">${renderMonthMini(calYear, m, tourMap)}</div>`;
+  }
+  html += `</div>`;
+  const yearTours = tournaments.filter(t => t.date.startsWith(String(calYear))).sort((a,b)=>a.date.localeCompare(b.date));
+  if (yearTours.length) {
+    html += `<div class="card" style="margin-top:16px"><div class="section-title">🏆 ${yearTours.length} Torneo${yearTours.length>1?'s':''} en ${calYear}</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">`;
+    html += yearTours.map(t=>{
+      const dateRange=(t.end_date&&t.end_date!==t.date)?`${formatDate(t.date)} → ${formatDate(t.end_date)}`:formatDate(t.date);
+      return `<div style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg3)">
+        <div style="font-weight:700;font-size:14px">${t.name}</div>
+        <div style="font-size:12px;color:var(--text3)">${dateRange}${t.city?` · 📍 ${t.city}`:''}</div>
+      </div>`;
+    }).join('');
+    html += `</div></div>`;
+  }
+  document.getElementById('cal-container').innerHTML = html;
+}
+
+function showCalDayPopup(dateStr) {
+  const tourMap = buildTourMap();
+  const tours = tourMap[dateStr] || [];
+  if (!tours.length) return;
+  const list = tours.map(t => {
+    const dateRange = (t.end_date&&t.end_date!==t.date)?`${formatDate(t.date)} → ${formatDate(t.end_date)}`:formatDate(t.date);
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:700">${t.name}</div>
+      <div style="font-size:12px;color:var(--text3)">${dateRange}${t.city?` · 📍 ${t.city}`:''}</div>
+      <div class="tags" style="margin-top:6px">${(t.styles||[]).slice(0,5).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+    </div>`;
+  }).join('');
+  // Simple inline toast-style popup
+  showToast(`${tours.length} torneo(s) el ${formatDate(dateStr)}: ${tours.map(t=>t.name).join(', ')}`, 'info');
+}
+
+// ════════════════════════════════════════════════════════════
+// PARCIALES HISTÓRICOS (tiempos tab)
+// ════════════════════════════════════════════════════════════
+let parcialesHistChart = null;
+function renderParcialesHistChart(style) {
+  const container = document.getElementById('parciales-hist-container');
+  const label = document.getElementById('parciales-hist-style');
+  if (!style) { container.style.display = 'none'; return; }
+  // Gather all records of this style that have splits
+  const records = timesRaw.filter(r => r.style === style && r.splits && r.splits.length > 0);
+  if (!records.length) { container.style.display = 'none'; return; }
+  container.style.display = '';
+  label.textContent = style;
+  // Determine max splits length
+  const maxSplits = Math.max(...records.map(r => r.splits.length));
+  const labels = Array.from({length: maxSplits}, (_, i) => `${(i+1)*50}m`);
+  const COLORS = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025'];
+  const datasets = records.map((r, idx) => {
+    const tn = tournaments.find(t => t.id === r.tournament_id);
+    const sw = swimmers.find(s => s.id === r.swimmer_id);
+    const label = `${sw ? sw.name : '?'} — ${tn ? tn.name : '?'}`;
+    const color = COLORS[idx % COLORS.length];
+    const data = r.splits.map(s => parseFloat(s.split_time.toFixed(3)));
+    return { label, data, borderColor: color, backgroundColor: color+'20', tension: 0.3, fill: false, pointRadius: 5, pointBorderColor:'#fff', pointBorderWidth:2, pointBackgroundColor: color };
+  });
+  if (parcialesHistChart) { parcialesHistChart.destroy(); parcialesHistChart = null; }
+  const ctx = document.getElementById('chart-parciales-hist').getContext('2d');
+  parcialesHistChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'top', labels: { color:'#4a627a', usePointStyle:true, font:{size:11} } },
+        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw}s` } }
+      },
+      scales: {
+        x: { ticks:{color:'#8299b0'}, grid:{color:'rgba(220,229,239,0.8)'} },
+        y: { ticks:{color:'#8299b0', callback: v => `${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
+             title:{display:true,text:'Tiempo del parcial (s)',color:'#8299b0',font:{size:11}} }
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// ESTILOS TAB — comparación de parciales entre pruebas
+// ════════════════════════════════════════════════════════════
+let estilosChart = null;
+function refreshEstilosSelects() {
+  const styleSel = document.getElementById('estilos-style');
+  const swimSel  = document.getElementById('estilos-swimmer');
+  const curStyle = styleSel.value;
+  const curSwim  = swimSel.value;
+  styleSel.innerHTML = '<option value="">— Seleccionar estilo —</option>' +
+    ALL_STYLES.map(s => `<option value="${s}">${s}</option>`).join('');
+  swimSel.innerHTML = '<option value="">— Todos los nadadores —</option>' +
+    swimmers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  if (curStyle) styleSel.value = curStyle;
+  if (curSwim)  swimSel.value  = curSwim;
+}
+function loadEstilosTab() {
+  const style = document.getElementById('estilos-style').value;
+  const swid  = document.getElementById('estilos-swimmer').value;
+  const content = document.getElementById('estilos-content');
+  const empty   = document.getElementById('estilos-empty');
+  if (!style) { content.style.display='none'; empty.style.display=''; return; }
+  // Filter records
+  let records = timesRaw.filter(r => r.style === style && r.splits && r.splits.length > 0);
+  if (swid) records = records.filter(r => r.swimmer_id === swid);
+  if (!records.length) {
+    content.style.display='none';
+    empty.innerHTML='<div class="empty-icon">📊</div><p>No hay registros con parciales para este estilo' + (swid?' y nadador seleccionado':'') + '.</p>';
+    empty.style.display='';
+    return;
+  }
+  empty.style.display='none'; content.style.display='';
+  const maxSplits = Math.max(...records.map(r => r.splits.length));
+  const labels = Array.from({length: maxSplits}, (_, i) => `${(i+1)*50}m`);
+  const COLORS = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025','#e8821a','#6b4fdb'];
+  const datasets = records.map((r, idx) => {
+    const tn = tournaments.find(t => t.id === r.tournament_id);
+    const sw = swimmers.find(s => s.id === r.swimmer_id);
+    const lbl = swid ? (tn ? tn.name : '?') : `${sw ? sw.name : '?'} / ${tn ? tn.name : '?'}`;
+    const color = COLORS[idx % COLORS.length];
+    return { label: lbl, data: r.splits.map(s => parseFloat(s.split_time.toFixed(3))),
+      borderColor:color, backgroundColor:color+'18', tension:0.3, fill:false,
+      pointRadius:5, pointBorderColor:'#fff', pointBorderWidth:2, pointBackgroundColor:color };
+  });
+  // Stats per split position
+  const splitStats = labels.map((lbl, i) => {
+    const vals = records.map(r => r.splits[i]?.split_time).filter(v => v != null);
+    if (!vals.length) return null;
+    const avg = vals.reduce((a,b)=>a+b,0)/vals.length;
+    const best = Math.min(...vals);
+    const worst = Math.max(...vals);
+    return { lbl, avg, best, worst };
+  }).filter(Boolean);
+  content.innerHTML = `
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">📈 Comparación de parciales — ${style}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Cada línea representa una prueba. Permite identificar dónde se gana o pierde tiempo.</div>
+      <div class="chart-container" style="height:300px"><canvas id="chart-estilos-main"></canvas></div>
+    </div>
+    <div class="grid-2" style="gap:20px">
+      <div class="card">
+        <div class="section-title">📊 Estadísticas por tramo</div>
+        <div class="table-wrap"><table>
+          <thead><tr><th>Tramo</th><th style="text-align:center">Mejor</th><th style="text-align:center">Prom.</th><th style="text-align:center">Peor</th></tr></thead>
+          <tbody>${splitStats.map(s=>`<tr>
+            <td><strong>${s.lbl}</strong></td>
+            <td style="text-align:center;color:var(--green);font-weight:700">${s.best.toFixed(2)}s</td>
+            <td style="text-align:center;color:var(--cyan)">${s.avg.toFixed(2)}s</td>
+            <td style="text-align:center;color:var(--red)">${s.worst.toFixed(2)}s</td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>
+      <div class="card">
+        <div class="section-title">🔍 Pruebas incluidas (${records.length})</div>
+        ${records.map((r,idx)=>{
+          const tn=tournaments.find(t=>t.id===r.tournament_id);
+          const sw=swimmers.find(s=>s.id===r.swimmer_id);
+          const color=COLORS[idx%COLORS.length];
+          const sp=r.splits.map(s=>s.split_time);
+          const total=sp.reduce((a,b)=>a+b,0);
+          const strat=sp[0]<total/sp.length?'🚀 Salida rápida':sp[sp.length-1]<sp[0]?'🔄 Neg. Split':'➡️ Constante';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+            <div style="width:10px;height:10px;border-radius:50%;background:${color};flex-shrink:0"></div>
+            <div>
+              <div style="font-weight:600;font-size:13px">${sw?sw.name:'?'} <span style="color:var(--text3);font-weight:400">— ${tn?tn.name:'?'} (${r.tournament_date||tn?.date||''})</span></div>
+              <div style="font-size:11px;color:var(--text3)">${strat} · Total splits: ${formatTime(total)}</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  setTimeout(() => {
+    if (estilosChart) { estilosChart.destroy(); estilosChart = null; }
+    const ctx = document.getElementById('chart-estilos-main');
+    if (!ctx) return;
+    estilosChart = new Chart(ctx.getContext('2d'), {
+      type: 'line', data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position:'top', labels:{color:'#4a627a',usePointStyle:true,font:{size:11}} },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw}s` } }
+        },
+        scales: {
+          x: { ticks:{color:'#8299b0'}, grid:{color:'rgba(220,229,239,0.8)'} },
+          y: { ticks:{color:'#8299b0', callback:v=>`${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
+               title:{display:true,text:'Tiempo (s)',color:'#8299b0',font:{size:11}} }
+        }
+      }
+    });
+  }, 80);
+}
+
+// ════════════════════════════════════════════════════════════
+// ANALYSIS ENGINE
+// ════════════════════════════════════════════════════════════
+function computeAnalysis(swimmerId) {
+  const swimmer = swimmers.find(s => String(s.id) === String(swimmerId));
+  if (!swimmer) return null;
+  const records = getTimesJoined(swimmerId);
+  const goalsList = goals;
+  const styles_data = {};
+  records.forEach(r => {
+    if (!styles_data[r.style]) styles_data[r.style] = [];
+    styles_data[r.style].push(r);
+  });
+  const style_analysis = {};
+  for (const [style, recs] of Object.entries(styles_data)) {
+    const sorted = recs.sort((a,b) => (a.tournament_date||'').localeCompare(b.tournament_date||''));
+    const timeVals = sorted.map(r => r.time_seconds);
+    const best = Math.min(...timeVals);
+    const worst = Math.max(...timeVals);
+    const avg = timeVals.reduce((a,b)=>a+b,0) / timeVals.length;
+    const n = timeVals.length;
+    const std = n > 1 ? Math.sqrt(timeVals.map(v=>(v-avg)**2).reduce((a,b)=>a+b,0)/(n-1)) : 0;
+    const cv = avg > 0 ? (std / avg * 100) : 0;
+    const bestRec = sorted[timeVals.indexOf(best)];
+    const worstRec = sorted[timeVals.indexOf(worst)];
+    const improvement = n > 1 ? timeVals[0] - timeVals[n-1] : 0;
+    const improvement_pct = (timeVals[0] > 0 && n > 1) ? (improvement / timeVals[0] * 100) : 0;
+    // Último vs penúltimo (referencia a su tiempo más reciente)
+    const last_delta = n > 1 ? timeVals[n-2] - timeVals[n-1] : 0;
+    const last_delta_pct = (n > 1 && timeVals[n-2] > 0) ? (last_delta / timeVals[n-2] * 100) : 0;
+    let prediction = null;
+    if (n >= 2) {
+      const recent = timeVals.slice(-3);
+      if (recent.length >= 2) {
+        const diffs = recent.slice(0,-1).map((v,i) => v - recent[i+1]);
+        const avgDiff = diffs.reduce((a,b)=>a+b,0) / diffs.length;
+        prediction = timeVals[n-1] - avgDiff;
+      }
+    }
+    let streak = 0, best_streak = 0;
+    for (let i = 1; i < n; i++) {
+      if (timeVals[i] < timeVals[i-1]) { streak++; best_streak = Math.max(best_streak, streak); }
+      else streak = 0;
+    }
+    const goal_comparison = [];
+    goalsList.forEach(g => {
+      const gt = (g.times || {})[style];
+      if (gt) {
+        const diff = best - gt;
+        goal_comparison.push({ goal_name: g.name, goal_time: gt, diff, achieved: diff <= 0 });
+      }
+    });
+    style_analysis[style] = { records: sorted, best, worst, avg, std, cv, best_record: bestRec, worst_record: worstRec, improvement, improvement_pct, last_delta, last_delta_pct, prediction, best_streak, goal_comparison, count: n };
+  }
+  const monthly = {};
+  records.forEach(r => {
+    const month = (r.tournament_date||'').slice(0,7);
+    if (month) monthly[month] = (monthly[month]||0) + 1;
+  });
+  return {
+    swimmer, style_analysis, monthly_activity: monthly,
+    total_records: records.length,
+    total_competitions: new Set(records.map(r => r.tournament_id)).size
+  };
+}
+
+// ════════════════════════════════════════════════════════════
+// ANALYSIS UI
+// ════════════════════════════════════════════════════════════
+function refreshAnalysisSelect() {
+  const sel = document.getElementById('analysis-swimmer');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Seleccionar nadador —</option>' +
+    swimmers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+  if (cur) { sel.value = cur; loadAnalysis(); }
+}
+function loadAnalysis() {
+  const sid = document.getElementById('analysis-swimmer').value;
+  if (!sid) {
+    document.getElementById('analysis-content').style.display = 'none';
+    document.getElementById('analysis-empty').style.display = '';
+    return;
+  }
+  currentAnalysis = computeAnalysis(sid);
+  if (currentAnalysis) renderAnalysis(currentAnalysis);
+}
+function destroyChart(id) {
+  if (analysisCharts[id]) { analysisCharts[id].destroy(); delete analysisCharts[id]; }
+}
+function chartOptions(label) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label||label}: ${ctx.raw}` } }
+    },
+    scales: {
+      x: { ticks: { color:'#8299b0', maxRotation:45 }, grid: { color:'rgba(220,229,239,0.8)' } },
+      y: { ticks: { color:'#8299b0' }, grid: { color:'rgba(220,229,239,0.8)' } }
+    }
+  };
+}
+function renderAnalysis(data) {
+  document.getElementById('analysis-content').style.display = '';
+  document.getElementById('analysis-empty').style.display = 'none';
+  const { swimmer, style_analysis, monthly_activity, total_records, total_competitions } = data;
+  const age = getAge(swimmer.birthdate);
+  const cat = getCategory(swimmer.birthdate);
+  const imc = calcIMC(swimmer.weight, swimmer.height);
+  document.getElementById('analysis-profile').innerHTML = `
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">
+      <div class="swimmer-avatar" style="width:80px;height:80px;font-size:36px">
+        ${swimmer.photo ? `<img src="${swimmer.photo}">` : '🏊'}
+      </div>
+      <div>
+        <div style="font-family:var(--font-head);font-size:28px;letter-spacing:1px">${swimmer.name}</div>
+        <div class="category-badge">${cat}</div>
+        ${age ? `<div style="color:var(--text3);font-size:13px;margin-top:4px">${age} años</div>` : ''}
+      </div>
+    </div>
+    <div class="grid-2" style="gap:12px">
+      <div class="stat-card"><div class="stat-icon">🏆</div><div><div class="stat-value">${total_competitions}</div><div class="stat-label">Competencias</div></div></div>
+      <div class="stat-card"><div class="stat-icon">⏱️</div><div><div class="stat-value">${total_records}</div><div class="stat-label">Registros</div></div></div>
+      ${swimmer.height && swimmer.weight ? `<div class="stat-card" style="grid-column:1/-1"><div class="stat-icon">📏</div><div>
+        <div class="stat-value">${imc}</div><div class="stat-label">IMC — ${imcLabel(imc)}</div>
+        <div style="font-size:11px;color:var(--text3)">${swimmer.height}cm | ${swimmer.weight}kg${swimmer.wingspan ? ` | Env. ${swimmer.wingspan}cm` : ''}</div>
+      </div></div>` : ''}
+    </div>
+    <div style="margin-top:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.65">
+      <strong style="color:var(--text)">ℹ️ ¿Qué significan estas métricas?</strong><br>
+      <strong>IMC (Índice de Masa Corporal)</strong> = peso ÷ altura². Es una referencia general de la relación entre peso y estatura. En deportistas es solo orientativo: la masa muscular puede subirlo sin que signifique exceso de grasa.<br>
+      <strong>Altura</strong> y <strong>peso</strong> permiten seguir el crecimiento y la condición física a lo largo del tiempo. La <strong>envergadura</strong> (brazos extendidos, de una punta a la otra) es muy importante en natación: cuando es mayor que la altura, suele dar ventaja en la brazada y el alcance.<br>
+      <span style="color:var(--text3)">💡 ¿Quieres seguir otros datos (frecuencia cardíaca, talla de pie, etc.)? Se pueden agregar al crear o editar el nadador.</span>
+    </div>`;
+  destroyChart('monthly');
+  const months = Object.keys(monthly_activity).sort().slice(-6);
+  analysisCharts['monthly'] = new Chart(document.getElementById('chart-monthly').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: months.map(m => { const [y,mo] = m.split('-'); return new Date(y,mo-1).toLocaleDateString('es',{month:'short',year:'numeric'}); }),
+      datasets: [{ data: months.map(m => monthly_activity[m]||0), backgroundColor:'rgba(26,111,196,0.55)', borderColor:'rgba(26,111,196,1)', borderWidth:1, borderRadius:6 }]
+    },
+    options: chartOptions('Registros')
+  });
+  const styles = Object.keys(style_analysis);
+  document.getElementById('style-pills').innerHTML = styles.map(s =>
+    `<span class="style-pill" onclick="showStyleAnalysis('${s}')">${s}</span>`
+  ).join('');
+  document.getElementById('style-analysis-content').innerHTML = `
+    <div class="empty-state" style="padding:20px">
+      <div class="empty-icon" style="font-size:28px">👆</div>
+      <p style="font-size:13px">Selecciona un estilo para ver su análisis detallado</p>
+    </div>`;
+  // Goals dashboard
+  const goalDash = document.getElementById('goals-dashboard');
+  const goalContent = document.getElementById('goals-dashboard-content');
+  const currentGoals = goals;
+  if (currentGoals.length && styles.length) {
+    goalDash.style.display = '';
+    goalContent.innerHTML = `<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr>
+          <th style="padding:10px 14px;text-align:left;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase">Estilo</th>
+          <th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;text-align:center">Tu Mejor Marca</th>
+          ${currentGoals.map((g,i) => `<th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase"><span style="color:${GOAL_PALETTE[i%GOAL_PALETTE.length]};font-weight:700">🎯 ${g.name}</span></th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${styles.map((s,idx) => {
+            const a = style_analysis[s];
+            return `<tr style="${idx%2===0?'':'background:var(--bg3)'}">
+              <td style="padding:10px 14px;font-weight:700;color:var(--text)">${s}</td>
+              <td style="padding:10px 14px;text-align:center;font-family:var(--font-head);font-size:17px;color:var(--cyan);letter-spacing:1px">${formatTime(a.best)}</td>
+              ${currentGoals.map((g,i) => {
+                const gt = (g.times||{})[s];
+                if (!gt) return `<td style="padding:10px 14px;text-align:center;color:var(--text3)">—</td>`;
+                const diff = a.best - gt;
+                const ok = diff <= 0;
+                return `<td style="padding:10px 14px;text-align:center;background:${ok?'rgba(26,138,69,0.08)':'rgba(217,48,37,0.07)'}">
+                  <div style="font-family:var(--font-head);font-size:15px;color:${ok?'var(--green)':'var(--red)'};letter-spacing:0.5px">${ok?'✅':'⏳'} ${formatTime(gt)}</div>
+                  <div style="font-size:11px;color:${ok?'var(--green)':'var(--red)'};font-weight:700;margin-top:2px">${ok ? `+${formatTime(Math.abs(diff))}s por debajo` : `Faltan ${formatTime(Math.abs(diff))}s`}</div>
+                </td>`;
+              }).join('')}
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.65">
+      <strong style="color:var(--text)">🎯 Cómo leer esta tabla</strong><br>
+      Cada columna es una <strong>meta</strong> (con su tiempo objetivo por estilo). Se compara contra tu <strong>mejor marca</strong> de cada estilo.<br>
+      <span style="color:var(--green);font-weight:600">✅ Verde</span> = ya superaste esa meta (muestra cuántos segundos vas por debajo). &nbsp;
+      <span style="color:var(--red);font-weight:600">⏳ Naranja</span> = aún no la alcanzas (muestra cuántos segundos te faltan).<br>
+      <span style="color:var(--text3)">Así ves de un vistazo qué metas ya lograste y cuánto te falta para las demás.</span>
+    </div>`;
+  } else { goalDash.style.display = 'none'; }
+  // Improvements chart
+  destroyChart('improvements');
+  const impData = styles.map(s => ({ style: s, diff: style_analysis[s].last_delta, pct: style_analysis[s].last_delta_pct })).sort((a,b) => b.diff - a.diff);
+  analysisCharts['improvements'] = new Chart(document.getElementById('chart-improvements').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: impData.map(d => d.style),
+      datasets: [{ label: 'Segundos mejorados', data: impData.map(d => parseFloat(d.diff.toFixed(2))),
+        backgroundColor: impData.map(d => d.diff>=0?'rgba(26,138,69,0.65)':'rgba(217,48,37,0.65)'),
+        borderColor: impData.map(d => d.diff>=0?'rgba(26,138,69,1)':'rgba(217,48,37,1)'),
+        borderWidth:1, borderRadius:4
+      }]
+    },
+    options: { ...chartOptions(''), indexAxis:'y',
+      plugins: { legend: { display:false }, tooltip: { callbacks: { label: ctx => {
+        const d = impData[ctx.dataIndex];
+        return `${d.diff>=0?'↓ Mejoró':'↑ Empeoró'} ${Math.abs(d.diff).toFixed(2)}s (${Math.abs(d.pct).toFixed(1)}%)`;
+      }}}},
+      scales: {
+        x: { ticks:{color:'#8299b0',callback:v=>`${v>0?'+':''}${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
+          title:{display:true,text:'Segundos (positivo = mejoró)',color:'#8299b0',font:{size:11}} },
+        y: { ticks:{color:'#4a627a',font:{size:11}}, grid:{color:'rgba(220,229,239,0.5)'} }
+      }
+    }
+  });
+  // Consistency table
+  document.getElementById('consistency-table').innerHTML = `
+    <table style="width:100%">
+      <thead><tr><th>Estilo</th><th>Regist.</th><th>Mejor</th><th>Promedio</th><th>Peor</th><th>Desv. Est.</th><th>Consistencia</th></tr></thead>
+      <tbody>
+        ${styles.map(s => {
+          const a = style_analysis[s]; const cv = cvLabel(a.cv);
+          return `<tr><td><strong>${s}</strong></td><td style="text-align:center">${a.count}</td>
+            <td class="time-badge" style="color:var(--green)">${formatTime(a.best)}</td>
+            <td class="time-badge">${formatTime(a.avg)}</td>
+            <td class="time-badge" style="color:var(--red)">${formatTime(a.worst)}</td>
+            <td style="text-align:center">${a.std.toFixed(2)}s</td>
+            <td><span class="cv-indicator ${cv.cls}">${cv.label} (${a.cv.toFixed(1)}%)</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div style="margin-top:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;font-size:11.5px;color:var(--text2);line-height:1.65">
+      <strong style="color:var(--text)">📋 Cómo leer esta tabla</strong><br>
+      <strong>Registros</strong>: cuántas veces has nadado ese estilo. &nbsp; <strong>Mejor / Promedio / Peor</strong>: tu mejor marca, el promedio y la más lenta.<br>
+      <strong>Desv. Est.</strong> (desviación estándar): qué tanto varían tus tiempos respecto a tu promedio. <strong>Menor = más parejo</strong> (haces tiempos similares); mayor = más irregular.<br>
+      <strong>Consistencia</strong>: traduce esa variación en una etiqueta fácil (Excelente / Buena / Regular…). Una consistencia alta significa que rindes de forma estable, no solo en tus mejores días.
+    </div>`;
+  // ── Ritmo Objetivo: poblar metas y recalcular ──
+  const _rgsel = document.getElementById('ritmo-goal');
+  if (_rgsel) {
+    const _cur = _rgsel.value;
+    _rgsel.innerHTML = goals.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
+    if (_cur && goals.some(g => g.name === _cur)) _rgsel.value = _cur;
+    renderRitmo();
+  }
+  const _gEmpty = document.getElementById('goals-dashboard-empty');
+  if (_gEmpty) _gEmpty.style.display = (goals.length && styles.length) ? 'none' : '';
+  switchAnalysisSection(currentAnalysisSection || 'resumen');
+}
+
+function switchAnalysisSection(name) {
+  currentAnalysisSection = name;
+  document.querySelectorAll('#tab-analisis .asub-tab').forEach(t => t.classList.toggle('active', t.dataset.asec === name));
+  document.querySelectorAll('#analysis-content .asec').forEach(s => { s.style.display = (s.id === 'asec-' + name) ? '' : 'none'; });
+  Object.values(analysisCharts).forEach(c => { try { c.resize(); } catch(e){} });
+}
+function styleDistance(style) { const m = String(style).match(/(\d+)\s*m/i); return m ? parseInt(m[1], 10) : 0; }
+function renderRitmo() {
+  const content = document.getElementById('ritmo-content');
+  if (!content) return;
+  if (!goals.length) { content.innerHTML = '<p style="color:var(--text3);font-size:13px">No hay metas creadas. Crea una en la pestaña «Metas».</p>'; return; }
+  const gname = document.getElementById('ritmo-goal').value;
+  const g = goals.find(x => x.name === gname) || goals[0];
+  const pct = parseFloat(document.getElementById('ritmo-pct').value) || 0;
+  const dive = parseFloat(document.getElementById('ritmo-dive').value) || 0;
+  const times = g.times || {};
+  const stylesG = Object.keys(times)
+    .filter(s => times[s] > 0 && !/^Combinado/i.test(s))   // Combinado excluido (mezcla estilos)
+    .sort((a,b) => ALL_STYLES.indexOf(a) - ALL_STYLES.indexOf(b));
+  if (!stylesG.length) { content.innerHTML = '<p style="color:var(--text3);font-size:13px">Esta meta no tiene tiempos definidos (sin contar Combinado).</p>'; return; }
+  const sa = (currentAnalysis && currentAnalysis.style_analysis) || {};
+  // Celda de ritmo para una piscina de largo `len` (50 ó 25)
+  function poolCell(target, dist, len, effDive) {
+    const seg = Math.max(1, Math.round(dist/len));
+    const avg = target/seg;
+    if (effDive > 0 && seg > 1) {
+      const first = avg - effDive;
+      const rest = (target - first) / (seg - 1);
+      return `<div style="font-family:var(--font-head);font-size:17px;color:var(--teal);letter-spacing:0.5px">${formatTime(rest)}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:2px">1er ${len}: ${formatTime(first)} · resto: ${formatTime(rest)}</div>`;
+    }
+    return `<div style="font-family:var(--font-head);font-size:17px;color:var(--teal);letter-spacing:0.5px">${formatTime(avg)}</div>
+      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${seg} × ${len} m</div>`;
+  }
+  const rows = stylesG.map(style => {
+    const goalT = times[style];
+    const target = goalT * (1 - pct/100);
+    const dist = styleDistance(style) || 50;
+    const isBack = /^Espalda/i.test(style);
+    const effDive = isBack ? 0 : dive;          // Espalda: salida dentro del agua, sin ventaja
+    const vel = target > 0 ? (dist / target) : 0;
+    const a = sa[style];
+    const bestCell = (a && a.best != null) ? formatTime(a.best) : '—';
+    const backNote = (isBack && dive > 0) ? ` <span style="font-size:10px;color:var(--text3)">↔ sin salida</span>` : '';
+    return `<tr>
+      <td style="font-weight:700">${style}${backNote}</td>
+      <td style="text-align:center">${bestCell}</td>
+      <td style="text-align:center">${formatTime(goalT)}</td>
+      <td style="text-align:center;color:var(--cyan);font-weight:700">${formatTime(target)}</td>
+      <td style="text-align:center">${poolCell(target, dist, 50, effDive)}</td>
+      <td style="text-align:center">${poolCell(target, dist, 25, effDive)}</td>
+      <td style="text-align:center;color:var(--text3)">${vel.toFixed(2)} m/s</td>
+    </tr>`;
+  }).join('');
+  content.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr>
+      <th>Estilo</th><th style="text-align:center">Tu mejor</th><th style="text-align:center">Meta</th>
+      <th style="text-align:center">Objetivo −${pct}%</th>
+      <th style="text-align:center">🏊 Piscina 50&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">por cada 50</span></th>
+      <th style="text-align:center">🏊 Piscina 25&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">por cada 25</span></th>
+      <th style="text-align:center">Velocidad</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>
+    <div style="margin-top:12px;font-size:11.5px;color:var(--text3);line-height:1.6">💡 Cada columna de piscina te dice el ritmo a mantener en cada largo según dónde entrenes. La <strong>ventaja de salida</strong> solo aplica a Libre, Pecho y Mariposa (salen del partidor); en <strong>Espalda</strong> se ignora (sale dentro del agua) y verás «↔ sin salida». Con ventaja de salida, el primer largo va más rápido y el número grande es el ritmo del <strong>resto</strong> de largos. <strong>Combinado</strong> no se incluye.</div>`;
+}
+
+function showStyleAnalysis(style) {
+  document.querySelectorAll('.style-pill').forEach(p => p.classList.toggle('active', p.textContent.trim() === style));
+  const a = currentAnalysis.style_analysis[style];
+  if (!a) return;
+  destroyChart('evolution');
+  const evolData = a.records.map(r => ({ x: r.tournament_date, y: r.time_seconds, label: r.tournament_name }));
+  const currentGoals = goals;
+  const styleGoals = currentGoals.map((g,i) => {
+    const t = (g.times||{})[style];
+    return t ? { name: g.name, time: t, color: GOAL_PALETTE[i%GOAL_PALETTE.length] } : null;
+  }).filter(Boolean);
+  let splitsSection = '';
+  const splitRecs = a.records.filter(r => r.splits?.length);
+  if (splitRecs.length) {
+    const maxSeg = Math.max(...splitRecs.map(r => r.splits.length));
+    const headCols = Array.from({length:maxSeg}, (_,i) => `<th style="text-align:center">${(i+1)*50}m</th>`).join('');
+    const bodyRows = splitRecs.map(r => {
+      const sp = r.splits.map(s => s.split_time);
+      const avgS = sp.reduce((x,y)=>x+y,0)/sp.length;
+      const mn = Math.min(...sp), mx = Math.max(...sp);
+      const strategy = sp[0]<avgS ? '🚀 Salida rápida' : (sp[sp.length-1]<sp[0] ? '🔄 Negative split' : '➡️ Constante');
+      const cells = Array.from({length:maxSeg}, (_,i) => {
+        if (i >= sp.length) return '<td style="text-align:center;color:var(--text3)">—</td>';
+        const v = sp[i];
+        const col = v===mn ? 'var(--green)' : (v===mx ? 'var(--red)' : 'var(--text2)');
+        return `<td style="text-align:center;color:${col};font-weight:${v===mn?'700':'400'}">${v.toFixed(2)}</td>`;
+      }).join('');
+      return `<tr>
+        <td style="font-weight:700;white-space:nowrap">${r.tournament_name}</td>
+        <td style="text-align:center"><span class="time-badge">${formatTime(r.time_seconds)}</span></td>
+        ${cells}
+        <td style="text-align:center;font-weight:600">${avgS.toFixed(2)}</td>
+        <td style="text-align:center;white-space:nowrap">${strategy}</td>
+      </tr>`;
+    }).join('');
+    splitsSection = `
+      <div class="section-title" style="margin-top:20px">⚑ Análisis de Parciales (50&nbsp;m)</div>
+      <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.65">Cada fila es una competencia con parciales registrados; cada columna (50m, 100m…) es el tiempo de ese tramo de 50&nbsp;m. <span style="color:var(--green);font-weight:600">Verde</span> = tu 50 más rápido de esa prueba, <span style="color:var(--red);font-weight:600">rojo</span> = el más lento. <strong>Prom/50</strong> es el promedio por tramo. La <strong>estrategia</strong> resume cómo repartiste el esfuerzo: 🚀 salida rápida (empezaste fuerte), 🔄 negative split (segunda mitad más veloz, lo ideal) o ➡️ ritmo constante.</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Competencia</th><th style="text-align:center">Total</th>${headCols}<th style="text-align:center">Prom/50</th><th style="text-align:center">Estrategia</th></tr></thead>
+        <tbody>${bodyRows}</tbody>
+      </table></div>`;
+  }
+  const cv = cvLabel(a.cv);
+  const goalCards = a.goal_comparison.length ? `
+    <div class="section-title" style="margin-top:4px">🎯 Metas para este estilo</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:4px">
+      ${a.goal_comparison.map((g,i) => {
+        const color = GOAL_PALETTE[i%GOAL_PALETTE.length];
+        return `<div style="padding:14px 16px;border-radius:var(--radius);border:2px solid ${g.achieved?'rgba(26,138,69,0.3)':color+'40'};background:${g.achieved?'rgba(26,138,69,0.07)':'rgba(26,47,76,0.04)'}">
+          <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">🎯 ${g.goal_name}</div>
+          <div style="font-family:var(--font-head);font-size:20px;color:var(--text3);letter-spacing:0.5px">${formatTime(g.goal_time)}</div>
+          <div style="font-size:13px;font-weight:700;color:${g.achieved?'var(--green)':'var(--red)'};margin-top:6px">
+            ${g.achieved ? `✅ Meta superada<br><span style="font-size:11px">${formatTime(Math.abs(g.diff))}s por debajo</span>` : `⏳ Faltan ${formatTime(Math.abs(g.diff))}s`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+  document.getElementById('style-analysis-content').innerHTML = `
+    <div class="grid-2" style="gap:16px;margin-top:16px">
+      <div>
+        <div class="section-title">🏅 Marcas</div>
+        <div class="stat-card" style="margin-bottom:10px">
+          <div class="stat-icon" style="background:rgba(26,138,69,0.1)">🏆</div>
+          <div><div class="stat-value" style="color:var(--green)">${formatTime(a.best)}</div>
+            <div class="stat-label">Mejor — ${a.best_record.tournament_name}</div>
+            <div style="font-size:11px;color:var(--text3)">${a.best_record.tournament_date}</div></div>
+        </div>
+        <div class="stat-card" style="margin-bottom:10px">
+          <div class="stat-icon" style="background:rgba(217,48,37,0.1)">📉</div>
+          <div><div class="stat-value" style="color:var(--red)">${formatTime(a.worst)}</div>
+            <div class="stat-label">Peor — ${a.worst_record.tournament_name}</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div><div class="stat-value">${formatTime(a.avg)}</div>
+            <div class="stat-label">Promedio · Des.Est. ${a.std.toFixed(2)}s</div>
+            <div style="margin-top:6px"><span class="cv-indicator ${cv.cls}">${cv.label} (CV ${a.cv.toFixed(1)}%)</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">📈 Predicción y racha</div>
+        <div class="card" style="background:var(--bg3);border-color:var(--border);margin-bottom:10px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <div><div style="font-size:11px;color:var(--text3)">Último tiempo</div><div class="stat-value">${formatTime(a.records[a.records.length-1]?.time_seconds)}</div></div>
+            ${a.prediction ? `<div><div style="font-size:11px;color:var(--text3)">Predicción próximo</div><div class="stat-value" style="color:var(--teal)">${formatTime(a.prediction)}</div></div>` : ''}
+          </div>
+          <span class="cv-indicator ${a.improvement>=0?'cv-excellent':'cv-poor'}">${a.improvement>=0?'📈 Tendencia mejorando':'📉 Tendencia por mejorar'}</span>
+          <div style="font-size:12px;color:var(--text2);margin-top:8px">Mejor racha: <strong>${a.best_streak}</strong> mejoras consecutivas</div>
+        </div>
+        ${goalCards}
+      </div>
+    </div>
+    <div class="section-title" style="margin-top:20px">📈 Evolución de tiempos</div>
+    ${styleGoals.length ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-size:12px;color:var(--text3);font-weight:600">Ver línea de meta:</span>
+      ${styleGoals.map(g => `<button class="goal-toggle-btn" data-goal="${g.name}" data-style="${style}"
+        onclick="toggleGoalLine('${g.name}','${style}')"
+        style="padding:5px 12px;border-radius:20px;border:2px solid ${g.color};background:transparent;color:${g.color};font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s">${g.name}</button>`).join('')}
+      <span style="font-size:11px;color:var(--text3);margin-left:4px">← Haz clic para mostrar/ocultar</span>
+    </div>` : ''}
+    <div class="chart-container" style="height:260px"><canvas id="chart-evolution"></canvas></div>
+    ${splitsSection}`;
+  setTimeout(() => {
+    const ctx = document.getElementById('chart-evolution');
+    if (!ctx) return;
+    analysisCharts['evolution'] = new Chart(ctx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: evolData.map(d=>d.x),
+        datasets: [{ label:'Tiempo registrado', data:evolData.map(d=>d.y),
+          borderColor:'rgba(26,111,196,1)', backgroundColor:'rgba(26,111,196,0.08)',
+          tension:0.3, fill:true, pointRadius:6, pointBackgroundColor:'rgba(26,111,196,1)', pointBorderColor:'#fff', pointBorderWidth:2
+        }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins: {
+          legend:{display:true,position:'top',labels:{color:'#4a627a',usePointStyle:true}},
+          tooltip:{callbacks:{label:ctx=>{
+            if(ctx.dataset.label==='Tiempo registrado') return `${ctx.dataset.label}: ${formatTime(ctx.raw)} — ${evolData[ctx.dataIndex]?.label||''}`;
+            return `Meta "${ctx.dataset.label}": ${formatTime(ctx.raw)}`;
+          }}}
+        },
+        scales: {
+          x:{ticks:{color:'#8299b0',maxRotation:45},grid:{color:'rgba(220,229,239,0.8)'}},
+          y:{ticks:{color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
+        }
+      }
+    });
+    activeGoalLines = {};
+  }, 100);
+}
+function toggleGoalLine(goalName, styleKey) {
+  const chart = analysisCharts['evolution'];
+  if (!chart) return;
+  const btn = document.querySelector(`.goal-toggle-btn[data-goal="${goalName}"]`);
+  const goalObj = goals.find(g => g.name === goalName);
+  if (!goalObj) return;
+  const goalTime = (goalObj.times||{})[styleKey];
+  if (!goalTime) return;
+  const gColor = GOAL_PALETTE[goals.indexOf(goalObj) % GOAL_PALETTE.length];
+  const existing = chart.data.datasets.findIndex(d => d.label === goalName);
+  if (existing >= 0) {
+    chart.data.datasets.splice(existing, 1);
+    if (btn) { btn.style.background='transparent'; btn.style.borderStyle='solid'; }
+  } else {
+    chart.data.datasets.push({ label:goalName, data:Array(chart.data.labels.length).fill(goalTime),
+      borderColor:gColor, borderDash:[8,4], borderWidth:2.5, pointRadius:0, fill:false, tension:0, order:2 });
+    if (btn) { btn.style.background=gColor+'20'; btn.style.borderStyle='dashed'; }
+  }
+  chart.update();
+}
+
+// ════════════════════════════════════════════════════════════
+// PDF EXPORT
+// ════════════════════════════════════════════════════════════
+async function exportPDF() {
+  const sid = document.getElementById('analysis-swimmer').value;
+  if (!sid || !currentAnalysis) { showToast('Selecciona un nadador para exportar', 'error'); return; }
+  const { swimmer, style_analysis, total_records, total_competitions } = currentAnalysis;
+  const cat = getCategory(swimmer.birthdate);
+  const allStyles = Object.keys(style_analysis);
+  const activeStylePill = document.querySelector('.style-pill.active');
+  const selectedStyle = activeStylePill ? activeStylePill.textContent.trim() : null;
+  let chartImgData = null;
+  if (selectedStyle) {
+    const cc = document.getElementById('chart-evolution');
+    if (cc) chartImgData = cc.toDataURL('image/png');
+  }
+  const GCOLS = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
+  const currentGoals = goals;
+  const header = `<div style="background:linear-gradient(135deg,#1c3050,#1a6fc4);color:white;padding:24px 28px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
+    <div><div style="font-size:26px;font-weight:900;letter-spacing:3px">🏊 SWIMTRACKER PRO</div><div style="opacity:0.7;font-size:11px;margin-top:3px;letter-spacing:1px">REPORTE DE RENDIMIENTO</div></div>
+    <div style="text-align:right;opacity:0.85;font-size:12px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px">Generado</div>
+      <div style="font-weight:700">${new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})}</div>
+      ${selectedStyle ? `<div style="margin-top:4px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;font-size:10px">🏊 ${selectedStyle}</div>` : ''}
+    </div>
+  </div>`;
+  const profileBlock = `<div style="display:flex;gap:16px;margin-bottom:16px;align-items:center;padding:14px 18px;background:#f5f8fc;border-radius:10px;border:1px solid #dce5ef">
+    <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#1a6fc4,#0897a7);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex-shrink:0">
+      ${swimmer.photo ? `<img src="${swimmer.photo}" style="width:100%;height:100%;object-fit:cover">` : '🏊'}
+    </div>
+    <div style="flex:1">
+      <div style="font-size:22px;font-weight:800;color:#1c2d3e">${swimmer.name}</div>
+      <span style="background:#1c3050;color:white;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">${cat}</span>
+      ${getAge(swimmer.birthdate) ? `<span style="color:#4a627a;font-size:12px;margin-left:8px">${getAge(swimmer.birthdate)} años</span>` : ''}
+    </div>
+    <div style="display:flex;gap:10px">
+      ${[['🏆',total_competitions,'Competencias'],['⏱️',total_records,'Registros']].map(([ic,v,lb])=>`
+      <div style="text-align:center;background:#1c3050;color:white;padding:10px 14px;border-radius:8px">
+        <div style="font-size:20px;font-weight:900;color:#5bc8e8">${v}</div><div style="font-size:9px;opacity:0.8">${lb}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+  const goalsTable = (stylesList) => {
+    if (!currentGoals.length) return '';
+    return `<div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:#1c3050;padding-bottom:5px;border-bottom:2px solid #dce5ef">🎯 Comparación con Metas</div>
+    <div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:11px">
+      <thead><tr style="background:#1c3050;color:white">
+        <th style="padding:7px 10px;text-align:left">Estilo</th>
+        <th style="padding:7px 10px;text-align:center">Tu Mejor</th>
+        ${currentGoals.map((g,i)=>`<th style="padding:7px 10px;text-align:center;color:${GCOLS[i%GCOLS.length]}">🎯 ${g.name}</th>`).join('')}
+      </tr></thead>
+      <tbody>${stylesList.map((s,idx)=>{
+        const a = style_analysis[s];
+        return `<tr style="background:${idx%2===0?'#f8fafd':'#fff'}">
+          <td style="padding:7px 10px;font-weight:700;color:#1c2d3e">${s}</td>
+          <td style="padding:7px 10px;text-align:center;font-weight:700;color:#0897a7">${formatTime(a.best)}</td>
+          ${currentGoals.map((g,i)=>{
+            const gt=(g.times||{})[s]; if(!gt) return `<td style="padding:7px 10px;text-align:center;color:#c0ccd8">—</td>`;
+            const diff=a.best-gt; const ok=diff<=0;
+            return `<td style="padding:7px 10px;text-align:center;background:${ok?'rgba(26,138,69,0.06)':'rgba(217,48,37,0.04)'}">
+              <div style="font-weight:700;color:#4a627a">${formatTime(gt)}</div>
+              <div style="font-size:10px;color:${ok?'#1a8a45':'#d93025'};font-weight:700">${ok?`✅ +${formatTime(Math.abs(diff))}s`:`⏳ -${formatTime(Math.abs(diff))}s`}</div>
+            </td>`;
+          }).join('')}
+        </tr>`;}).join('')}
+      </tbody>
+    </table></div>`;
+  };
+  const statsTable = (stylesList) => `
+    <div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:#1c3050;padding-bottom:5px;border-bottom:2px solid #dce5ef">📊 Estadísticas por Estilo</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:16px">
+      <thead><tr style="background:#1c3050;color:white">
+        <th style="padding:7px 10px;text-align:left">Estilo</th><th style="padding:7px 10px;text-align:center">Regist.</th>
+        <th style="padding:7px 10px;text-align:center">Mejor</th><th style="padding:7px 10px;text-align:center">Promedio</th>
+        <th style="padding:7px 10px;text-align:center">Progreso</th><th style="padding:7px 10px;text-align:center">Consistencia</th>
+      </tr></thead>
+      <tbody>${stylesList.map((s,i)=>{
+        const a=style_analysis[s]; const cv=cvLabel(a.cv);
+        const impColor=a.improvement>=0?'#1a8a45':'#d93025';
+        const cvColor=cv.cls==='cv-excellent'?'#1a8a45':cv.cls==='cv-good'?'#1a6fc4':cv.cls==='cv-regular'?'#d4880a':'#d93025';
+        return `<tr style="background:${i%2===0?'#f8fafd':'#fff'}">
+          <td style="padding:7px 10px;font-weight:700;color:#1c2d3e">${s}</td>
+          <td style="padding:7px 10px;text-align:center;color:#4a627a">${a.count}</td>
+          <td style="padding:7px 10px;text-align:center;font-weight:700;color:#0897a7">${formatTime(a.best)}</td>
+          <td style="padding:7px 10px;text-align:center;color:#1a6fc4">${formatTime(a.avg)}</td>
+          <td style="padding:7px 10px;text-align:center;font-weight:700;color:${impColor}">${a.improvement>=0?'↑ +':'↓ -'}${Math.abs(a.improvement).toFixed(2)}s</td>
+          <td style="padding:7px 10px;text-align:center;font-weight:600;color:${cvColor}">${cv.label} (${a.cv.toFixed(1)}%)</td>
+        </tr>`;}).join('')}
+      </tbody>
+    </table>`;
+  const styleDetailBlock = (s) => {
+    const a = style_analysis[s];
+    const cv = cvLabel(a.cv);
+    const impColor = a.improvement>=0?'#1a8a45':'#d93025';
+    const recsWithSplits = a.records.filter(r => r.splits?.length);
+    return `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+        ${[['🏆 Mejor','#0897a7',formatTime(a.best)],['📊 Promedio','#1a6fc4',formatTime(a.avg)],
+          [`${a.improvement>=0?'📈':'📉'} Progreso`,impColor,`${a.improvement>=0?'↑ +':'↓ -'}${Math.abs(a.improvement).toFixed(2)}s`],
+          ['🎯 Consistencia',cv.cls==='cv-excellent'?'#1a8a45':cv.cls==='cv-good'?'#1a6fc4':cv.cls==='cv-regular'?'#d4880a':'#d93025',cv.label]
+        ].map(([lb,c,v])=>`<div style="padding:10px;background:#f5f8fc;border-radius:8px;border:1px solid #dce5ef;text-align:center">
+          <div style="font-size:9px;color:#8299b0;text-transform:uppercase">${lb}</div>
+          <div style="font-size:15px;font-weight:800;color:${c};margin-top:4px">${v}</div>
+        </div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="padding:12px;background:#f0faf5;border-radius:8px;border:1px solid #b7e4cc">
+          <div style="font-size:10px;color:#4a627a;font-weight:600">🏆 Mejor Marca</div>
+          <div style="font-size:22px;font-weight:900;color:#1a8a45">${formatTime(a.best)}</div>
+          <div style="font-size:10px;color:#4a627a">${a.best_record.tournament_name} · ${a.best_record.tournament_date}</div>
+        </div>
+        <div style="padding:12px;background:#f5f8fc;border-radius:8px;border:1px solid #dce5ef">
+          <div style="font-size:10px;color:#4a627a;font-weight:600">🔮 Predicción</div>
+          <div style="font-size:22px;font-weight:900;color:#1a6fc4">${a.prediction ? formatTime(a.prediction) : '—'}</div>
+          <div style="font-size:10px;font-weight:700;color:${impColor}">${a.improvement>=0?'Tendencia mejorando ↑':'Por mejorar ↓'} · Racha: ${a.best_streak}</div>
+        </div>
+      </div>
+      ${a.goal_comparison.length ? `<div style="font-size:12px;font-weight:800;margin-bottom:8px;color:#1c3050">🎯 Metas</div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(a.goal_comparison.length,3)},1fr);gap:8px;margin-bottom:14px">
+        ${a.goal_comparison.map((g,i)=>{const gc=GCOLS[i%GCOLS.length];return`<div style="padding:10px 12px;border-radius:8px;border:2px solid ${g.achieved?'rgba(26,138,69,0.35)':gc+'55'};background:${g.achieved?'rgba(26,138,69,0.06)':'rgba(26,47,76,0.03)'}">
+          <div style="font-size:10px;font-weight:700;color:${gc};text-transform:uppercase">${g.goal_name}</div>
+          <div style="font-size:16px;font-weight:900;color:#4a627a;margin-top:2px">${formatTime(g.goal_time)}</div>
+          <div style="font-size:11px;font-weight:700;color:${g.achieved?'#1a8a45':'#d93025'};margin-top:4px">${g.achieved?`✅ Superada (+${formatTime(Math.abs(g.diff))}s)`:`⏳ Faltan ${formatTime(Math.abs(g.diff))}s`}</div>
+        </div>`;}).join('')}
+      </div>` : ''}
+      ${chartImgData ? `<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">📈 Evolución de tiempos</div>
+      <img src="${chartImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
+      <div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">📋 Historial</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px">
+        <thead><tr style="background:#f5f8fc"><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #dce5ef;color:#8299b0">Torneo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Fecha</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Tiempo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Parciales</th></tr></thead>
+        <tbody>${a.records.map(r=>{const db=r.time_seconds-a.best;return`<tr>
+          <td style="padding:5px 8px;border-bottom:1px solid #f0f4f8">${r.tournament_name}</td>
+          <td style="padding:5px 8px;text-align:center;color:#4a627a;border-bottom:1px solid #f0f4f8">${r.tournament_date}</td>
+          <td style="padding:5px 8px;text-align:center;font-weight:700;color:${r.time_seconds===a.best?'#1a8a45':'#1a6fc4'};border-bottom:1px solid #f0f4f8">${formatTime(r.time_seconds)}${r.time_seconds===a.best?' ⭐':''}</td>
+          <td style="padding:5px 8px;text-align:center;color:#8299b0;border-bottom:1px solid #f0f4f8;font-size:10px">${r.splits?.length?r.splits.map(sp=>sp.split_time.toFixed(2)+'s').join(' | '):'—'}</td>
+        </tr>`;}).join('')}</tbody>
+      </table>
+      ${recsWithSplits.length ? `<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">⚑ Parciales</div>
+      ${recsWithSplits.map(r=>{const sp=r.splits.map(s=>s.split_time);const avg=sp.reduce((a,b)=>a+b,0)/sp.length;const strat=sp[0]<avg?'🚀 Salida rápida':sp[sp.length-1]<sp[0]?'🔄 Negative Split':'➡️ Ritmo constante';return`<div style="padding:8px 12px;background:#f5f8fc;border-radius:6px;border:1px solid #dce5ef;margin-bottom:6px;font-size:11px"><strong>${r.tournament_name}</strong> — ${strat}<br><span style="color:#4a627a">${sp.map((s,i)=>`${(i+1)*50}m: ${s.toFixed(2)}s`).join('  •  ')}</span></div>`;}).join('')}` : ''}`;
+  };
+  let bodyHTML = selectedStyle ? profileBlock + styleDetailBlock(selectedStyle) : profileBlock + goalsTable(allStyles) + statsTable(allStyles);
+  const footer = `<div style="margin-top:16px;padding:10px 14px;background:#f5f8fc;border-radius:8px;font-size:10px;color:#8299b0;text-align:center;border:1px solid #dce5ef">Generado por SwimTracker Pro • ${new Date().toLocaleDateString('es-ES')} ${selectedStyle ? `· Estilo: ${selectedStyle}` : '· Reporte General'}</div>`;
+  document.getElementById('pdf-content').innerHTML = `<div style="font-family:'DM Sans',sans-serif;color:#1c2d3e;max-width:820px;margin:0 auto;padding:4px">${header}${bodyHTML}${footer}</div>`;
+  openModal('pdf-modal');
+}
+async function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const element = document.getElementById('pdf-content');
+  const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('p','mm','a4');
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = (canvas.height * pdfW) / canvas.width;
+  let y = 0, heightLeft = pdfH, pageH = pdf.internal.pageSize.getHeight();
+  pdf.addImage(imgData,'PNG',0,y,pdfW,pdfH);
+  heightLeft -= pageH;
+  while (heightLeft > 0) { y = heightLeft - pdfH; pdf.addPage(); pdf.addImage(imgData,'PNG',0,y,pdfW,pdfH); heightLeft -= pageH; }
+  const name = currentAnalysis?.swimmer?.name || 'Reporte';
+  pdf.save(`SwimTracker_${name}_${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast('PDF descargado ✓', 'success');
+}
+
+// ════════════════════════════════════════════════════════════
+// EXCEL EXPORT (all data)
+// ════════════════════════════════════════════════════════════
+function exportExcel() {
+  const wb = XLSX.utils.book_new();
+  const allSw = swimmers;
+  const allTn = tournaments;
+  const allTr = getTimesJoined();
+  const allGoals = goals;
+  // Nadadores
+  const swRows = [['ID','Nombre','Fecha Nac.','Tipo Sangre','Peso (kg)','Altura (cm)','Envergadura (cm)','Alergias','Lesiones','Seguro','Contacto Emerg.','Tel. Emerg.']];
+  allSw.forEach(s => swRows.push([s.id,s.name,s.birthdate,s.blood_type,s.weight,s.height,s.wingspan,s.allergies,s.injuries,s.insurance,s.emergency_name,s.emergency_phone]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(swRows), 'Nadadores');
+  // Torneos
+  const tnRows = [['ID','Nombre','Fecha','Estilos']];
+  allTn.forEach(t => tnRows.push([t.id,t.name,t.date,(t.styles||[]).join(', ')]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(tnRows), 'Torneos');
+  // Tiempos
+  const trRows = [['ID','Nadador','Torneo','Fecha','Estilo','Tiempo (s)','Tiempo','Parciales']];
+  allTr.forEach(r => trRows.push([r.id,r.swimmer_name,r.tournament_name,r.tournament_date,r.style,r.time_seconds,formatTime(r.time_seconds),(r.splits||[]).map(s=>s.split_time.toFixed(2)+'s').join(' | ')]));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trRows), 'Tiempos');
+  // Metas
+  const glRows = [['ID','Nombre Meta','Estilo','Tiempo (s)','Tiempo']];
+  allGoals.forEach(g => { Object.entries(g.times||{}).forEach(([style,t]) => glRows.push([g.id,g.name,style,t,formatTime(t)])); });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(glRows), 'Metas');
+  XLSX.writeFile(wb, `SwimTracker_${new Date().toISOString().slice(0,10)}.xlsx`);
+  showToast('Excel exportado ✓', 'success');
+}
+
+// ════════════════════════════════════════════════════════════
+// BACKUP / RESTORE
+// ════════════════════════════════════════════════════════════
+function exportBackup() {
+  const data = {
+    _version: 2,
+    swimmers,
+    tournaments,
+    goals,
+    time_records: timesRaw
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SwimTracker_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('Respaldo exportado ✓', 'success');
+}
+async function importBackup(input) {
+  const file = input.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (!data._version) throw new Error('Archivo de respaldo inválido');
+    if (!confirm(`¿Restaurar datos del respaldo? Se REEMPLAZARÁN todos los datos en la nube.\n\nNadadores: ${(data.swimmers||[]).length}\nTorneos: ${(data.tournaments||[]).length}\nTiempos: ${(data.time_records||[]).length}\nMetas: ${(data.goals||[]).length}`)) { input.value=''; return; }
+    // Clear and rewrite all collections
+    await fbDB.ref('swimmers').set(null);
+    await fbDB.ref('tournaments').set(null);
+    await fbDB.ref('goals').set(null);
+    await fbDB.ref('time_records').set(null);
+    const toObj = arr => {
+      const obj = {};
+      (arr||[]).forEach(item => { const {id, ...rest} = item; obj[id] = rest; });
+      return obj;
+    };
+    if ((data.swimmers||[]).length)     await fbDB.ref('swimmers').set(toObj(data.swimmers));
+    if ((data.tournaments||[]).length)  await fbDB.ref('tournaments').set(toObj(data.tournaments));
+    if ((data.goals||[]).length)        await fbDB.ref('goals').set(toObj(data.goals));
+    if ((data.time_records||[]).length) await fbDB.ref('time_records').set(toObj(data.time_records));
+    showToast('Datos restaurados en la nube ✓', 'success');
+  } catch(e) { showToast('Error al restaurar: ' + e.message, 'error'); }
+  input.value = '';
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+  if (!email || !pass) { errEl.textContent = 'Escribe tu correo y contraseña.'; return; }
+  errEl.style.color = '#d93025'; errEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  fbAuth.signInWithEmailAndPassword(email, pass).catch(e => {
+    btn.disabled = false; btn.textContent = 'Entrar';
+    const map = {
+      'auth/invalid-email':'Correo inválido.','auth/user-not-found':'Ese usuario no existe.',
+      'auth/wrong-password':'Contraseña incorrecta.','auth/invalid-credential':'Correo o contraseña incorrectos.',
+      'auth/too-many-requests':'Demasiados intentos. Espera un momento.','auth/network-request-failed':'Sin conexión a internet.'
+    };
+    errEl.textContent = map[e.code] || ('Error: ' + e.message);
+  });
+}
+function resetPassword() {
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!email) { errEl.style.color = '#d93025'; errEl.textContent = 'Escribe tu correo arriba y vuelve a tocar el enlace.'; return; }
+  fbAuth.sendPasswordResetEmail(email)
+    .then(() => { errEl.style.color = '#1a8a45'; errEl.textContent = 'Te enviamos un correo para restablecer la contraseña.'; })
+    .catch(e => { errEl.style.color = '#d93025'; errEl.textContent = 'No se pudo enviar: ' + (e.code || e.message); });
+}
+function logout() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  fbAuth.signOut().then(() => location.reload());
+}
+function init() {
+  fbAuth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('login-screen').style.display = 'none';
+      if (!_listenersStarted) { _listenersStarted = true; setupListeners(); }
+    } else {
+      document.getElementById('login-screen').style.display = 'flex';
+    }
+  });
+}
+init();
+// Service worker (PWA) — solo en http/https, no con file://
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW no registrado:', e));
+  });
+}
+</script>
+</body>
+</html>

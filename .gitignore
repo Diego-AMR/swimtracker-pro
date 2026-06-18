@@ -1,0 +1,6 @@
+﻿# Solo se publica la app web (HTML único + PWA). Lo demás es local.
+swimtracker/
+*.zip
+*backup*.json
+*restaurado*.json
+__pycache__/
