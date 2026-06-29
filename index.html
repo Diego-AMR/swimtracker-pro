@@ -472,6 +472,9 @@ tr:last-child td { border-bottom:none; }
     <div class="bottom-nav-item" data-tab="calendario" onclick="switchTab('calendario')">
       <span class="bnav-icon">📅</span><span class="bnav-label">Calendario</span>
     </div>
+    <div class="bottom-nav-item" data-tab="competencia" onclick="switchTab('competencia')">
+      <span class="bnav-icon">🏁</span><span class="bnav-label">Competencia</span>
+    </div>
   </div>
 </nav>
 
@@ -516,6 +519,9 @@ tr:last-child td { border-bottom:none; }
     </div>
     <div class="nav-item" data-tab="calendario" onclick="switchTab('calendario')">
       <span class="nav-icon">📅</span><span>Calendario</span>
+    </div>
+    <div class="nav-item" data-tab="competencia" onclick="switchTab('competencia')">
+      <span class="nav-icon">🏁</span><span>Competencia</span>
     </div>
   </div>
   <div class="sidebar-footer">
@@ -805,7 +811,78 @@ tr:last-child td { border-bottom:none; }
   </div>
 </div>
 
+<!-- 8. COMPETENCIA -->
+<div id="tab-competencia" class="tab-content">
+  <div class="page-header">
+    <div>
+      <div class="page-title">🏁 MODO COMPETENCIA</div>
+      <div class="page-subtitle">Preparación, alimentación y avisos para llegar en tu mejor forma</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="openRoutineModal()">⚙️ Rutina diaria</button>
+      <button class="btn btn-primary" id="comp-ics-btn" onclick="exportCompICS()" style="display:none">📅 Agregar al calendario</button>
+    </div>
+  </div>
+  <div class="analysis-selector">
+    <select class="form-select" id="comp-tournament" onchange="loadComp()" style="max-width:320px">
+      <option value="">— Seleccionar torneo —</option>
+    </select>
+  </div>
+  <div id="comp-content" style="display:none">
+    <div class="card" id="comp-today-card" style="margin-bottom:20px;display:none">
+      <div class="section-title">📍 Hoy</div>
+      <div id="comp-today"></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">📋 Sesiones y pruebas (de la convocatoria)</div>
+      <div id="comp-config"></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">📅 Cuenta regresiva — 7 días antes</div>
+      <div id="comp-countdown"></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">🏁 Días de competencia</div>
+      <div id="comp-days"></div>
+    </div>
+    <div class="card">
+      <div class="section-title">🥗 Reglas de alimentación e hidratación</div>
+      <div id="comp-rules"></div>
+    </div>
+  </div>
+  <div id="comp-empty" class="empty-state">
+    <div class="empty-icon">🏁</div>
+    <p>Selecciona un torneo para preparar su plan de competencia.</p>
+  </div>
+</div>
+
 </main>
+
+<!-- Routine Modal -->
+<div class="modal-overlay" id="routine-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Rutina diaria de la nadadora</div>
+      <button class="modal-close" onclick="closeModal('routine-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px">
+      <p style="font-size:12.5px;color:var(--text3);margin-bottom:14px">Se usa para calcular el plan. Se guarda una sola vez (puedes editarla cuando quieras).</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:12px;color:var(--text2)">🌅 Levantarse</label><input type="time" class="form-input" id="rt-wake"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🌙 Dormir</label><input type="time" class="form-input" id="rt-sleep"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🍳 Desayuno</label><input type="time" class="form-input" id="rt-breakfast"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🍎 Media mañana</label><input type="time" class="form-input" id="rt-snackam"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🍽️ Almuerzo</label><input type="time" class="form-input" id="rt-lunch"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🥪 Onces</label><input type="time" class="form-input" id="rt-snackpm"></div>
+        <div><label style="font-size:12px;color:var(--text2)">🍝 Cena</label><input type="time" class="form-input" id="rt-dinner"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('routine-modal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRoutine()">Guardar rutina</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════ MODALS ═══════════════════════ -->
 
@@ -1102,6 +1179,16 @@ function setupListeners() {
     times = getTimesJoined();
     renderTimes();
   });
+
+  // Plan de competencia (config por torneo)
+  fbDB.ref('comp_plans').on('value', snap => {
+    compPlans = snap.val() || {};
+    if (document.getElementById('tab-competencia')?.classList.contains('active')) loadComp();
+  });
+  // Rutina diaria
+  fbDB.ref('routine').on('value', snap => {
+    routine = Object.assign({}, DEFAULT_ROUTINE, snap.val() || {});
+  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1113,6 +1200,8 @@ let chronoRunning = false, chronoInterval = null, chronoStartTime = 0, chronoEla
 let parciales = [], parcialesBase = 0;
 let analysisCharts = {}, activeGoalLines = {};
 let currentAnalysisSection = 'resumen';
+let compPlans = {}, routine = {}, currentCompTid = '';
+const DEFAULT_ROUTINE = { wake:'08:30', sleep:'23:00', breakfast:'08:45', snackam:'10:30', lunch:'12:30', snackpm:'15:45', dinner:'21:45' };
 
 // ════════════════════════════════════════════════════════════
 // UTILITIES
@@ -1201,6 +1290,7 @@ function switchTab(tab) {
   if (tab === 'calendario') renderCalendar();
   if (tab === 'analisis') refreshAnalysisSelect();
   if (tab === 'estilos') refreshEstilosSelects();
+  if (tab === 'competencia') refreshCompSelect();
 }
 function openBackupDrawer() { document.getElementById('backup-drawer').classList.add('open'); }
 function closeBackupDrawer() { document.getElementById('backup-drawer').classList.remove('open'); }
@@ -2766,6 +2856,286 @@ async function importBackup(input) {
 // ════════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+// MODO COMPETENCIA
+// ════════════════════════════════════════════════════════════
+const TAPER = [
+  { d:7, n:'🟢', foco:'Última carga fuerte. Empieza a cuidar la comida (menos frito/chatarra). Agua ~2–2.5 L. Respeta el sueño (9.5 h).' },
+  { d:6, n:'🟢', foco:'Entreno normal. Comida limpia y balanceada. Hidratación constante. Recupera bien el sueño.' },
+  { d:5, n:'🟡', foco:'Entreno suave / técnico (inicia taper). REGLA: nada de comidas nuevas hasta después del torneo. Dormir 9.5–10 h.' },
+  { d:4, n:'🟡', foco:'Descanso / movilidad. Comida limpia con buenos carbohidratos. Sueño estricto (acostarse temprano).' },
+  { d:3, n:'🟠', foco:'Bajar volumen de entreno. Menos grasa y fibra pesada; más carbohidratos. Hidratar alto. Sueño sin excepción.' },
+  { d:2, n:'🟠', foco:'Entreno corto y suave. CARGAR ENERGÍA: subir carbohidratos (arroz, pasta, avena, papa, fruta). Dormir temprano. Revisar lista de maleta.' },
+  { d:1, n:'🔴', foco:'Descanso o soltura muy suave. Carbos + proteína magra; CENA TEMPRANA baja en grasa; nada frito / gaseosa / nuevo. 🎒 Alistar maleta. DORMIR MUY TEMPRANO.' }
+];
+function compStyles(t) { try { return JSON.parse(t.styles || '[]'); } catch { return []; } }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function parseHM(hm){ const [h,m]=(hm||'0:0').split(':').map(Number); return h*60+(m||0); }
+function fmtHM(min){ min=((min%1440)+1440)%1440; return pad2(Math.floor(min/60))+':'+pad2(min%60); }
+function addDaysISO(iso, n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function fmtDateLong(iso){ if(!iso) return ''; const d=new Date(iso+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'short'}); }
+function getRoutine(){ return Object.assign({}, DEFAULT_ROUTINE, routine); }
+function getCompPlan(tid){
+  const t = tournaments.find(x=>String(x.id)===String(tid));
+  const base = { startDate: t?.date || '', endDate: t?.date || '', sessions: [], events: [] };
+  return Object.assign(base, compPlans[tid] || {});
+}
+function saveCompPlan(tid, plan){ currentCompPlanCache=plan; fbDB.ref('comp_plans/'+tid).set(plan); }
+let currentCompPlanCache = null;
+function refreshCompSelect(){
+  const sel = document.getElementById('comp-tournament'); if(!sel) return;
+  const cur = sel.value || currentCompTid;
+  sel.innerHTML = '<option value="">— Seleccionar torneo —</option>' +
+    tournaments.map(t=>`<option value="${t.id}">${t.name} (${t.date||'sin fecha'})</option>`).join('');
+  if(cur && tournaments.some(t=>String(t.id)===String(cur))){ sel.value=cur; loadComp(); }
+}
+function loadComp(){
+  const sel = document.getElementById('comp-tournament'); if(!sel) return;
+  currentCompTid = sel.value;
+  const empty = document.getElementById('comp-empty'), content = document.getElementById('comp-content');
+  const icsBtn = document.getElementById('comp-ics-btn');
+  if(!currentCompTid){ content.style.display='none'; empty.style.display=''; icsBtn.style.display='none'; return; }
+  content.style.display=''; empty.style.display='none'; icsBtn.style.display='';
+  renderComp();
+}
+function renderComp(){
+  const tid = currentCompTid; if(!tid) return;
+  const t = tournaments.find(x=>String(x.id)===String(tid)); if(!t) return;
+  const plan = getCompPlan(tid);
+  renderCompConfig(tid, t, plan);
+  renderCompCountdown(plan);
+  renderCompDays(plan);
+  renderCompToday(plan);
+  renderCompRules();
+}
+// ── Config: sesiones + pruebas ──
+function renderCompConfig(tid, t, plan){
+  const el = document.getElementById('comp-config');
+  const styles = compStyles(t);
+  let h = `<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">
+    <div><label style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">Fecha inicio</label><input type="date" class="form-input" id="cp-start" value="${plan.startDate||''}" onchange="compSetDates('${tid}')" style="max-width:170px"></div>
+    <div><label style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase">Fecha fin</label><input type="date" class="form-input" id="cp-end" value="${plan.endDate||''}" onchange="compSetDates('${tid}')" style="max-width:170px"></div>
+  </div>`;
+  h += `<div style="font-weight:700;margin:4px 0 8px">🕐 Sesiones <span style="font-weight:400;font-size:12px;color:var(--text3)">(copia de la convocatoria)</span></div>`;
+  if(plan.sessions.length){
+    h += plan.sessions.map(s=>`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px">
+      <input type="date" class="form-input" value="${s.date||''}" onchange="compUpdSession('${tid}','${s.id}','date',this.value)" style="max-width:150px">
+      <input class="form-input" placeholder="Etiqueta (ej. Sáb mañana)" value="${(s.label||'').replace(/"/g,'&quot;')}" onchange="compUpdSession('${tid}','${s.id}','label',this.value)" style="max-width:180px">
+      <span style="font-size:12px;color:var(--text3)">Calent.</span><input type="time" class="form-input" value="${s.warmup||''}" onchange="compUpdSession('${tid}','${s.id}','warmup',this.value)" style="max-width:120px">
+      <span style="font-size:12px;color:var(--text3)">Comp.</span><input type="time" class="form-input" value="${s.comp||''}" onchange="compUpdSession('${tid}','${s.id}','comp',this.value)" style="max-width:120px">
+      <button class="btn btn-secondary btn-sm" onclick="compRemoveSession('${tid}','${s.id}')" style="color:var(--red)">✕</button>
+    </div>`).join('');
+  } else { h += `<p style="font-size:12.5px;color:var(--text3);margin-bottom:8px">Aún no hay sesiones.</p>`; }
+  h += `<button class="btn btn-secondary btn-sm" onclick="compAddSession('${tid}')">+ Agregar sesión</button>`;
+  // Pruebas
+  h += `<div style="font-weight:700;margin:18px 0 8px">🏊 Pruebas de la nadadora <span style="font-weight:400;font-size:12px;color:var(--text3)">(marca las que va a nadar)</span></div>`;
+  if(!styles.length){ h += `<p style="font-size:12.5px;color:var(--text3)">Este torneo no tiene pruebas definidas. Agrégalas en la pestaña Torneos.</p>`; }
+  else {
+    const sessOpts = plan.sessions.map(s=>`<option value="${s.id}">${(s.label||fmtDateLong(s.date)||'Sesión')}</option>`).join('');
+    h += `<div style="display:flex;flex-direction:column;gap:6px">` + styles.map(st=>{
+      const ev = plan.events.find(e=>e.style===st);
+      const checked = !!ev;
+      return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;min-width:170px;cursor:pointer">
+          <input type="checkbox" ${checked?'checked':''} onchange="compToggleEvent('${tid}','${st.replace(/'/g,"\\'")}',this.checked)"> ${st}
+        </label>
+        ${checked ? `<select class="form-input" style="max-width:200px;padding:6px 10px" onchange="compAssignEvent('${tid}','${st.replace(/'/g,"\\'")}',this.value)"><option value="">¿En qué sesión?</option>${plan.sessions.map(s=>`<option value="${s.id}" ${ev.sessionId===s.id?'selected':''}>${(s.label||fmtDateLong(s.date)||'Sesión')}</option>`).join('')}</select>` : ''}
+      </div>`;
+    }).join('') + `</div>`;
+    // Avisos de límites
+    const total = plan.events.length;
+    let warns = [];
+    if(total>6) warns.push(`⚠️ Tienes <strong>${total}</strong> pruebas marcadas — el límite suele ser <strong>6</strong>.`);
+    // por sesión (regla ~2 individuales por jornada)
+    plan.sessions.forEach(s=>{
+      const c = plan.events.filter(e=>e.sessionId===s.id).length;
+      if(c>2) warns.push(`⚠️ La sesión <strong>${s.label||fmtDateLong(s.date)}</strong> tiene <strong>${c}</strong> pruebas (revisa el máx. 2 por jornada).`);
+    });
+    const unassigned = plan.events.filter(e=>!e.sessionId).length;
+    if(unassigned) warns.push(`ℹ️ ${unassigned} prueba(s) sin asignar a una sesión.`);
+    h += `<div style="margin-top:10px;font-size:12px;color:var(--text2)">Marcadas: <strong>${total}</strong>/6</div>`;
+    if(warns.length) h += `<div style="margin-top:8px;background:rgba(217,48,37,0.06);border:1px solid rgba(217,48,37,0.25);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.7">${warns.join('<br>')}</div>`;
+  }
+  el.innerHTML = h;
+}
+function compSetDates(tid){
+  const plan = getCompPlan(tid);
+  plan.startDate = document.getElementById('cp-start').value;
+  plan.endDate = document.getElementById('cp-end').value;
+  saveCompPlan(tid, plan); renderComp();
+}
+function compAddSession(tid){
+  const plan = getCompPlan(tid);
+  plan.sessions = plan.sessions || [];
+  plan.sessions.push({ id:'s'+Date.now(), date: plan.startDate||'', label:'', warmup:'', comp:'' });
+  saveCompPlan(tid, plan); renderComp();
+}
+function compRemoveSession(tid, sid){
+  const plan = getCompPlan(tid);
+  plan.sessions = plan.sessions.filter(s=>s.id!==sid);
+  plan.events = (plan.events||[]).map(e=> e.sessionId===sid ? {...e, sessionId:''} : e);
+  saveCompPlan(tid, plan); renderComp();
+}
+function compUpdSession(tid, sid, field, value){
+  const plan = getCompPlan(tid);
+  const s = plan.sessions.find(x=>x.id===sid); if(s){ s[field]=value; saveCompPlan(tid, plan); renderComp(); }
+}
+function compToggleEvent(tid, style, checked){
+  const plan = getCompPlan(tid); plan.events = plan.events||[];
+  if(checked){ if(!plan.events.find(e=>e.style===style)) plan.events.push({style, sessionId:''}); }
+  else { plan.events = plan.events.filter(e=>e.style!==style); }
+  saveCompPlan(tid, plan); renderComp();
+}
+function compAssignEvent(tid, style, sessionId){
+  const plan = getCompPlan(tid); const e = (plan.events||[]).find(x=>x.style===style);
+  if(e){ e.sessionId = sessionId; saveCompPlan(tid, plan); renderComp(); }
+}
+// ── Cuenta regresiva 7 días ──
+function renderCompCountdown(plan){
+  const el = document.getElementById('comp-countdown');
+  if(!plan.startDate){ el.innerHTML = '<p style="font-size:12.5px;color:var(--text3)">Pon la fecha de inicio para ver la cuenta regresiva.</p>'; return; }
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Día</th><th>Fecha</th><th>Enfoque (cada vez más estricto)</th></tr></thead>
+    <tbody>${TAPER.map(p=>`<tr>
+      <td style="white-space:nowrap;font-weight:700">${p.n} D-${p.d}</td>
+      <td style="white-space:nowrap;text-transform:capitalize">${fmtDateLong(addDaysISO(plan.startDate, -p.d))}</td>
+      <td style="font-size:12.5px">${p.foco}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>
+  <div style="margin-top:10px;font-size:11.5px;color:var(--text3)">🎒 <strong>Maleta (D-1):</strong> 2 gorros, gafas, vestido (+ repuesto), toalla, sandalias, uniforme del club, Titanium, agua, banano y snacks, abrigo, y la lista de pruebas/horas.</div>`;
+}
+// ── Días de competencia ──
+function compSessionPlan(s){
+  const out = [];
+  const comp = s.comp ? parseHM(s.comp) : null;
+  const warm = s.warmup ? parseHM(s.warmup) : null;
+  const morning = (comp!=null) ? comp < 12*60 : (warm!=null && warm < 11*60);
+  if(morning && warm!=null){
+    const wake = warm - 120;
+    out.push(['🌅 Levantarse', fmtHM(wake)]);
+    out.push(['🍳 Desayuno fácil de digerir (avena/tostada/banano)', fmtHM(wake+15)]);
+    out.push(['💧 Hidratar (agua / Titanium a sorbos)', fmtHM(wake+20)]);
+  } else if(!morning && comp!=null){
+    out.push(['🍽️ Almuerzo ligero 3–4 h antes', fmtHM(comp-210)]);
+    out.push(['🥪 Snack ligero ~1.5 h antes', fmtHM(comp-90)]);
+  }
+  if(warm!=null) out.push(['🏊 Estar en la piscina — calentamiento', s.warmup]);
+  if(comp!=null){
+    out.push(['⏱️ Presentarse 30 min antes (Oficial Mayor)', fmtHM(comp-30)]);
+    out.push(['🚦 Inicio de competencia', s.comp]);
+  }
+  out.push(['🥤 Tras cada prueba: recuperación + Titanium', '—']);
+  return out;
+}
+function renderCompDays(plan){
+  const el = document.getElementById('comp-days');
+  const ss = (plan.sessions||[]).filter(s=>s.warmup||s.comp).slice().sort((a,b)=>((a.date||'')+ (a.comp||'')).localeCompare((b.date||'')+(b.comp||'')));
+  if(!ss.length){ el.innerHTML='<p style="font-size:12.5px;color:var(--text3)">Agrega sesiones con sus horas para ver el plan de cada día.</p>'; return; }
+  el.innerHTML = ss.map(s=>{
+    const evs = (plan.events||[]).filter(e=>e.sessionId===s.id).map(e=>e.style);
+    const steps = compSessionPlan(s);
+    return `<div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+      <div style="font-weight:700;margin-bottom:4px;text-transform:capitalize">${s.label||fmtDateLong(s.date)||'Sesión'} ${s.comp?`· comp. ${s.comp}`:''}</div>
+      ${evs.length?`<div style="font-size:12px;color:var(--cyan);margin-bottom:8px">Pruebas: ${evs.join(' · ')}</div>`:''}
+      <div style="display:flex;flex-direction:column;gap:4px">${steps.map(([t,h])=>`<div style="display:flex;justify-content:space-between;gap:10px;font-size:12.5px;border-bottom:1px solid var(--border);padding:4px 0"><span>${t}</span><span style="font-weight:700;white-space:nowrap">${h}</span></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+// ── Vista Hoy ──
+function renderCompToday(plan){
+  const card = document.getElementById('comp-today-card'), el = document.getElementById('comp-today');
+  if(!plan.startDate){ card.style.display='none'; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  const start = new Date(plan.startDate+'T00:00:00');
+  const end = new Date((plan.endDate||plan.startDate)+'T00:00:00');
+  const dayMs = 86400000;
+  const diff = Math.round((start - today)/dayMs);
+  card.style.display='';
+  if(today >= start && today <= end){
+    const todayISO = today.toISOString().slice(0,10);
+    const todaySessions = (plan.sessions||[]).filter(s=>s.date===todayISO && (s.warmup||s.comp));
+    el.innerHTML = `<div style="font-weight:700;color:var(--green);margin-bottom:8px">🏁 ¡Hoy es día de competencia!</div>` +
+      (todaySessions.length ? todaySessions.map(s=>{
+        const steps = compSessionPlan(s);
+        return `<div style="font-weight:600;margin:6px 0;text-transform:capitalize">${s.label||'Sesión'}</div>` + steps.map(([t,h])=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0"><span>${t}</span><span style="font-weight:700">${h}</span></div>`).join('');
+      }).join('') : `<div style="font-size:12.5px;color:var(--text3)">No hay sesiones registradas para hoy.</div>`);
+  } else if(diff > 0 && diff <= 7){
+    const p = TAPER.find(x=>x.d===diff);
+    el.innerHTML = `<div style="font-weight:700;margin-bottom:6px">Faltan <span style="color:var(--cyan)">${diff}</span> día(s) — <strong>${p?p.n+' D-'+diff:''}</strong></div><div style="font-size:13px;color:var(--text2);line-height:1.6">${p?p.foco:'Sigue tu rutina y cuida hidratación y sueño.'}</div>`;
+  } else if(diff > 7){
+    el.innerHTML = `<div style="font-size:13px;color:var(--text2)">Faltan <strong>${diff}</strong> días. El plan estricto arranca <strong>7 días antes</strong> (${fmtDateLong(addDaysISO(plan.startDate,-7))}). Por ahora: rutina normal, buena hidratación y sueño.</div>`;
+  } else {
+    el.innerHTML = `<div style="font-size:13px;color:var(--text2)">El torneo ya pasó. ¡A recuperar! 💪 Comida con proteína + carbohidratos y buen descanso.</div>`;
+  }
+}
+// ── Reglas fijas ──
+function renderCompRules(){
+  document.getElementById('comp-rules').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div style="background:rgba(26,138,69,0.06);border:1px solid rgba(26,138,69,0.25);border-radius:var(--radius);padding:12px 14px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ Sí</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.7">Carbohidratos (arroz, pasta, papa, avena, pan, fruta) · proteína magra (pollo, huevo, pescado, lácteos) · verduras suaves · <strong>agua</strong> todo el día · Titanium alrededor del entreno/competencia.</div>
+      </div>
+      <div style="background:rgba(217,48,37,0.05);border:1px solid rgba(217,48,37,0.25);border-radius:var(--radius);padding:12px 14px">
+        <div style="font-weight:700;color:var(--red);margin-bottom:6px">🚫 Evitar antes de competir</div>
+        <div style="font-size:12.5px;color:var(--text2);line-height:1.7">Frito / grasoso · exceso de fibra · comidas nuevas o desconocidas · mucha azúcar de golpe · gaseosas / energizantes · muy condimentado.</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;font-size:12.5px;color:var(--text2);line-height:1.7">
+      <strong>Cómo:</strong> comida fuerte ~3–4 h antes de nadar; snack ligero ~1–1.5 h antes; recuperación (carbo+proteína) dentro de ~1 h después. Hidratar a sorbos, sin llegar llena.<br>
+      <span style="color:var(--text3)">🩺 Guía general. Revísala con el entrenador y un pediatra/nutricionista. Sin cafeína ni suplementos ergogénicos en menores.</span>
+    </div>`;
+}
+// ── Rutina (modal) ──
+function openRoutineModal(){
+  const R = getRoutine();
+  document.getElementById('rt-wake').value = R.wake;
+  document.getElementById('rt-sleep').value = R.sleep;
+  document.getElementById('rt-breakfast').value = R.breakfast;
+  document.getElementById('rt-snackam').value = R.snackam;
+  document.getElementById('rt-lunch').value = R.lunch;
+  document.getElementById('rt-snackpm').value = R.snackpm;
+  document.getElementById('rt-dinner').value = R.dinner;
+  openModal('routine-modal');
+}
+function saveRoutine(){
+  const obj = {
+    wake:document.getElementById('rt-wake').value, sleep:document.getElementById('rt-sleep').value,
+    breakfast:document.getElementById('rt-breakfast').value, snackam:document.getElementById('rt-snackam').value,
+    lunch:document.getElementById('rt-lunch').value, snackpm:document.getElementById('rt-snackpm').value,
+    dinner:document.getElementById('rt-dinner').value
+  };
+  fbDB.ref('routine').set(obj).then(()=>{ routine=obj; showToast('Rutina guardada ✓','success'); closeModal('routine-modal'); if(currentCompTid) renderComp(); });
+}
+// ── Exportar al calendario (.ics) ──
+function icsDT(iso, hm){ return iso.replace(/-/g,'') + 'T' + (hm||'08:00').replace(':','') + '00'; }
+function icsEsc(s){ return String(s).replace(/[\\,;]/g,m=>'\\'+m).replace(/\n/g,'\\n'); }
+function exportCompICS(){
+  const tid = currentCompTid; if(!tid){ showToast('Selecciona un torneo','error'); return; }
+  const t = tournaments.find(x=>String(x.id)===String(tid));
+  const plan = getCompPlan(tid);
+  if(!plan.startDate){ showToast('Pon la fecha de inicio','error'); return; }
+  let ev = [];
+  const add = (iso, hm, title, desc, alarmMin) => {
+    ev.push(['BEGIN:VEVENT','UID:'+Math.random().toString(36).slice(2)+'@swimtracker','DTSTAMP:'+icsDT(new Date().toISOString().slice(0,10),'08:00'),
+      'DTSTART:'+icsDT(iso,hm),'DTEND:'+icsDT(iso, fmtHM(parseHM(hm)+15)),'SUMMARY:'+icsEsc(title),'DESCRIPTION:'+icsEsc(desc||''),
+      'BEGIN:VALARM','TRIGGER:-PT'+(alarmMin||0)+'M','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'END:VALARM','END:VEVENT'].join('\r\n'));
+  };
+  // 7 días de cuenta regresiva (recordatorio diario)
+  TAPER.forEach(p=>{ add(addDaysISO(plan.startDate,-p.d),'09:00',`🏊 D-${p.d} ${t.name}`, p.foco, 0); });
+  add(addDaysISO(plan.startDate,-1),'18:00','🎒 Alistar maleta — '+t.name,'Gorros, gafas, vestido+repuesto, toalla, sandalias, uniforme, Titanium, agua, snacks, lista de pruebas.',0);
+  // Días de competencia
+  (plan.sessions||[]).forEach(s=>{
+    if(!s.date) return;
+    compSessionPlan(s).forEach(([title,hm])=>{ if(hm && hm!=='—') add(s.date, hm, title+' — '+(s.label||t.name), 'Plan de competencia', 10); });
+  });
+  const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SwimTracker Pro//ES','CALSCALE:GREGORIAN', ...ev, 'END:VCALENDAR'].join('\r\n');
+  const blob = new Blob([ics], {type:'text/calendar'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'plan-'+(t.name||'torneo').replace(/[^a-z0-9]/gi,'_')+'.ics'; a.click();
+  showToast('Calendario descargado ✓ ábrelo para agregar los recordatorios','success');
+}
+
 function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass = document.getElementById('login-pass').value;
