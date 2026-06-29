@@ -829,17 +829,17 @@ tr:last-child td { border-bottom:none; }
       <div class="section-title">📍 Hoy</div>
       <div id="comp-today"></div>
     </div>
+    <div class="card" style="margin-bottom:20px;border:2px solid var(--cyan);background:rgba(26,111,196,0.05)">
+      <div class="section-title" style="color:var(--cyan)">⭐ Recomendaciones clave</div>
+      <div id="comp-rules"></div>
+    </div>
     <div class="card" style="margin-bottom:20px">
-      <div class="section-title">📅 Plan día por día (7 días antes)</div>
+      <div class="section-title">📅 Plan día por día <span style="font-weight:400;font-size:12px;color:var(--text3)">— toca un día para ver el detalle</span></div>
       <div id="comp-countdown"></div>
     </div>
-    <div class="card" style="margin-bottom:20px">
+    <div class="card">
       <div class="section-title">🥤 Jugos y batidos que ayudan</div>
       <div id="comp-juices"></div>
-    </div>
-    <div class="card">
-      <div class="section-title">🥗 Reglas generales</div>
-      <div id="comp-rules"></div>
     </div>
   </div>
   <div id="comp-empty" class="empty-state">
@@ -2889,11 +2889,14 @@ const NUTRI = {
      cena:'(TEMPRANA ~7:30 pm) Pasta o arroz blanco + pollo sin salsas pesadas. Baja en grasa y fibra.', evitar:'Frito, gaseosa, comidas nuevas, mucha fibra/picante.'}
 };
 const JUICES = [
-  {n:'🥤 Jugo de remolacha', ing:'Remolacha + naranja (o manzana) + un toque de jengibre + agua.', when:'2–3 h antes del entreno fuerte o de competir (sobre todo D-3 a D-1 y el día del torneo).', why:'Nitratos → mejoran el flujo de sangre y la resistencia.'},
-  {n:'🍒 Cereza ácida (tart cherry)', ing:'Cerezas ácidas naturales (o concentrado natural) + agua.', when:'En la noche, después del entreno.', why:'Antioxidantes → ayudan a la recuperación muscular y al sueño.'},
-  {n:'🍌🥛 Batido de recuperación', ing:'Leche + banano + avena + cacao.', when:'Apenas termina el entreno fuerte.', why:'Carbohidrato + proteína → recuperación.'},
-  {n:'🍉 Jugo de sandía', ing:'Sandía natural (sin azúcar añadida).', when:'Días calurosos / para hidratar.', why:'Hidratación + citrulina.'},
-  {n:'🍊🥕 Naranja + zanahoria', ing:'Naranja + zanahoria + agua.', when:'En el desayuno o media mañana.', why:'Vitamina C y antioxidantes → defensas.'}
+  {cat:'entreno', n:'🍌 Snack pre-entreno', ing:'Banano (o fruta) + un poco de avena.', when:'~1 h antes del entreno.', why:'Energía rápida para entrenar mejor.'},
+  {cat:'entreno', n:'💧 Hidratación en el entreno', ing:'Agua o Titanium (electrolitos).', when:'A sorbos durante el entreno, sobre todo si es largo.', why:'Evita la deshidratación y los calambres.'},
+  {cat:'entreno', n:'🍌🥛 Batido de recuperación', ing:'Leche + banano + avena + cacao.', when:'Apenas termina el entreno (todos los días de entreno).', why:'Carbohidrato + proteína → recupera el músculo.'},
+  {cat:'entreno', n:'🧃 Jugo verde suave', ing:'Espinaca + manzana + piña + agua.', when:'Desayuno o media mañana (ocasional).', why:'Vitaminas y minerales.'},
+  {cat:'competencia', n:'🥤 Jugo de remolacha', ing:'Remolacha + naranja (o manzana) + jengibre + agua.', when:'2–3 h antes de competir o del entreno fuerte (D-3 a D-1 y día de torneo).', why:'Nitratos → más resistencia.'},
+  {cat:'competencia', n:'🍒 Cereza ácida (tart cherry)', ing:'Cereza ácida natural + agua.', when:'En la noche, en la semana del torneo.', why:'Recuperación muscular y mejor sueño.'},
+  {cat:'ambos', n:'🍉 Jugo de sandía', ing:'Sandía natural (sin azúcar añadida).', when:'Días calurosos / para hidratar.', why:'Hidratación + citrulina.'},
+  {cat:'ambos', n:'🍊🥕 Naranja + zanahoria', ing:'Naranja + zanahoria + agua.', when:'Desayuno o media mañana.', why:'Vitamina C → defensas.'}
 ];
 function pad2(n){ return String(n).padStart(2,'0'); }
 function parseHM(hm){ const a=(hm||'0:0').split(':'); return (parseInt(a[0])||0)*60+(parseInt(a[1])||0); }
@@ -2942,12 +2945,15 @@ function dayBlock(p,d,date){
 function renderMealPlan(start){
   const el=document.getElementById('comp-countdown');
   if(!start){ el.innerHTML='<p style="font-size:12.5px;color:var(--text3)">Este torneo no tiene fecha. Agrégala en la pestaña Torneos.</p>'; return; }
+  const today=new Date(); today.setHours(0,0,0,0);
+  const diffToday=Math.round((new Date(start+'T00:00:00')-today)/86400000);
+  const openD=(diffToday>=1&&diffToday<=7)?diffToday:7;
   let h='';
   for(let d=7; d>=1; d--){
-    const p=NUTRI[d]; const date=addDaysISO(start,-d);
-    h+='<div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">'+
-       '<div style="font-weight:700;margin-bottom:6px">'+p.lv+' Faltan '+d+' día(s) · <span style="text-transform:capitalize">'+fmtDateLong(date)+'</span></div>'+
-       dayBlock(p,d,date)+'</div>';
+    const p=NUTRI[d]; const date=addDaysISO(start,-d); const isToday=(d===diffToday);
+    h+='<details '+(d===openD?'open':'')+' style="border:1px solid '+(isToday?'var(--cyan)':'var(--border)')+';border-radius:var(--radius);margin-bottom:8px;padding:0 14px">'+
+       '<summary style="padding:12px 0;cursor:pointer;font-weight:700">'+p.lv+' Faltan '+d+' día(s) · <span style="text-transform:capitalize">'+fmtDateLong(date)+'</span>'+(isToday?' <span style="color:var(--cyan)">· HOY</span>':'')+'</summary>'+
+       '<div style="padding-bottom:14px">'+dayBlock(p,d,date)+'</div></details>';
   }
   el.innerHTML=h;
 }
@@ -2971,12 +2977,19 @@ function renderCompToday(t){
 }
 function renderCompJuices(){
   const el=document.getElementById('comp-juices'); if(!el) return;
-  el.innerHTML=JUICES.map(j=>'<div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px">'+
-    '<div style="font-weight:700;margin-bottom:3px">'+j.n+'</div>'+
-    '<div style="font-size:12.5px;color:var(--text2)"><strong>Ingredientes:</strong> '+j.ing+'</div>'+
-    '<div style="font-size:12.5px;color:var(--text2)"><strong>Cuándo:</strong> '+j.when+'</div>'+
-    '<div style="font-size:12px;color:var(--text3)">'+j.why+'</div></div>').join('')+
-    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">🩺 Como alimentos naturales están bien; nada de suplementos concentrados sin aval del pediatra/nutricionista.</div>';
+  const groups=[['entreno','🏊 Para el entrenamiento (día a día)'],['competencia','🏆 Para la semana de competencia'],['ambos','🌿 Siempre (hidratación y defensas)']];
+  let h='';
+  groups.forEach(g=>{
+    const items=JUICES.filter(j=>j.cat===g[0]); if(!items.length) return;
+    h+='<div style="font-weight:700;margin:12px 0 6px;color:var(--cyan)">'+g[1]+'</div>';
+    h+=items.map(j=>'<div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px">'+
+      '<div style="font-weight:700;margin-bottom:3px">'+j.n+'</div>'+
+      '<div style="font-size:12.5px;color:var(--text2)"><strong>Ingredientes:</strong> '+j.ing+'</div>'+
+      '<div style="font-size:12.5px;color:var(--text2)"><strong>Cuándo:</strong> '+j.when+'</div>'+
+      '<div style="font-size:12px;color:var(--text3)">'+j.why+'</div></div>').join('');
+  });
+  h+='<div style="font-size:11.5px;color:var(--text3);margin-top:4px">🩺 Como alimentos naturales están bien; nada de suplementos concentrados sin aval del pediatra/nutricionista.</div>';
+  el.innerHTML=h;
 }
 function renderCompRules(){
   document.getElementById('comp-rules').innerHTML=
