@@ -4,3 +4,6 @@ swimtracker/
 *backup*.json
 *restaurado*.json
 __pycache__/
+
+PROYECTO.md
+*.pdf
