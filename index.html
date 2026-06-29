@@ -823,11 +823,7 @@ tr:last-child td { border-bottom:none; }
       <button class="btn btn-primary" id="comp-ics-btn" onclick="exportCompICS()" style="display:none">🔔 Activar avisos (calendario)</button>
     </div>
   </div>
-  <div class="analysis-selector">
-    <select class="form-select" id="comp-tournament" onchange="loadComp()" style="max-width:320px">
-      <option value="">— Seleccionar torneo —</option>
-    </select>
-  </div>
+  <div id="comp-tourinfo" style="margin:4px 0 18px;font-size:14px;color:var(--text2)"></div>
   <div id="comp-content" style="display:none">
     <div class="card" id="comp-today-card" style="margin-bottom:20px;display:none">
       <div class="section-title">📍 Hoy</div>
@@ -836,6 +832,10 @@ tr:last-child td { border-bottom:none; }
     <div class="card" style="margin-bottom:20px">
       <div class="section-title">📅 Plan día por día (7 días antes)</div>
       <div id="comp-countdown"></div>
+    </div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">🥤 Jugos y batidos que ayudan</div>
+      <div id="comp-juices"></div>
     </div>
     <div class="card">
       <div class="section-title">🥗 Reglas generales</div>
@@ -1282,7 +1282,7 @@ function switchTab(tab) {
   if (tab === 'calendario') renderCalendar();
   if (tab === 'analisis') refreshAnalysisSelect();
   if (tab === 'estilos') refreshEstilosSelects();
-  if (tab === 'competencia') refreshCompSelect();
+  if (tab === 'competencia') loadComp();
 }
 function openBackupDrawer() { document.getElementById('backup-drawer').classList.add('open'); }
 function closeBackupDrawer() { document.getElementById('backup-drawer').classList.remove('open'); }
@@ -2852,42 +2852,49 @@ async function importBackup(input) {
 // PLAN ALIMENTICIO (se activa 7 días antes del torneo)
 // ════════════════════════════════════════════════════════════
 const MEALS = [
-  ['desayuno','\U0001F373 Desayuno','breakfast'],
-  ['media','\U0001F34E Media mañana','snackam'],
-  ['almuerzo','\U0001F37D️ Almuerzo','lunch'],
-  ['onces','\U0001F96A Onces','snackpm'],
-  ['cena','\U0001F35D Cena','dinner']
+  ['desayuno','🍳 Desayuno','breakfast'],
+  ['media','🍎 Media mañana','snackam'],
+  ['almuerzo','🍽️ Almuerzo','lunch'],
+  ['onces','🥪 Onces','snackpm'],
+  ['cena','🍝 Cena','dinner']
 ];
 const NUTRI = {
-  7:{lv:'\U0001F7E2',foco:'Arranca el enfoque: come limpio e hidrátate bien (~2–2.5 L de agua al día).',
+  7:{lv:'🟢',foco:'Arranca el enfoque: come limpio e hidrátate bien (~2–2.5 L de agua al día).',
      desayuno:'Avena con fruta + huevo + pan integral. Agua.', media:'Fruta + yogur (o frutos secos).',
      almuerzo:'Arroz o pasta + pollo/pescado + verduras + fruta.', onces:'Sándwich integral o fruta con lácteo.',
      cena:'Proteína magra + carbohidrato suave + verduras (no muy pesada).', evitar:'Frito, paquetes/chatarra, gaseosa.'},
-  6:{lv:'\U0001F7E2',foco:'Sigue limpio. Hidratación constante todo el día.',
+  6:{lv:'🟢',foco:'Sigue limpio. Hidratación constante todo el día.',
      desayuno:'Huevos + arepa/pan integral + fruta. Agua.', media:'Fruta + puñado de frutos secos.',
      almuerzo:'Arroz + pollo o carne magra + verduras cocidas + fruta.', onces:'Yogur con granola o fruta.',
      cena:'Pescado/pollo + papa o arroz + verduras.', evitar:'Frito, dulces en exceso, gaseosa.'},
-  5:{lv:'\U0001F7E1',foco:'REGLA: nada de comidas nuevas hasta después del torneo. Dormir 9.5–10 h.',
+  5:{lv:'🟡',foco:'REGLA: nada de comidas nuevas hasta después del torneo. Dormir 9.5–10 h.',
      desayuno:'Avena + fruta + huevo. Agua.', media:'Fruta + lácteo.',
      almuerzo:'Pasta o arroz + pollo + verduras suaves.', onces:'Pan integral con queso o fruta.',
      cena:'Proteína magra + carbohidrato + verduras.', evitar:'Comidas nuevas, frito, gaseosa.'},
-  4:{lv:'\U0001F7E1',foco:'Comida limpia con buenos carbohidratos. Acostarse temprano.',
+  4:{lv:'🟡',foco:'Comida limpia con buenos carbohidratos. Acostarse temprano.',
      desayuno:'Avena/tostadas + fruta + huevo.', media:'Fruta + yogur.',
      almuerzo:'Arroz/pasta (buena porción) + pollo + verduras.', onces:'Fruta + lácteo o sándwich.',
      cena:'Carbohidrato suave + proteína magra (ligera).', evitar:'Frito, fibra muy pesada en la noche.'},
-  3:{lv:'\U0001F7E0',foco:'Sube carbohidratos, baja grasa y fibra pesada. Hidratar alto.',
+  3:{lv:'🟠',foco:'Sube carbohidratos, baja grasa y fibra pesada. Hidratar alto.',
      desayuno:'Avena con banano + huevo. Agua.', media:'Banano o fruta.',
      almuerzo:'Más arroz/pasta + pollo a la plancha + verdura cocida (evita ensaladas crudas grandes).', onces:'Pan blanco con queso o fruta.',
      cena:'Arroz o pasta + proteína magra, poca grasa.', evitar:'Frito, salsas pesadas, exceso de fibra/ensaladas crudas.'},
-  2:{lv:'\U0001F7E0',foco:'CARGAR ENERGÍA: carbohidratos protagonistas en cada comida. Mucha agua. Revisa la maleta.',
+  2:{lv:'🟠',foco:'CARGAR ENERGÍA: carbohidratos protagonistas en cada comida. Mucha agua. Revisa la maleta.',
      desayuno:'Avena + pan/tostadas + fruta + algo de huevo.', media:'Banano + fruta.',
      almuerzo:'Buena porción de pasta/arroz/papa + pollo (moderado) + verdura suave.', onces:'Pan o galletas simples + fruta.',
      cena:'Pasta o arroz (carga) + proteína magra ligera.', evitar:'Frito, mucha grasa, fibra pesada, gaseosa.'},
-  1:{lv:'\U0001F534',foco:'Víspera: carbohidratos + proteína magra. Cena TEMPRANA y baja en grasa. Nada nuevo. \U0001F392 Maleta. Dormir muy temprano.',
+  1:{lv:'🔴',foco:'Víspera: carbohidratos + proteína magra. Cena TEMPRANA y baja en grasa. Nada nuevo. 🎒 Maleta. Dormir muy temprano.',
      desayuno:'Avena + fruta + huevo.', media:'Banano o fruta.',
      almuerzo:'Arroz/pasta + pollo a la plancha + verdura cocida.', onces:'Fruta + pan simple.',
      cena:'(TEMPRANA ~7:30 pm) Pasta o arroz blanco + pollo sin salsas pesadas. Baja en grasa y fibra.', evitar:'Frito, gaseosa, comidas nuevas, mucha fibra/picante.'}
 };
+const JUICES = [
+  {n:'🥤 Jugo de remolacha', ing:'Remolacha + naranja (o manzana) + un toque de jengibre + agua.', when:'2–3 h antes del entreno fuerte o de competir (sobre todo D-3 a D-1 y el día del torneo).', why:'Nitratos → mejoran el flujo de sangre y la resistencia.'},
+  {n:'🍒 Cereza ácida (tart cherry)', ing:'Cerezas ácidas naturales (o concentrado natural) + agua.', when:'En la noche, después del entreno.', why:'Antioxidantes → ayudan a la recuperación muscular y al sueño.'},
+  {n:'🍌🥛 Batido de recuperación', ing:'Leche + banano + avena + cacao.', when:'Apenas termina el entreno fuerte.', why:'Carbohidrato + proteína → recuperación.'},
+  {n:'🍉 Jugo de sandía', ing:'Sandía natural (sin azúcar añadida).', when:'Días calurosos / para hidratar.', why:'Hidratación + citrulina.'},
+  {n:'🍊🥕 Naranja + zanahoria', ing:'Naranja + zanahoria + agua.', when:'En el desayuno o media mañana.', why:'Vitamina C y antioxidantes → defensas.'}
+];
 function pad2(n){ return String(n).padStart(2,'0'); }
 function parseHM(hm){ const a=(hm||'0:0').split(':'); return (parseInt(a[0])||0)*60+(parseInt(a[1])||0); }
 function fmtHM(min){ min=((min%1440)+1440)%1440; return pad2(Math.floor(min/60))+':'+pad2(min%60); }
@@ -2895,26 +2902,42 @@ function addDaysISO(iso,n){ const d=new Date(iso+'T12:00:00'); d.setDate(d.getDa
 function fmtDateLong(iso){ if(!iso) return ''; const d=new Date(iso+'T12:00:00'); return d.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'short'}); }
 function getRoutine(){ return Object.assign({}, DEFAULT_ROUTINE, routine); }
 function mealTime(routineKey,d){ const R=getRoutine(); if(d===1 && routineKey==='dinner') return '19:30'; return R[routineKey]||''; }
-function refreshCompSelect(){
-  const sel=document.getElementById('comp-tournament'); if(!sel) return;
-  const cur=sel.value||currentCompTid;
-  sel.innerHTML='<option value="">— Seleccionar torneo —</option>'+tournaments.map(t=>`<option value="${t.id}">${t.name} (${t.date||'sin fecha'})</option>`).join('');
-  if(cur && tournaments.some(t=>String(t.id)===String(cur))){ sel.value=cur; loadComp(); }
+function trainingFor(iso){
+  const dow=new Date(iso+'T12:00:00').getDay();
+  if(dow===1) return {txt:'Descanso (movilidad suave)', post:''};
+  if(dow===0||dow===6) return {txt:'Agua 12:00–14:00', post:'14:15'};
+  return {txt:'Seco 17:00–18:00 + Piscina 18:00–20:00', post:'20:20'};
+}
+function nextTournament(){
+  const today=new Date().toISOString().slice(0,10);
+  const up=tournaments.filter(t=>t.date && (t.end_date||t.date)>=today).sort((a,b)=>a.date.localeCompare(b.date));
+  return up[0]||null;
 }
 function loadComp(){
-  const sel=document.getElementById('comp-tournament'); if(!sel) return;
-  currentCompTid=sel.value;
+  const info=document.getElementById('comp-tourinfo');
   const empty=document.getElementById('comp-empty'), content=document.getElementById('comp-content'), ics=document.getElementById('comp-ics-btn');
-  if(!currentCompTid){ content.style.display='none'; empty.style.display=''; ics.style.display='none'; return; }
+  if(!content) return;
+  const t=nextTournament();
+  if(!t){ currentCompTid=''; content.style.display='none'; ics.style.display='none'; empty.style.display=''; empty.querySelector('p').textContent='No hay torneos próximos. Crea uno (con fecha) en la pestaña Torneos y el plan se activará solo.'; if(info) info.innerHTML=''; return; }
+  currentCompTid=t.id;
+  if(info) info.innerHTML='🏁 Próximo torneo: <strong>'+t.name+'</strong> · <span style="text-transform:capitalize">'+fmtDateLong(t.date)+'</span>'+((t.end_date&&t.end_date!==t.date)?(' – <span style="text-transform:capitalize">'+fmtDateLong(t.end_date)+'</span>'):'');
   content.style.display=''; empty.style.display='none'; ics.style.display='';
   renderComp();
 }
 function renderComp(){
   const t=tournaments.find(x=>String(x.id)===String(currentCompTid)); if(!t) return;
-  renderCompToday(t); renderMealPlan(t.date); renderCompRules();
+  renderCompToday(t); renderMealPlan(t.date); renderCompJuices(); renderCompRules();
 }
 function mealRow(p,k,label,rk,d){
-  return `<div style="display:flex;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="min-width:140px;font-weight:600">${label} <span style="color:var(--text3);font-weight:400">${mealTime(rk,d)}</span></span><span style="flex:1;color:var(--text2)">${p[k]}</span></div>`;
+  return '<div style="display:flex;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="min-width:140px;font-weight:600">'+label+' <span style="color:var(--text3);font-weight:400">'+mealTime(rk,d)+'</span></span><span style="flex:1;color:var(--text2)">'+p[k]+'</span></div>';
+}
+function dayBlock(p,d,date){
+  const tr=trainingFor(date);
+  return '<div style="font-size:12px;color:var(--text2);margin-bottom:8px">'+p.foco+'</div>'+
+    '<div style="font-size:12px;color:var(--cyan);margin-bottom:8px">🏊 Entreno: '+tr.txt+'</div>'+
+    MEALS.map(m=>mealRow(p,m[0],m[1],m[2],d)).join('')+
+    (tr.post?'<div style="font-size:12px;color:var(--teal);margin-top:8px">🥤 Recuperación tras el entreno (~'+tr.post+'): batido de leche + banano + avena.</div>':'')+
+    '<div style="font-size:12px;color:var(--red);margin-top:6px">🚫 Evita: '+p.evitar+'</div>';
 }
 function renderMealPlan(start){
   const el=document.getElementById('comp-countdown');
@@ -2922,12 +2945,9 @@ function renderMealPlan(start){
   let h='';
   for(let d=7; d>=1; d--){
     const p=NUTRI[d]; const date=addDaysISO(start,-d);
-    h+=`<div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
-      <div style="font-weight:700;margin-bottom:6px">${p.lv} Faltan ${d} día(s) · <span style="text-transform:capitalize">${fmtDateLong(date)}</span></div>
-      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">${p.foco}</div>
-      ${MEALS.map(m=>mealRow(p,m[0],m[1],m[2],d)).join('')}
-      <div style="font-size:12px;color:var(--red);margin-top:8px">\U0001F6AB Evita: ${p.evitar}</div>
-    </div>`;
+    h+='<div style="border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">'+
+       '<div style="font-weight:700;margin-bottom:6px">'+p.lv+' Faltan '+d+' día(s) · <span style="text-transform:capitalize">'+fmtDateLong(date)+'</span></div>'+
+       dayBlock(p,d,date)+'</div>';
   }
   el.innerHTML=h;
 }
@@ -2939,35 +2959,38 @@ function renderCompToday(t){
   const diff=Math.round((start-today)/86400000);
   card.style.display='';
   if(diff>=1 && diff<=7){
-    const p=NUTRI[diff];
-    el.innerHTML=`<div style="font-weight:700;margin-bottom:6px">\U0001F514 Faltan <span style="color:var(--cyan)">${diff}</span> día(s) para <strong>${t.name}</strong> — hoy ${p.lv}</div>
-      <div style="font-size:12.5px;color:var(--text2);margin-bottom:10px">${p.foco}</div>
-      ${MEALS.map(m=>mealRow(p,m[0],m[1],m[2],diff)).join('')}
-      <div style="font-size:12px;color:var(--red);margin-top:8px">\U0001F6AB Evita: ${p.evitar}</div>`;
+    const p=NUTRI[diff]; const dateISO=today.toISOString().slice(0,10);
+    el.innerHTML='<div style="font-weight:700;margin-bottom:6px">🔔 Faltan <span style="color:var(--cyan)">'+diff+'</span> día(s) para <strong>'+t.name+'</strong> — hoy '+p.lv+'</div>'+dayBlock(p,diff,dateISO);
   } else if(today>=start && today<=end){
-    el.innerHTML=`<div style="font-weight:700;color:var(--green);margin-bottom:6px">\U0001F3C1 ¡Hoy es día de torneo!</div><div style="font-size:12.5px;color:var(--text2);line-height:1.6">Come ligero 3–4 h antes de nadar (carbohidratos fáciles + algo de proteína, bajo en grasa). Snack ligero ~1.5 h antes. Hidrata a sorbos (agua/Titanium). Después de cada prueba: recuperación (carbo+proteína). Buen descanso para el día siguiente.</div>`;
+    el.innerHTML='<div style="font-weight:700;color:var(--green);margin-bottom:6px">🏁 ¡Hoy es día de torneo!</div><div style="font-size:12.5px;color:var(--text2);line-height:1.6">Come ligero 3–4 h antes de nadar (carbohidratos fáciles + algo de proteína, bajo en grasa). Snack ligero ~1.5 h antes. Hidrata a sorbos (agua/Titanium). Después de cada prueba: recuperación (carbo+proteína). Buen descanso para el día siguiente.</div>';
   } else if(diff>7){
-    el.innerHTML=`<div style="font-size:13px;color:var(--text2)">Faltan <strong>${diff}</strong> días para ${t.name}. El plan estricto arranca <strong>7 días antes</strong> (<span style="text-transform:capitalize">${fmtDateLong(addDaysISO(t.date,-7))}</span>). Por ahora: comida balanceada, buena hidratación y sueño.</div>`;
+    el.innerHTML='<div style="font-size:13px;color:var(--text2)">Faltan <strong>'+diff+'</strong> días para '+t.name+'. El plan estricto arranca <strong>7 días antes</strong> (<span style="text-transform:capitalize">'+fmtDateLong(addDaysISO(t.date,-7))+'</span>). Por ahora: comida balanceada, buena hidratación y sueño.</div>';
   } else {
-    el.innerHTML=`<div style="font-size:13px;color:var(--text2)">El torneo ya pasó. ¡A recuperar! \U0001F4AA Proteína + carbohidratos y buen descanso.</div>`;
+    el.innerHTML='<div style="font-size:13px;color:var(--text2)">El torneo ya pasó. ¡A recuperar! 💪 Proteína + carbohidratos y buen descanso.</div>';
   }
 }
+function renderCompJuices(){
+  const el=document.getElementById('comp-juices'); if(!el) return;
+  el.innerHTML=JUICES.map(j=>'<div style="border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px">'+
+    '<div style="font-weight:700;margin-bottom:3px">'+j.n+'</div>'+
+    '<div style="font-size:12.5px;color:var(--text2)"><strong>Ingredientes:</strong> '+j.ing+'</div>'+
+    '<div style="font-size:12.5px;color:var(--text2)"><strong>Cuándo:</strong> '+j.when+'</div>'+
+    '<div style="font-size:12px;color:var(--text3)">'+j.why+'</div></div>').join('')+
+    '<div style="font-size:11.5px;color:var(--text3);margin-top:4px">🩺 Como alimentos naturales están bien; nada de suplementos concentrados sin aval del pediatra/nutricionista.</div>';
+}
 function renderCompRules(){
-  document.getElementById('comp-rules').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div style="background:rgba(26,138,69,0.06);border:1px solid rgba(26,138,69,0.25);border-radius:var(--radius);padding:12px 14px">
-        <div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ Sí</div>
-        <div style="font-size:12.5px;color:var(--text2);line-height:1.7">Carbohidratos (arroz, pasta, papa, avena, pan, fruta) · proteína magra (pollo, huevo, pescado, lácteos) · verduras suaves · <strong>agua</strong> todo el día · Titanium alrededor del entreno/competencia.</div>
-      </div>
-      <div style="background:rgba(217,48,37,0.05);border:1px solid rgba(217,48,37,0.25);border-radius:var(--radius);padding:12px 14px">
-        <div style="font-weight:700;color:var(--red);margin-bottom:6px">\U0001F6AB Evitar antes de competir</div>
-        <div style="font-size:12.5px;color:var(--text2);line-height:1.7">Frito/grasoso · exceso de fibra · comidas nuevas o desconocidas · mucha azúcar de golpe · gaseosas/energizantes · muy condimentado.</div>
-      </div>
-    </div>
-    <div style="margin-top:12px;font-size:12.5px;color:var(--text2);line-height:1.7">
-      <strong>Cómo:</strong> comida fuerte ~3–4 h antes de nadar; snack ligero ~1–1.5 h antes; recuperación (carbo+proteína) dentro de ~1 h después. Hidratar a sorbos, sin llegar llena.<br>
-      <span style="color:var(--text3)">\U0001FA7A Guía general. Revísala con el entrenador y un pediatra/nutricionista. Sin cafeína ni suplementos en menores.</span>
-    </div>`;
+  document.getElementById('comp-rules').innerHTML=
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'+
+      '<div style="background:rgba(26,138,69,0.06);border:1px solid rgba(26,138,69,0.25);border-radius:var(--radius);padding:12px 14px">'+
+        '<div style="font-weight:700;color:var(--green);margin-bottom:6px">✅ Sí</div>'+
+        '<div style="font-size:12.5px;color:var(--text2);line-height:1.7">Carbohidratos (arroz, pasta, papa, avena, pan, fruta) · proteína magra (pollo, huevo, pescado, lácteos) · verduras suaves · <strong>agua</strong> todo el día · Titanium alrededor del entreno/competencia.</div>'+
+      '</div>'+
+      '<div style="background:rgba(217,48,37,0.05);border:1px solid rgba(217,48,37,0.25);border-radius:var(--radius);padding:12px 14px">'+
+        '<div style="font-weight:700;color:var(--red);margin-bottom:6px">🚫 Evitar antes de competir</div>'+
+        '<div style="font-size:12.5px;color:var(--text2);line-height:1.7">Frito/grasoso · exceso de fibra · comidas nuevas o desconocidas · mucha azúcar de golpe · gaseosas/energizantes · muy condimentado.</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="margin-top:12px;font-size:12.5px;color:var(--text2);line-height:1.7"><strong>Cómo:</strong> comida fuerte ~3–4 h antes de nadar; snack ligero ~1–1.5 h antes; recuperación (carbo+proteína) dentro de ~1 h después. Hidratar a sorbos, sin llegar llena.<br><span style="color:var(--text3)">🩺 Guía general. Revísala con el entrenador y un pediatra/nutricionista. Sin cafeína ni suplementos en menores.</span></div>';
 }
 function openRoutineModal(){
   const R=getRoutine();
@@ -2980,23 +3003,25 @@ function openRoutineModal(){
 function saveRoutine(){
   const g=id=>document.getElementById(id).value;
   const obj={ wake:g('rt-wake'), sleep:g('rt-sleep'), breakfast:g('rt-breakfast'), snackam:g('rt-snackam'), lunch:g('rt-lunch'), snackpm:g('rt-snackpm'), dinner:g('rt-dinner') };
-  fbDB.ref('routine').set(obj).then(()=>{ routine=obj; showToast('Horarios guardados ✓','success'); closeModal('routine-modal'); if(currentCompTid) renderComp(); });
+  fbDB.ref('routine').set(obj).then(()=>{ routine=obj; showToast('Horarios guardados ✓','success'); closeModal('routine-modal'); loadComp(); });
 }
 function icsDT(iso,hm){ return iso.replace(/-/g,'')+'T'+(hm||'08:00').replace(':','')+'00'; }
 function icsEsc(s){ return String(s).replace(/[\\,;]/g,function(m){return '\\'+m;}).replace(/\n/g,'\\n'); }
 function exportCompICS(){
   const t=tournaments.find(x=>String(x.id)===String(currentCompTid));
-  if(!t){ showToast('Selecciona un torneo','error'); return; }
+  if(!t){ showToast('No hay torneo próximo','error'); return; }
   if(!t.date){ showToast('El torneo no tiene fecha','error'); return; }
   const R=getRoutine(); let ev=[];
   const add=(iso,hm,title,desc)=>{ if(!hm) return; ev.push(['BEGIN:VEVENT','UID:'+Math.random().toString(36).slice(2)+'@swimtracker','DTSTAMP:'+icsDT(new Date().toISOString().slice(0,10),'08:00'),'DTSTART:'+icsDT(iso,hm),'DTEND:'+icsDT(iso,fmtHM(parseHM(hm)+20)),'SUMMARY:'+icsEsc(title),'DESCRIPTION:'+icsEsc(desc||''),'BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(title),'END:VALARM','END:VEVENT'].join('\r\n')); };
   for(let d=7; d>=1; d--){
-    const p=NUTRI[d]; const date=addDaysISO(t.date,-d);
-    if(d===7) add(date, R.wake||'08:00', '\U0001F957 Empieza tu plan: faltan 7 días ('+t.name+')', p.foco);
-    MEALS.forEach(m=>{ add(date, mealTime(m[2],d), m[1]+' (faltan '+d+')', p[m[0]]+'   \U0001F6AB Evita: '+p.evitar); });
-    add(date, (d===1?'21:30':(R.sleep||'23:00')), '\U0001F319 A dormir (faltan '+d+')', 'Dormir bien es clave para rendir.'+(d<=2?' Acuéstate temprano.':''));
+    const p=NUTRI[d]; const date=addDaysISO(t.date,-d); const tr=trainingFor(date);
+    if(d===7) add(date, R.wake||'08:00', '🥗 Empieza tu plan: faltan 7 días ('+t.name+')', p.foco);
+    MEALS.forEach(m=>{ add(date, mealTime(m[2],d), m[1]+' (faltan '+d+')', p[m[0]]+'   🚫 Evita: '+p.evitar); });
+    if(d<=3) add(date, '14:30', '🥤 Jugo de remolacha (faltan '+d+')', 'Remolacha + naranja + jengibre, ~2–3 h antes del entreno. Ayuda a la resistencia.');
+    if(tr.post) add(date, tr.post, '🥤 Recuperación post-entreno (faltan '+d+')', 'Batido de leche + banano + avena (carbo+proteína).');
+    add(date, (d===1?'21:30':(R.sleep||'23:00')), '🌙 A dormir (faltan '+d+')', 'Dormir bien es clave.'+(d<=2?' Acuéstate temprano.':'')+' Opcional: jugo de cereza ácida.');
   }
-  add(addDaysISO(t.date,-1),'18:00','\U0001F392 Alistar maleta ('+t.name+')','Gorros, gafas, vestido+repuesto, toalla, sandalias, uniforme, Titanium, agua, snacks, lista de pruebas.');
+  add(addDaysISO(t.date,-1),'18:00','🎒 Alistar maleta ('+t.name+')','Gorros, gafas, vestido+repuesto, toalla, sandalias, uniforme, Titanium, agua, snacks, lista de pruebas.');
   const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SwimTracker Pro//ES','CALSCALE:GREGORIAN'].concat(ev).concat(['END:VCALENDAR']).join('\r\n');
   const blob=new Blob([ics],{type:'text/calendar'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='plan-alimenticio-'+(t.name||'torneo').replace(/[^a-z0-9]/gi,'_')+'.ics'; a.click();
