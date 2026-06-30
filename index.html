@@ -629,9 +629,10 @@ tr:last-child td { border-bottom:none; }
         <div class="chrono-controls">
           <button class="btn btn-primary" id="btn-chrono-start" onclick="chronoStart()" disabled>▶ Iniciar</button>
           <button class="btn btn-secondary" id="btn-chrono-split" onclick="chronoSplit()" disabled>⚑ Parcial</button>
+          <button class="btn btn-success" id="btn-chrono-use" onclick="chronoFinish()" disabled>🏁 Finalizar</button>
           <button class="btn btn-secondary" onclick="chronoReset()">↺ Reiniciar</button>
-          <button class="btn btn-success" id="btn-chrono-use" onclick="chronoUse()" disabled>✓ Usar Tiempo</button>
         </div>
+        <div style="font-size:11.5px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.6">💡 Toca <strong>⚑ Parcial</strong> en cada 50 m (no en el último). Al terminar, <strong>🏁 Finalizar</strong> agrega el último 50 solo. Luego, abajo, dale <strong>💾 Guardar Tiempo</strong>.</div>
         <div id="parciales-container" style="display:none">
           <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase">Parciales registrados (cada 50m)</div>
           <div class="parciales-list" id="parciales-list"></div>
@@ -643,7 +644,8 @@ tr:last-child td { border-bottom:none; }
         <div class="chart-container" style="height:200px"><canvas id="chart-parciales-hist"></canvas></div>
       </div>
       <div class="card">
-        <div class="section-title">⌨️ Ingresar Tiempo</div>
+        <div class="section-title">⌨️ Ingresar / Guardar Tiempo</div>
+        <div style="font-size:11.5px;color:var(--text3);margin-bottom:10px">Aquí se <strong>guarda</strong> el tiempo (venga del cronómetro o escrito a mano). Revisa y dale Guardar.</div>
         <div class="form-group">
           <label class="form-label">Tiempo * (ej: 1:25.50 o 25.50)</label>
           <input class="form-input" id="tr-time" type="text" placeholder="1:25.50">
@@ -1034,9 +1036,10 @@ tr:last-child td { border-bottom:none; }
         <label class="form-label">Tiempo (MM:SS.cc o SS.cc)</label>
         <input class="form-input" id="te-time" type="text" placeholder="1:25.50">
       </div>
-      <div id="te-splits-section" style="display:none">
-        <div class="section-title">⚑ Parciales registrados</div>
-        <div id="te-splits-list" class="parciales-list"></div>
+      <div id="te-splits-section">
+        <div class="section-title" style="font-size:14px">⚑ Parciales (50 m) — editables</div>
+        <div id="te-splits-list"></div>
+        <button class="btn btn-secondary btn-sm" type="button" onclick="addEditSplit()" style="margin-top:6px">+ Agregar parcial</button>
       </div>
     </div>
     <div class="modal-footer">
@@ -1638,25 +1641,27 @@ function chronoStart() {
     chronoRunning = true;
     document.getElementById('btn-chrono-start').textContent = '⏸ Pausar';
     document.getElementById('btn-chrono-split').disabled = false;
-    document.getElementById('btn-chrono-use').disabled = true;
+    document.getElementById('btn-chrono-use').disabled = false;
     document.getElementById('chrono-display').classList.add('running');
   }
 }
+function renderParcialesList(){
+  const list=document.getElementById('parciales-list');
+  document.getElementById('parciales-container').style.display = parciales.length ? '' : 'none';
+  let html='';
+  for(let i=0;i<parciales.length;i++){
+    const v=parciales[i]; const prev=i>0?parciales[i-1]:null; const diff=prev!=null?(v-prev):null;
+    html+='<div class="parcial-item"><span>Parcial '+(i+1)+' ('+((i+1)*50)+'m)</span><span style="color:var(--cyan)">'+formatTime(v)+'</span>'+(diff!==null?'<span style="color:'+(diff<=0?'var(--green)':'var(--red)')+'">Δ'+(diff>=0?'+':'')+diff.toFixed(2)+'s</span>':'')+'</div>';
+  }
+  list.innerHTML=html; list.scrollTop=list.scrollHeight;
+}
 function chronoSplit() {
-  const elapsed = chronoElapsed + (Date.now() - chronoStartTime);
-  const splitTime = elapsed - parcialesBase;
+  const elapsed = chronoElapsed + (chronoRunning ? (Date.now() - chronoStartTime) : 0);
+  const splitTime = (elapsed - parcialesBase) / 1000;
+  if(splitTime<=0) return;
   parcialesBase = elapsed;
-  parciales.push(splitTime / 1000);
-  const list = document.getElementById('parciales-list');
-  document.getElementById('parciales-container').style.display = '';
-  const prev = parciales.length > 1 ? parciales[parciales.length-2] : null;
-  const diff = prev ? (splitTime/1000 - prev) : null;
-  list.innerHTML += `<div class="parcial-item">
-    <span>Parcial ${parciales.length} (${(parciales.length)*50}m)</span>
-    <span style="color:var(--cyan)">${formatTime(splitTime/1000)}</span>
-    ${diff !== null ? `<span style="color:${diff<=0?'var(--green)':'var(--red)'}">Δ${diff>=0?'+':''}${diff.toFixed(2)}s</span>` : ''}
-  </div>`;
-  list.scrollTop = list.scrollHeight;
+  parciales.push(splitTime);
+  renderParcialesList();
 }
 function chronoReset() {
   clearInterval(chronoInterval); chronoRunning = false; chronoElapsed = 0; parcialesBase = 0; parciales = [];
@@ -1667,14 +1672,24 @@ function chronoReset() {
   document.getElementById('btn-chrono-use').disabled = true;
   document.getElementById('parciales-list').innerHTML = '';
   document.getElementById('parciales-container').style.display = 'none';
+  checkChronoReady();
 }
-function chronoUse() {
+function chronoFinish() {
+  if(chronoRunning){ chronoElapsed += Date.now()-chronoStartTime; clearInterval(chronoInterval); chronoRunning=false; }
   const elapsed = chronoElapsed;
-  const m = Math.floor(elapsed / 60000);
-  const s = (elapsed % 60000) / 1000;
-  const timeStr = m > 0 ? `${m}:${s.toFixed(2).padStart(5,'0')}` : s.toFixed(2);
-  document.getElementById('tr-time').value = timeStr;
-  showToast('Tiempo transferido al formulario', 'info');
+  if(elapsed<=0){ showToast('Primero inicia el cronómetro','error'); return; }
+  const finalSeg = (elapsed - parcialesBase) / 1000;
+  if(finalSeg>0.05){ parciales.push(finalSeg); parcialesBase = elapsed; }
+  renderParcialesList();
+  const m = Math.floor(elapsed/60000); const sec = (elapsed%60000)/1000;
+  const ts = m>0 ? (m+':'+sec.toFixed(2).padStart(5,'0')) : sec.toFixed(2);
+  document.getElementById('tr-time').value = ts;
+  document.getElementById('chrono-display').textContent = m>0 ? ts : ('00:'+sec.toFixed(2).padStart(5,'0'));
+  document.getElementById('chrono-display').classList.remove('running');
+  document.getElementById('btn-chrono-start').disabled = true;
+  document.getElementById('btn-chrono-split').disabled = true;
+  document.getElementById('btn-chrono-use').disabled = true;
+  showToast('🏁 Finalizado. Revisa los parciales y dale 💾 Guardar Tiempo','success');
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1755,22 +1770,24 @@ function openTimeEdit(id) {
   document.getElementById('te-info').innerHTML = `
     <strong>${t.swimmer_name}</strong> — ${t.tournament_name} (${t.tournament_date})<br>
     <span class="tag" style="margin-top:4px">${t.style}</span>`;
-  const splitsSec = document.getElementById('te-splits-section');
-  const splitsList = document.getElementById('te-splits-list');
-  if (t.splits && t.splits.length) {
-    splitsSec.style.display = '';
-    splitsList.innerHTML = t.splits.map((s,i) => `<div class="parcial-item">
-      <span>Parcial ${i+1} — ${(i+1)*50}m</span>
-      <span style="color:var(--cyan);font-weight:600">${formatTime(s.split_time)}s</span>
-    </div>`).join('');
-  } else { splitsSec.style.display = 'none'; }
+  editSplits = (t.splits||[]).map(s=>s.split_time);
+  renderEditSplits();
   openModal('time-edit-modal');
 }
+let editSplits = [];
+function renderEditSplits(){
+  const list=document.getElementById('te-splits-list'); if(!list) return;
+  if(!editSplits.length){ list.innerHTML='<div style="font-size:12px;color:var(--text3);margin-bottom:6px">Sin parciales. Puedes agregarlos con el botón de abajo.</div>'; return; }
+  list.innerHTML=editSplits.map((v,i)=>'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="min-width:120px;font-size:12.5px">Parcial '+(i+1)+' ('+((i+1)*50)+'m)</span><input class="form-input" style="max-width:130px;padding:6px 10px" value="'+formatTime(v)+'" onchange="editSplits['+i+']=parseTime(this.value)"><button class="btn btn-secondary btn-sm" type="button" onclick="removeEditSplit('+i+')" style="color:var(--red)">✕</button></div>').join('');
+}
+function addEditSplit(){ editSplits.push(0); renderEditSplits(); }
+function removeEditSplit(i){ editSplits.splice(i,1); renderEditSplits(); }
 async function updateTime() {
   const timeStr = document.getElementById('te-time').value;
   try {
     const time_seconds = parseTime(timeStr);
-    await fbDB.ref(`time_records/${currentEditId}`).update({ time_seconds });
+    const splits = editSplits.filter(v=>v>0).map((v,i)=>({split_number:i+1, split_time:v}));
+    await fbDB.ref(`time_records/${currentEditId}`).update({ time_seconds, splits });
     showToast('Tiempo actualizado ✓', 'success');
     closeModal('time-edit-modal');
   } catch(e) { showToast('Formato de tiempo inválido', 'error'); }
