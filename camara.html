@@ -403,29 +403,47 @@ window.FB_CONFIG = {
   function setZoom(z){ zoom = Math.max(1, Math.min(6, Math.round(z*10)/10)); }
 
   /* ================= Wiring ================= */
-  /* Forzar orientación horizontal (para grabar apaisado). Requiere fullscreen en Android. */
+  /* ===== Inmersivo: pantalla completa + horizontal (para grabar apaisado) ===== */
+  function isFS(){
+    return document.fullscreenElement || document.webkitFullscreenElement ||
+           document.mozFullScreenElement || document.msFullscreenElement;
+  }
   function lockLandscape(){
     try {
       if (screen.orientation && screen.orientation.lock){
         screen.orientation.lock('landscape').catch(function(){});
+      } else if (screen.lockOrientation || screen.mozLockOrientation || screen.msLockOrientation){
+        (screen.lockOrientation || screen.mozLockOrientation || screen.msLockOrientation).call(screen, 'landscape');
       }
     } catch(e){}
   }
-  /* Pantalla completa: oculta la barra de dirección (requiere un toque del usuario) */
+  /* Pide pantalla completa (oculta la barra de dirección). Requiere gesto del usuario. */
   function goFS(){
+    if (isFS()){ lockLandscape(); return; }
     var el = document.documentElement;
-    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-    if (fn && !document.fullscreenElement && !document.webkitFullscreenElement){
-      try {
-        var p = fn.call(el);
-        if (p && p.then) { p.then(lockLandscape).catch(lockLandscape); }
-        else { lockLandscape(); }
-      } catch(e){ lockLandscape(); }
-    } else {
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen ||
+             el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (!fn){ lockLandscape(); return; }
+    try {
+      var p = fn.call(el);
+      if (p && p.then){ p.then(lockLandscape).catch(lockLandscape); }
+      else { setTimeout(lockLandscape, 150); } // webkit no devuelve promesa
+    } catch(e){ lockLandscape(); }
+  }
+  /* Reintenta en CADA toque hasta lograr pantalla completa (algunos gestos no cuentan). */
+  function onTapImmersive(){ goFS(); }
+  document.addEventListener('pointerdown', onTapImmersive, true);
+  function onFSChange(){
+    if (isFS()){
       lockLandscape();
+      document.removeEventListener('pointerdown', onTapImmersive, true);
+      if (msg.textContent.indexOf('pantalla completa') > -1) say('');
     }
   }
-  window.addEventListener('pointerdown', goFS, { once:true });
+  document.addEventListener('fullscreenchange', onFSChange);
+  document.addEventListener('webkitfullscreenchange', onFSChange);
+  /* Si el sistema intenta volver a vertical, re-forzar horizontal. */
+  window.addEventListener('orientationchange', function(){ if (isFS()) lockLandscape(); });
 
   /* Modo: Completo (grabar + tiempos) / Solo grabar (los tiempos los toma STP) */
   function applyMode(){
@@ -471,6 +489,8 @@ window.FB_CONFIG = {
     await startCam();
     await listCams();
     draw();
+    // Aviso: hace falta un toque para entrar a pantalla completa + horizontal.
+    if (!isFS()) say('👆 Toca la pantalla para pantalla completa (horizontal)');
   })();
 })();
 </script>
