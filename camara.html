@@ -273,7 +273,12 @@ window.FB_CONFIG = {
     document.getElementById('stopc').disabled = !chrono.running;
   }
   function cronoAction(){
-    if (!chrono.running){ cGo(); return; }
+    if (!chrono.running){
+      // Seguridad: el cronómetro NO corre sin grabación. Si no está grabando, arranca ya.
+      if (!recording) startRec();
+      cGo();
+      return;
+    }
     if (atLastLap()){ cStop(); return; } // último parcial = finalizar y parar
     cLap();
   }
