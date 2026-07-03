@@ -241,36 +241,41 @@ window.FB_CONFIG = {
   }
 
   /* ================= Cronómetro ================= */
+  // ¿Ya se dieron todos los parciales a mano? (el último lo agrega Finalizar/Stop)
+  function atLastLap(){ return MAXLAPS && chrono.laps.length >= MAXLAPS - 1; }
   function cGo(){
     chrono.start = performance.now() - chrono.elapsed*1000;
     chrono.running = true;
-    setC(true);
+    updateCrono();
   }
   function cLap(){
     if (!chrono.running) return;
-    // El último parcial lo agrega ■ Stop, así que a mano solo se permiten MAXLAPS-1.
-    if (MAXLAPS && chrono.laps.length >= MAXLAPS - 1){
-      say('Ya tienes ' + (MAXLAPS - 1) + ' parciales. Usa ■ Stop para el último.');
-      setTimeout(function(){ say(''); }, 2500);
-      return;
-    }
+    if (atLastLap()) return; // seguridad: no pasar del límite
     chrono.laps.push(+chrono.elapsed.toFixed(2));
+    updateCrono();
   }
   function cStop(){
     if (!chrono.running) return;
     chrono.running = false;
-    chrono.laps.push(+chrono.elapsed.toFixed(2)); // toque final
-    setC(false);
+    chrono.laps.push(+chrono.elapsed.toFixed(2)); // toque final (el último parcial)
+    updateCrono();
   }
   function cReset(){
     chrono.running = false; chrono.elapsed = 0; chrono.laps = [];
-    setC(false);
+    updateCrono();
   }
-  function setC(run){
+  // El botón "crono": Iniciar → ⊕ Parcial → (al llegar al último) 🏁 Finalizar.
+  function updateCrono(){
     var c = document.getElementById('crono');
-    c.textContent = run ? '⊕ Parcial' : '▶ Iniciar';
-    c.classList.toggle('run', run);
-    document.getElementById('stopc').disabled = !run;
+    if (!chrono.running){ c.textContent = '▶ Iniciar'; c.classList.remove('run'); }
+    else if (atLastLap()){ c.textContent = '🏁 Finalizar'; c.classList.add('run'); }
+    else { c.textContent = '⊕ Parcial'; c.classList.add('run'); }
+    document.getElementById('stopc').disabled = !chrono.running;
+  }
+  function cronoAction(){
+    if (!chrono.running){ cGo(); return; }
+    if (atLastLap()){ cStop(); return; } // último parcial = finalizar y parar
+    cLap();
   }
 
   /* ================= Grabación (graba el CANVAS = con overlay) ================= */
@@ -459,7 +464,7 @@ window.FB_CONFIG = {
     applyMode();
   };
 
-  document.getElementById('crono').onclick = function(){ chrono.running ? cLap() : cGo(); };
+  document.getElementById('crono').onclick = cronoAction;
   document.getElementById('stopc').onclick = cStop;
   document.getElementById('reset').onclick = cReset;
   document.getElementById('rec').onclick = function(){ recording ? stopRec() : startRec(); };

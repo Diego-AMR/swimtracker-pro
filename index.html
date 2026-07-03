@@ -1668,7 +1668,8 @@ function chronoStart() {
     chronoInterval = setInterval(chronoTick, 10);
     chronoRunning = true;
     document.getElementById('btn-chrono-start').textContent = '⏸ Pausar';
-    document.getElementById('btn-chrono-split').disabled = false;
+    const Nstart = maxSplitsForCurrent();
+    document.getElementById('btn-chrono-split').disabled = !!(Nstart && Nstart <= 1); // 50 m no tiene parciales intermedios
     document.getElementById('btn-chrono-use').disabled = false;
     document.getElementById('chrono-display').classList.add('running');
   }
@@ -1697,6 +1698,11 @@ function chronoSplit() {
   parcialesBase = elapsed;
   parciales.push(splitTime);
   renderParcialesList();
+  // Si ya se dieron todos los parciales a mano (N-1), deshabilitar ⚑ y guiar a 🏁 Finalizar.
+  if (N && parciales.length >= N - 1) {
+    document.getElementById('btn-chrono-split').disabled = true;
+    showToast('Listo los parciales. Ahora dale 🏁 Finalizar para el último y parar.', 'info');
+  }
 }
 function chronoReset() {
   clearInterval(chronoInterval); chronoRunning = false; chronoElapsed = 0; parcialesBase = 0; parciales = [];
