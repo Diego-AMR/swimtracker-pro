@@ -259,9 +259,11 @@ window.FB_CONFIG = {
     chrono.running = false;
     chrono.laps.push(+chrono.elapsed.toFixed(2)); // toque final (el último parcial)
     updateCrono();
+    autoSaveTimes(); // al Finalizar, guarda los tiempos en STP de una vez
   }
   function cReset(){
     chrono.running = false; chrono.elapsed = 0; chrono.laps = [];
+    timesSaved = false;
     updateCrono();
   }
   // El botón "crono": Iniciar → ⊕ Parcial → (al llegar al último) 🏁 Finalizar.
@@ -316,7 +318,7 @@ window.FB_CONFIG = {
     b.textContent = on ? '■ Detener' : '● Grabar';
     b.classList.toggle('on', on);
   }
-  var lastRace = null;
+  var lastRace = null, timesSaved = false;
   function showResult(blob){
     var url = URL.createObjectURL(blob);
     var ext = (blob.type.indexOf('mp4')>-1) ? 'mp4' : 'webm';
@@ -331,6 +333,8 @@ window.FB_CONFIG = {
     lastRace = buildRace(label, stamp, fname); // registro de tiempos para STP/Firebase
     prepFbButton();
     document.getElementById('result').style.display = 'flex';
+    // Guardar el video de una (el navegador lo maneja como descarga). El botón ⬇ queda de respaldo.
+    try { dl.click(); } catch(e){}
   }
   function fromCum(cum){ var o=[],p=0; for(var i=0;i<cum.length;i++){ o.push(+(cum[i]-p).toFixed(2)); p=cum[i]; } return o; }
   function buildRace(label, stamp, videoName){
@@ -355,6 +359,11 @@ window.FB_CONFIG = {
     if (mode !== 'full' || !lastRace || !lastRace.splits.length){
       btn.style.display = 'none';
       st.textContent = 'Modo "Solo grabar": los parciales los registra STP.';
+      return;
+    }
+    if (timesSaved){   // ya se guardaron al Finalizar
+      btn.style.display = 'none';
+      st.textContent = '✔ Tiempos ya guardados en STP ✓';
       return;
     }
     btn.style.display = '';
@@ -383,6 +392,7 @@ window.FB_CONFIG = {
   function saveRace(){
     if (!lastRace) return;
     var btn = document.getElementById('fbsave'), st = document.getElementById('fbstatus');
+    if (timesSaved){ st.textContent = '✔ Tiempos ya guardados en STP ✓'; btn.style.display = 'none'; return; }
     if (!fbReady){ st.textContent = '⚠ Firebase no disponible (revisa la conexión).'; return; }
     if (!authUser){ st.textContent = '⚠ Inicia sesión en STP (misma pestaña/sitio) para guardar.'; return; }
     if (!PARAMS.swimmer_id || !PARAMS.tournament_id || !PARAMS.style){
@@ -403,10 +413,37 @@ window.FB_CONFIG = {
     };
     try {
       var p = db.ref('time_records').push(rec);                              // misma forma que STP
+      timesSaved = true;
       st.textContent = '✔ Guardado. Aparecerá en STP (sube a la nube al haber internet).';
       p.then(function(){ st.textContent = '✔ Sincronizado con STP ✓'; })
        .catch(function(){ st.textContent = '✔ Guardado local · pendiente de subir.'; });
     } catch(e){ btn.disabled = false; st.textContent = '⚠ ' + e.message; }
+  }
+  /* Guardado automático de tiempos al darle 🏁 Finalizar (modo Completo).
+     Silencioso: si falta login o datos, no molesta y el botón ☁️ queda de respaldo. */
+  function autoSaveTimes(){
+    if (mode !== 'full' || timesSaved) return;
+    var cum = chrono.laps.slice();
+    if (!cum.length) return;
+    if (!fbReady || !authUser) return;                                        // sin login → usar ☁️
+    if (!PARAMS.swimmer_id || !PARAMS.tournament_id || !PARAMS.style) return;
+    var rec = {
+      swimmer_id: PARAMS.swimmer_id,
+      tournament_id: PARAMS.tournament_id,
+      style: PARAMS.style,
+      time_seconds: cum[cum.length-1],
+      splits: fromCum(cum).map(function(t,i){ return { split_number:i+1, split_time:t }; }),
+      pool_length: parseInt(PARAMS.pool, 10) || null,
+      notes: 'Video',
+      source: 'video',
+      created_at: new Date().toISOString()
+    };
+    try {
+      db.ref('time_records').push(rec);
+      timesSaved = true;
+      say('✔ Tiempos guardados en STP ✓');
+      setTimeout(function(){ if (msg.textContent.indexOf('guardados') > -1) say(''); }, 3000);
+    } catch(e){}
   }
 
   /* ================= Zoom (solo + / –) ================= */
