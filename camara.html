@@ -130,6 +130,12 @@ window.FB_CONFIG = {
     return q;
   })();
 
+  /* Nº total de parciales = distancia ÷ largo de piscina (viene de STP). 0 = sin límite. */
+  var MAXLAPS = (function(){
+    var d = parseInt(PARAMS.dist, 10), p = parseInt(PARAMS.pool, 10);
+    return (d && p) ? Math.round(d / p) : 0;
+  })();
+
   /* ---------- Cronómetro (independiente de la grabación) ---------- */
   var chrono = { running:false, start:0, elapsed:0, laps:[] }; // laps = acumulados en seg
 
@@ -242,6 +248,12 @@ window.FB_CONFIG = {
   }
   function cLap(){
     if (!chrono.running) return;
+    // El último parcial lo agrega ■ Stop, así que a mano solo se permiten MAXLAPS-1.
+    if (MAXLAPS && chrono.laps.length >= MAXLAPS - 1){
+      say('Ya tienes ' + (MAXLAPS - 1) + ' parciales. Usa ■ Stop para el último.');
+      setTimeout(function(){ say(''); }, 2500);
+      return;
+    }
     chrono.laps.push(+chrono.elapsed.toFixed(2));
   }
   function cStop(){
@@ -374,6 +386,7 @@ window.FB_CONFIG = {
       style: PARAMS.style,
       time_seconds: lastRace.total,
       splits: lastRace.splits.map(function(t,i){ return { split_number:i+1, split_time:t }; }),
+      pool_length: parseInt(PARAMS.pool, 10) || null,
       notes: 'Video',
       source: 'video',
       created_at: new Date().toISOString()
