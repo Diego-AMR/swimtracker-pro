@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Cámara + Cronómetro · SwimTracker Pro</title>
+<style>
+  :root { --accent:#22D3EE; --rec:#EF4444; --ok:#22C55E; --ink:#0B1220; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:#000; color:#fff;
+    font-family:-apple-system,Segoe UI,Roboto,system-ui,sans-serif; overscroll-behavior:none; }
+  #stage { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:#000; }
+  video { display:none; }
+  canvas { max-width:100%; max-height:100%; background:#000; }
+
+  /* Capa de controles (NO se graba: va fuera del canvas) */
+  #ui { position:fixed; inset:0; pointer-events:none; }
+
+  /* Bloque de botones: dos columnas, a la derecha (mano derecha) */
+  .controls { position:absolute; top:50%; right:8px; transform:translateY(-50%);
+    display:grid; grid-template-columns:repeat(2, 82px); gap:7px; pointer-events:auto; }
+  .sq { width:82px; height:52px; border-radius:12px; padding:0;
+    border:1px solid rgba(255,255,255,.22); background:rgba(10,16,32,.55); color:#fff;
+    font-size:12.5px; font-weight:700; backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center; }
+  .sq:disabled { opacity:.35; }
+  .sq.big { font-size:24px; }
+  .sq.rec { background:var(--rec); color:#fff; border:none; }
+  .sq.rec.on { background:#fff; color:var(--rec); }
+  .sq.crono { background:var(--ok); color:#04220f; border:none; }
+  .sq.crono.run { background:var(--accent); color:#04222a; }
+
+  .top { position:absolute; top:0; left:0; right:0; padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
+    display:flex; gap:8px; align-items:center; pointer-events:auto;
+    background:linear-gradient(to bottom, rgba(0,0,0,.5), rgba(0,0,0,0)); }
+  .tag { font-size:12px; font-weight:600; padding:6px 10px; border-radius:999px; color:#fff;
+    font-family:inherit; background:rgba(10,16,32,.6); border:1px solid rgba(255,255,255,.18); }
+  #mode { background:rgba(34,211,238,.18); border-color:rgba(34,211,238,.5); }
+  #recdot { display:none; }
+  #recdot.on { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--rec);
+    animation:blink 1s steps(2,start) infinite; }
+  @keyframes blink { 50%{opacity:0} }
+
+  #msg { position:fixed; left:12px; right:12px; bottom:50%; text-align:center; font-size:14px;
+    color:#fca5a5; pointer-events:none; }
+  #result { position:fixed; inset:0; background:rgba(0,0,0,.92); display:none; flex-direction:column;
+    padding:16px; gap:12px; z-index:10; }
+  #result video { display:block; width:100%; border-radius:12px; background:#000; }
+  #result a, #result button { text-decoration:none; text-align:center; padding:14px; border-radius:12px;
+    font-weight:700; font-size:16px; border:none; }
+  #dl { background:var(--ok); color:#04220f; }
+  #fbsave { background:#2563EB; color:#fff; }
+  #fbsave:disabled { opacity:.5; }
+  #close { background:#334155; color:#fff; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <video id="cam" playsinline muted></video>
+    <canvas id="c"></canvas>
+  </div>
+
+  <div id="ui">
+    <div class="top">
+      <span id="recdot"></span>
+      <button class="tag" id="mode">Modo: Completo</button>
+      <span class="tag" id="header" style="max-width:55vw; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">Toca para editar rótulo ✎</span>
+    </div>
+
+    <div class="controls">
+      <button class="sq rec"   id="rec">● Grabar</button>
+      <button class="sq big"   id="zin">+</button>
+      <button class="sq crono" id="crono">▶ Iniciar</button>
+      <button class="sq big"   id="zout">–</button>
+      <button class="sq"       id="stopc" disabled>■ Stop</button>
+      <button class="sq"       id="reset">↺ Reset</button>
+    </div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div id="result">
+    <video id="preview" controls playsinline></video>
+    <div id="fbstatus" style="text-align:center; font-size:13px; color:#93c5fd; min-height:18px;"></div>
+    <a id="dl" download="prueba-carrera.webm">⬇ Guardar video en el teléfono</a>
+    <button id="fbsave">☁️ Guardar tiempos en STP</button>
+    <button id="close">Cerrar</button>
+  </div>
+
+<!-- Firebase (mismo SDK y proyecto que STP: Realtime Database + Auth compartido) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!-- Config de Firebase incrustada: MISMO proyecto que STP (swimtracker-pro).
+     Mismo origen que index.html → hereda el login automáticamente. -->
+<script>
+window.FB_CONFIG = {
+  apiKey: "AIzaSyB__TYUly11LiwpAAZY0s66Fp6uKnfi6p0",
+  authDomain: "swimtracker-pro.firebaseapp.com",
+  databaseURL: "https://swimtracker-pro-default-rtdb.firebaseio.com",
+  projectId: "swimtracker-pro",
+  storageBucket: "swimtracker-pro.firebasestorage.app",
+  messagingSenderId: "662677087562",
+  appId: "1:662677087562:web:8ce18727dcfe0e9d61cdb3"
+};
+</script>
+
+<script>
+(function(){
+  "use strict";
+  var cam = document.getElementById('cam');
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var msg = document.getElementById('msg');
+  function say(t){ msg.textContent = t || ''; }
+
+  /* ---------- Estado cámara / zoom ---------- */
+  var devices = [], devIdx = 0, stream = null;
+  var zoom = 1;
+  var mode = 'full'; // 'full' = grabar + tiempos | 'rec' = solo grabar
+
+  /* Datos que llegan desde STP por la URL: swimmer_id, tournament_id, style, sname, tname, mode */
+  var PARAMS = (function(){
+    var q = {};
+    location.search.replace(/^\?/,'').split('&').forEach(function(kv){
+      if (!kv) return; var i = kv.indexOf('=');
+      if (i < 0) { q[decodeURIComponent(kv)] = ''; return; }
+      q[decodeURIComponent(kv.slice(0,i))] = decodeURIComponent(kv.slice(i+1).replace(/\+/g,' '));
+    });
+    return q;
+  })();
+
+  /* ---------- Cronómetro (independiente de la grabación) ---------- */
+  var chrono = { running:false, start:0, elapsed:0, laps:[] }; // laps = acumulados en seg
+
+  /* ---------- Grabación ---------- */
+  var recorder = null, chunks = [], recording = false;
+
+  /* ================= Cámara ================= */
+  async function listCams(){
+    try {
+      var all = await navigator.mediaDevices.enumerateDevices();
+      devices = all.filter(function(d){ return d.kind === 'videoinput'; });
+    } catch(e){ devices = []; }
+  }
+
+  async function startCam(){
+    say('Pidiendo cámara…');
+    if (stream) stream.getTracks().forEach(function(t){ t.stop(); });
+    var constraints = {
+      audio: true,
+      video: devices.length && devices[devIdx] && devices[devIdx].deviceId
+        ? { deviceId: { exact: devices[devIdx].deviceId }, width:{ideal:1920}, height:{ideal:1080} }
+        : { facingMode: { ideal:'environment' }, width:{ideal:1920}, height:{ideal:1080} }
+    };
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch(e){
+      say('No se pudo abrir la cámara: ' + e.name + '. ¿Diste permiso? ¿Estás en HTTPS/archivo local?');
+      return;
+    }
+    cam.srcObject = stream;
+    await cam.play().catch(function(){});
+    // refrescar labels de dispositivos (ahora sí con permiso)
+    if (!devices.length){ await listCams(); }
+    say('');
+  }
+
+  /* ================= Dibujo (cámara + overlay) ================= */
+  function fmt(sec){
+    if (sec == null || isNaN(sec)) sec = 0;
+    var m = Math.floor(sec/60), s = sec - m*60;
+    var ss = s.toFixed(2); if (s < 10) ss = '0'+ss;
+    return (m<10?'0'+m:m) + ':' + ss;
+  }
+
+  function draw(){
+    requestAnimationFrame(draw);
+    var vw = cam.videoWidth, vh = cam.videoHeight;
+    if (!vw || !vh) return;
+    if (canvas.width !== vw || canvas.height !== vh){ canvas.width = vw; canvas.height = vh; }
+
+    // Zoom digital: recorto una región central y la estiro a todo el canvas
+    var sw = vw / zoom, sh = vh / zoom;
+    var sx = (vw - sw)/2, sy = (vh - sh)/2;
+    ctx.drawImage(cam, sx, sy, sw, sh, 0, 0, vw, vh);
+
+    // ----- OVERLAY (esto SÍ queda grabado) -----
+    if (chrono.running) chrono.elapsed = (performance.now() - chrono.start)/1000;
+    var t = chrono.elapsed;
+
+    var pad = Math.round(vw*0.02);
+    var big = Math.round(vh*0.075);
+    var small = Math.round(vh*0.035);
+
+    // rótulo superior (quién/prueba/torneo)
+    ctx.font = '600 ' + small + 'px sans-serif';
+    ctx.textBaseline = 'top';
+    var head = document.getElementById('header').dataset.text || '';
+    if (head){
+      var hw = ctx.measureText(head).width;
+      ctx.fillStyle = 'rgba(0,0,0,.45)';
+      ctx.fillRect(pad-8, pad-6, hw+16, small+12);
+      ctx.fillStyle = '#fff'; ctx.fillText(head, pad, pad);
+    }
+
+    // En modo "Solo grabar" no se dibuja el cronómetro ni los parciales (los toma STP).
+    if (mode !== 'full') { ctx.textBaseline = 'top'; return; }
+
+    // cronómetro grande
+    ctx.font = '800 ' + big + 'px sans-serif';
+    var tx = fmt(t);
+    var tw = ctx.measureText(tx).width;
+    var ty = pad + (head?small+16:0);
+    ctx.fillStyle = 'rgba(0,0,0,.45)';
+    ctx.fillRect(pad-8, ty-4, tw+16, big+8);
+    ctx.fillStyle = chrono.running ? '#22D3EE' : '#fff';
+    ctx.fillText(tx, pad, ty);
+
+    // lista de parciales (abajo izquierda)
+    ctx.font = '700 ' + small + 'px sans-serif';
+    ctx.textBaseline = 'bottom';
+    var prev = 0;
+    for (var i=0;i<chrono.laps.length;i++){
+      var cum = chrono.laps[i];
+      var parc = cum - prev; prev = cum;
+      var line = 'P'+(i+1)+'  '+fmt(parc)+'   ('+fmt(cum)+')';
+      var y = vh - pad - (chrono.laps.length-1-i)*(small+8);
+      var lw = ctx.measureText(line).width;
+      ctx.fillStyle='rgba(0,0,0,.45)'; ctx.fillRect(pad-8, y-small-4, lw+16, small+10);
+      ctx.fillStyle='#fff'; ctx.fillText(line, pad, y);
+    }
+    ctx.textBaseline = 'top';
+
+  }
+
+  /* ================= Cronómetro ================= */
+  function cGo(){
+    chrono.start = performance.now() - chrono.elapsed*1000;
+    chrono.running = true;
+    setC(true);
+  }
+  function cLap(){
+    if (!chrono.running) return;
+    chrono.laps.push(+chrono.elapsed.toFixed(2));
+  }
+  function cStop(){
+    if (!chrono.running) return;
+    chrono.running = false;
+    chrono.laps.push(+chrono.elapsed.toFixed(2)); // toque final
+    setC(false);
+  }
+  function cReset(){
+    chrono.running = false; chrono.elapsed = 0; chrono.laps = [];
+    setC(false);
+  }
+  function setC(run){
+    var c = document.getElementById('crono');
+    c.textContent = run ? '⊕ Parcial' : '▶ Iniciar';
+    c.classList.toggle('run', run);
+    document.getElementById('stopc').disabled = !run;
+  }
+
+  /* ================= Grabación (graba el CANVAS = con overlay) ================= */
+  function pickMime(){
+    var opts = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+    for (var i=0;i<opts.length;i++){ if (window.MediaRecorder && MediaRecorder.isTypeSupported(opts[i])) return opts[i]; }
+    return '';
+  }
+  function startRec(){
+    if (!stream){ say('No hay cámara.'); return; }
+    var cstream = canvas.captureStream(30);
+    var mixed = new MediaStream();
+    cstream.getVideoTracks().forEach(function(t){ mixed.addTrack(t); });
+    stream.getAudioTracks().forEach(function(t){ mixed.addTrack(t); }); // sonido del ambiente
+    var mime = pickMime();
+    try { recorder = new MediaRecorder(mixed, mime ? { mimeType:mime } : undefined); }
+    catch(e){ say('MediaRecorder no soportado: '+e.message); return; }
+    chunks = [];
+    recorder.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = function(){
+      var blob = new Blob(chunks, { type: (recorder.mimeType||'video/webm') });
+      showResult(blob);
+    };
+    recorder.start();
+    recording = true; setRecUI(true);
+  }
+  function stopRec(){
+    if (recorder && recording){ recorder.stop(); recording = false; setRecUI(false); }
+  }
+  function setRecUI(on){
+    document.getElementById('recdot').className = on ? 'on' : '';
+    var b = document.getElementById('rec');
+    b.textContent = on ? '■ Detener' : '● Grabar';
+    b.classList.toggle('on', on);
+  }
+  var lastRace = null;
+  function showResult(blob){
+    var url = URL.createObjectURL(blob);
+    var ext = (blob.type.indexOf('mp4')>-1) ? 'mp4' : 'webm';
+    var stamp = new Date();
+    var label = document.getElementById('header').dataset.text || 'carrera';
+    var fname = ('STP ' + label + ' ' + stamp.toISOString().slice(0,10))
+                  .replace(/[^\w\- ]+/g,'').replace(/\s+/g,'_') + '.' + ext;
+
+    var pv = document.getElementById('preview'); pv.src = url;
+    var dl = document.getElementById('dl'); dl.href = url; dl.download = fname;
+
+    lastRace = buildRace(label, stamp, fname); // registro de tiempos para STP/Firebase
+    prepFbButton();
+    document.getElementById('result').style.display = 'flex';
+  }
+  function fromCum(cum){ var o=[],p=0; for(var i=0;i<cum.length;i++){ o.push(+(cum[i]-p).toFixed(2)); p=cum[i]; } return o; }
+  function buildRace(label, stamp, videoName){
+    var cum = chrono.laps.slice();      // tiempos acumulados (desde la salida)
+    return {
+      label: label,
+      date: stamp.toISOString().slice(0,10),
+      createdAt: stamp.getTime(),
+      mode: mode,
+      splitsCum: cum,
+      splits: fromCum(cum),             // parciales por tramo (formato STP)
+      total: cum.length ? cum[cum.length-1] : 0,
+      videoName: videoName,
+      source: 'stp-cam'
+    };
+  }
+  function prepFbButton(){
+    var btn = document.getElementById('fbsave');
+    var st  = document.getElementById('fbstatus');
+    btn.disabled = false;
+    btn.textContent = '☁️ Guardar tiempos en STP';
+    if (mode !== 'full' || !lastRace || !lastRace.splits.length){
+      btn.style.display = 'none';
+      st.textContent = 'Modo "Solo grabar": los parciales los registra STP.';
+      return;
+    }
+    btn.style.display = '';
+    if (!fbReady){ st.textContent = '⚠ Sin conexión a Firebase.'; return; }
+    if (!authUser){ st.textContent = '⚠ Inicia sesión en STP para poder guardar los tiempos.'; return; }
+    st.textContent = 'Listo: ' + lastRace.splits.length + ' parciales · total ' + fmt(lastRace.total)
+                   + (PARAMS.sname ? ' · ' + PARAMS.sname : '');
+  }
+
+  /* ================= Firebase (guarda SOLO los parciales; el video queda en el teléfono) ================= */
+  var db = null, fbReady = false, authUser = null;
+  function fbInit(){
+    try {
+      var cfg = window.FB_CONFIG || {};
+      if (!cfg.databaseURL || !cfg.apiKey) { fbReady = false; return; }       // sin config
+      if (!window.firebase || !firebase.initializeApp) { fbReady = false; return; }
+      firebase.initializeApp(cfg);
+      db = firebase.database();
+      fbReady = true;
+      firebase.auth().onAuthStateChanged(function(u){    // hereda la sesión de STP (mismo origen)
+        authUser = u;
+        if (document.getElementById('result').style.display === 'flex') prepFbButton();
+      });
+    } catch(e) { fbReady = false; }
+  }
+  function saveRace(){
+    if (!lastRace) return;
+    var btn = document.getElementById('fbsave'), st = document.getElementById('fbstatus');
+    if (!fbReady){ st.textContent = '⚠ Firebase no disponible (revisa la conexión).'; return; }
+    if (!authUser){ st.textContent = '⚠ Inicia sesión en STP (misma pestaña/sitio) para guardar.'; return; }
+    if (!PARAMS.swimmer_id || !PARAMS.tournament_id || !PARAMS.style){
+      st.textContent = '⚠ Faltan nadador/torneo/estilo. Abre la cámara desde el botón de STP.';
+      return;
+    }
+    btn.disabled = true;
+    var rec = {
+      swimmer_id: PARAMS.swimmer_id,
+      tournament_id: PARAMS.tournament_id,
+      style: PARAMS.style,
+      time_seconds: lastRace.total,
+      splits: lastRace.splits.map(function(t,i){ return { split_number:i+1, split_time:t }; }),
+      notes: 'Video',
+      source: 'video',
+      created_at: new Date().toISOString()
+    };
+    try {
+      var p = db.ref('time_records').push(rec);                              // misma forma que STP
+      st.textContent = '✔ Guardado. Aparecerá en STP (sube a la nube al haber internet).';
+      p.then(function(){ st.textContent = '✔ Sincronizado con STP ✓'; })
+       .catch(function(){ st.textContent = '✔ Guardado local · pendiente de subir.'; });
+    } catch(e){ btn.disabled = false; st.textContent = '⚠ ' + e.message; }
+  }
+
+  /* ================= Zoom (solo + / –) ================= */
+  function setZoom(z){ zoom = Math.max(1, Math.min(6, Math.round(z*10)/10)); }
+
+  /* ================= Wiring ================= */
+  /* Pantalla completa: oculta la barra de dirección (requiere un toque del usuario) */
+  function goFS(){
+    var el = document.documentElement;
+    var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (fn && !document.fullscreenElement && !document.webkitFullscreenElement){
+      try { fn.call(el); } catch(e){}
+    }
+  }
+  window.addEventListener('pointerdown', goFS, { once:true });
+
+  /* Modo: Completo (grabar + tiempos) / Solo grabar (los tiempos los toma STP) */
+  function applyMode(){
+    var timing = mode === 'full';
+    ['crono','stopc','reset'].forEach(function(id){
+      document.getElementById(id).style.display = timing ? '' : 'none';
+    });
+    document.getElementById('mode').textContent = 'Modo: ' + (timing ? 'Completo' : 'Solo grabar');
+    if (!timing) cReset(); // limpia cronómetro para que no aparezca en el video
+  }
+  document.getElementById('mode').onclick = function(){
+    mode = (mode === 'full') ? 'rec' : 'full';
+    applyMode();
+  };
+
+  document.getElementById('crono').onclick = function(){ chrono.running ? cLap() : cGo(); };
+  document.getElementById('stopc').onclick = cStop;
+  document.getElementById('reset').onclick = cReset;
+  document.getElementById('rec').onclick = function(){ recording ? stopRec() : startRec(); };
+  document.getElementById('zin').onclick  = function(){ setZoom(zoom+0.5); };
+  document.getElementById('zout').onclick = function(){ setZoom(zoom-0.5); };
+  document.getElementById('fbsave').onclick = saveRace;
+  document.getElementById('close').onclick = function(){ document.getElementById('result').style.display='none'; };
+  document.getElementById('header').onclick = function(){
+    var v = prompt('Rótulo (nombre · prueba · torneo):', this.dataset.text || 'Valentina · 200m Libre · Torneo');
+    if (v!=null){ this.dataset.text = v; this.textContent = v || 'Toca para editar rótulo ✎'; }
+  };
+
+  /* ================= Init ================= */
+  (async function(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      say('Este navegador no soporta cámara (getUserMedia). Usa Chrome.'); return;
+    }
+    fbInit();
+    // rótulo automático desde STP (nadador · estilo · torneo) — no se escribe a mano
+    var label = [PARAMS.sname, PARAMS.style, PARAMS.tname].filter(Boolean).join(' · ');
+    if (label){
+      var h = document.getElementById('header');
+      h.dataset.text = label; h.textContent = label;
+    }
+    if (PARAMS.mode === 'rec') mode = 'rec';
+    applyMode();
+    await startCam();
+    await listCams();
+    draw();
+  })();
+})();
+</script>
+</body>
+</html>

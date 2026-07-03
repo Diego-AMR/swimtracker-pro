@@ -7,3 +7,7 @@ __pycache__/
 
 PROYECTO.md
 *.pdf
+
+# Material de desarrollo de la cámara (prototipo, copia de referencia, doc de continuidad).
+# La página real que SÍ se publica es camara.html en la raíz.
+_camara-wip/
