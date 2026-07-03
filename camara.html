@@ -44,8 +44,8 @@
   #msg { position:fixed; left:12px; right:12px; bottom:50%; text-align:center; font-size:14px;
     color:#fca5a5; pointer-events:none; }
   #result { position:fixed; inset:0; background:rgba(0,0,0,.92); display:none; flex-direction:column;
-    padding:16px; gap:12px; z-index:10; }
-  #result video { display:block; width:100%; border-radius:12px; background:#000; }
+    padding:16px; gap:12px; z-index:10; overflow-y:auto; }
+  #result video { display:block; width:100%; max-height:45vh; border-radius:12px; background:#000; }
   #result a, #result button { text-decoration:none; text-align:center; padding:14px; border-radius:12px;
     font-weight:700; font-size:16px; border:none; }
   #dl { background:var(--ok); color:#04220f; }
@@ -82,8 +82,8 @@
   <div id="result">
     <video id="preview" controls playsinline></video>
     <div id="fbstatus" style="text-align:center; font-size:13px; color:#93c5fd; min-height:18px;"></div>
-    <a id="dl" download="prueba-carrera.webm">⬇ Guardar video en el teléfono</a>
     <button id="fbsave">☁️ Guardar tiempos en STP</button>
+    <a id="dl" download="prueba-carrera.webm">⬇ Guardar video en el teléfono</a>
     <button id="close">Cerrar</button>
   </div>
 
@@ -390,12 +390,26 @@ window.FB_CONFIG = {
   function setZoom(z){ zoom = Math.max(1, Math.min(6, Math.round(z*10)/10)); }
 
   /* ================= Wiring ================= */
+  /* Forzar orientación horizontal (para grabar apaisado). Requiere fullscreen en Android. */
+  function lockLandscape(){
+    try {
+      if (screen.orientation && screen.orientation.lock){
+        screen.orientation.lock('landscape').catch(function(){});
+      }
+    } catch(e){}
+  }
   /* Pantalla completa: oculta la barra de dirección (requiere un toque del usuario) */
   function goFS(){
     var el = document.documentElement;
     var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     if (fn && !document.fullscreenElement && !document.webkitFullscreenElement){
-      try { fn.call(el); } catch(e){}
+      try {
+        var p = fn.call(el);
+        if (p && p.then) { p.then(lockLandscape).catch(lockLandscape); }
+        else { lockLandscape(); }
+      } catch(e){ lockLandscape(); }
+    } else {
+      lockLandscape();
     }
   }
   window.addEventListener('pointerdown', goFS, { once:true });

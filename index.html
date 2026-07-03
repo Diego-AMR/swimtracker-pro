@@ -632,7 +632,7 @@ tr:last-child td { border-bottom:none; }
           <button class="btn btn-success" id="btn-chrono-use" onclick="chronoFinish()" disabled>🏁 Finalizar</button>
           <button class="btn btn-secondary" onclick="chronoReset()">↺ Reiniciar</button>
         </div>
-        <button class="btn" id="btn-video" onclick="launchVideo()" disabled style="width:100%;margin:2px 0 10px;background:#7c3aed;color:#fff">📹 Grabar video (con estos datos)</button>
+        <button class="btn" id="btn-video" onclick="launchVideo()" style="width:100%;margin:2px 0 10px;background:#7c3aed;color:#fff">📹 Grabar video (con estos datos)</button>
         <div style="font-size:11.5px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.6">💡 Toca <strong>⚑ Parcial</strong> en cada 50 m (no en el último). Al terminar, <strong>🏁 Finalizar</strong> agrega el último 50 solo. Luego, abajo, dale <strong>💾 Guardar Tiempo</strong>.</div>
         <div id="parciales-container" style="display:none">
           <div style="font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase">Parciales registrados (cada 50m)</div>
@@ -1729,7 +1729,7 @@ function launchVideo() {
   const tnSel = document.getElementById('tr-tournament');
   const stSel = document.getElementById('tr-style');
   const swimmer_id = swSel.value, tournament_id = tnSel.value, style = stSel.value;
-  if (!swimmer_id || !tournament_id || !style) { showToast('Selecciona nadador, torneo y estilo', 'error'); return; }
+  if (!swimmer_id || !tournament_id || !style) { showToast('Primero selecciona nadador, torneo y estilo para poder grabar 📹', 'error'); return; }
   const sname = swSel.selectedOptions[0] ? swSel.selectedOptions[0].text : '';
   const tname = tnSel.selectedOptions[0] ? tnSel.selectedOptions[0].text : '';
   const q = new URLSearchParams({ swimmer_id, tournament_id, style, sname, tname });
@@ -1742,7 +1742,7 @@ function checkChronoReady() {
   const st = document.getElementById('tr-style').value;
   const ready = sw && tn && st;
   document.getElementById('btn-chrono-start').disabled = !ready;
-  const bv = document.getElementById('btn-video'); if (bv) bv.disabled = !ready;
+  // El boton de video queda SIEMPRE activo: si falta seleccion, launchVideo() avisa.
   const lock = document.getElementById('chrono-lock-notice');
   if (lock) lock.style.display = ready ? 'none' : '';
   document.getElementById('chrono-display').style.opacity = ready ? '1' : '0.45';
