@@ -119,6 +119,18 @@ body::before {
 .modal-close:hover { color:var(--text); }
 .modal-body { padding:24px 28px; }
 .modal-footer { padding:16px 28px 24px; display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap; }
+/* Popup "última marca" */
+.lm-head { font-size:14px; color:var(--text2); font-weight:600; margin-bottom:4px; }
+.lm-head span { color:var(--text3); font-weight:400; }
+.lm-time { font-family:var(--font-head); font-size:48px; letter-spacing:2px; color:var(--cyan); line-height:1; margin-bottom:14px; }
+.lm-badge { border-radius:12px; padding:12px 14px; font-size:14px; font-weight:600; margin-bottom:14px; line-height:1.4; }
+.lm-badge.lm-pb { background:rgba(34,197,94,0.14); color:var(--green); border:1px solid rgba(34,197,94,0.35); }
+.lm-badge.lm-new { background:rgba(26,111,196,0.12); color:var(--cyan); border:1px solid rgba(26,111,196,0.35); }
+.lm-badge.lm-off { background:var(--bg3); color:var(--text2); border:1px solid var(--border); }
+.lm-rows { display:flex; flex-direction:column; gap:2px; }
+.lm-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 2px; border-bottom:1px solid var(--border); font-size:13.5px; color:var(--text3); }
+.lm-row:last-child { border-bottom:none; }
+.lm-row b { color:var(--text); font-weight:600; text-align:right; }
 /* SWIMMER CARDS */
 .swimmer-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
 .swimmer-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
@@ -861,6 +873,20 @@ tr:last-child td { border-bottom:none; }
 </main>
 
 <!-- Routine Modal -->
+<div class="modal-overlay" id="lastmark-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">🏁 Última marca</div>
+      <button class="modal-close" onclick="closeLastMark()">✕</button>
+    </div>
+    <div class="modal-body" id="lastmark-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeLastMark()">Cerrar</button>
+      <button class="btn btn-primary" onclick="closeLastMark(); switchTab('analisis')">Ver análisis →</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="routine-modal">
   <div class="modal">
     <div class="modal-header">
@@ -1131,6 +1157,57 @@ function getTimesJoined(swimmer_id = null) {
     .sort((a,b) => (b.tournament_date||'').localeCompare(a.tournament_date||''));
 }
 
+// ── Popup "última marca" ─────────────────────────────────────
+// Muestra un resumen rápido cuando aparece una marca nueva y reciente (por video o manual).
+let _lastMarkShownId = null;
+function maybeShowLastMark() {
+  if (!timesRaw.length || !swimmers.length) return;                 // espera a tener nombres
+  const recent = timesRaw.slice()
+    .filter(r => r.created_at)
+    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))[0];
+  if (!recent) return;
+  const ageMin = (Date.now() - new Date(recent.created_at).getTime()) / 60000;
+  const seen = _lastMarkShownId === recent.id || localStorage.getItem('stp_shownMarkId') === recent.id;
+  if (ageMin > 20 || seen) return;                                  // solo marcas nuevas (<20 min), una vez
+  _lastMarkShownId = recent.id;
+  try { localStorage.setItem('stp_shownMarkId', recent.id); } catch(e){}
+  showLastMark(recent);
+}
+function showLastMark(r) {
+  const sw = swimmers.find(s => String(s.id) === String(r.swimmer_id)) || {};
+  const tn = tournaments.find(t => String(t.id) === String(r.tournament_id)) || {};
+  const pool = r.pool_length || 50;
+  const prev = timesRaw.filter(x => x.id !== r.id && String(x.swimmer_id) === String(r.swimmer_id) && x.style === r.style && x.time_seconds > 0);
+  const prevBest = prev.length ? Math.min(...prev.map(x => x.time_seconds)) : null;
+  let verdict;
+  if (prevBest == null) {
+    verdict = `<div class="lm-badge lm-new">🎉 Primera marca registrada en ${r.style}. ¡Queda como su base!</div>`;
+  } else if (r.time_seconds <= prevBest) {
+    verdict = `<div class="lm-badge lm-pb">🏆 ¡Nuevo mejor tiempo! Bajó <b>${(prevBest - r.time_seconds).toFixed(2)}s</b> sobre su marca anterior (${formatTime(prevBest)}).</div>`;
+  } else {
+    verdict = `<div class="lm-badge lm-off">Quedó a <b>${(r.time_seconds - prevBest).toFixed(2)}s</b> de su mejor marca (${formatTime(prevBest)}).</div>`;
+  }
+  const sp = (r.splits || []).filter(s => s && s.split_time > 0);
+  let splitHtml = '';
+  if (sp.length) {
+    let best = sp[0];
+    sp.forEach(s => { if (s.split_time < best.split_time) best = s; });
+    splitHtml = `<div class="lm-row"><span>⚡ Parcial más rápido</span><b>P${best.split_number} · ${best.split_number * pool}m — ${formatTime(best.split_time)}</b></div>`;
+  }
+  document.getElementById('lastmark-body').innerHTML = `
+    <div class="lm-head">${sw.name || '?'} · ${r.style} <span>${tn.name || ''}</span></div>
+    <div class="lm-time">${formatTime(r.time_seconds)}</div>
+    ${verdict}
+    <div class="lm-rows">
+      <div class="lm-row"><span>Parciales</span><b>${sp.length || 0}${pool ? ' · cada '+pool+'m' : ''}</b></div>
+      ${splitHtml}
+      <div class="lm-row"><span>Estado</span><b style="color:var(--green)">✔ Guardado en la nube</b></div>
+      ${r.source === 'video' ? '<div class="lm-row"><span>Origen</span><b>📹 Video</b></div>' : ''}
+    </div>`;
+  document.getElementById('lastmark-modal').classList.add('open');
+}
+function closeLastMark() { document.getElementById('lastmark-modal').classList.remove('open'); }
+
 // Connection status
 function setConnectionStatus(status) {
   const configs = {
@@ -1160,6 +1237,7 @@ function setupListeners() {
     renderSwimmers();
     refreshAllSelects();
     times = getTimesJoined(); renderTimes();
+    maybeShowLastMark();
   });
 
   // Tournaments
@@ -1168,6 +1246,7 @@ function setupListeners() {
     renderTournaments();
     refreshAllSelects();
     times = getTimesJoined(); renderTimes();
+    maybeShowLastMark();
   });
 
   // Goals
@@ -1181,6 +1260,7 @@ function setupListeners() {
     timesRaw = snapToArray(snap);
     times = getTimesJoined();
     renderTimes();
+    maybeShowLastMark();
   });
 
   // Plan de competencia (config por torneo)

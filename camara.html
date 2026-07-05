@@ -156,8 +156,8 @@ window.FB_CONFIG = {
     var constraints = {
       audio: true,
       video: devices.length && devices[devIdx] && devices[devIdx].deviceId
-        ? { deviceId: { exact: devices[devIdx].deviceId }, width:{ideal:1920}, height:{ideal:1080} }
-        : { facingMode: { ideal:'environment' }, width:{ideal:1920}, height:{ideal:1080} }
+        ? { deviceId: { exact: devices[devIdx].deviceId }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30} }
+        : { facingMode: { ideal:'environment' }, width:{ideal:1920}, height:{ideal:1080}, frameRate:{ideal:30} }
     };
     try {
       stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -298,8 +298,14 @@ window.FB_CONFIG = {
     cstream.getVideoTracks().forEach(function(t){ mixed.addTrack(t); });
     stream.getAudioTracks().forEach(function(t){ mixed.addTrack(t); }); // sonido del ambiente
     var mime = pickMime();
-    try { recorder = new MediaRecorder(mixed, mime ? { mimeType:mime } : undefined); }
-    catch(e){ say('MediaRecorder no soportado: '+e.message); return; }
+    // Bitrate alto = menos compresión = video más nítido (por defecto queda muy comprimido).
+    var opts = { videoBitsPerSecond: 12000000, audioBitsPerSecond: 128000 };
+    if (mime) opts.mimeType = mime;
+    try { recorder = new MediaRecorder(mixed, opts); }
+    catch(e){
+      try { recorder = new MediaRecorder(mixed, mime ? { mimeType:mime } : undefined); } // respaldo sin bitrate
+      catch(e2){ say('MediaRecorder no soportado: '+e2.message); return; }
+    }
     chunks = [];
     recorder.ondataavailable = function(e){ if (e.data && e.data.size) chunks.push(e.data); };
     recorder.onstop = function(){
@@ -324,8 +330,12 @@ window.FB_CONFIG = {
     var ext = (blob.type.indexOf('mp4')>-1) ? 'mp4' : 'webm';
     var stamp = new Date();
     var label = document.getElementById('header').dataset.text || 'carrera';
-    var fname = ('STP ' + label + ' ' + stamp.toISOString().slice(0,10))
-                  .replace(/[^\w\- ]+/g,'').replace(/\s+/g,'_') + '.' + ext;
+    // Nombre único y descriptivo: Estilo_Nadador_DD-MM-AA_HHMMSS (sin caracteres inválidos como "/").
+    var pad = function(n){ return (n<10?'0':'') + n; };
+    var dateStr = pad(stamp.getDate()) + '-' + pad(stamp.getMonth()+1) + '-' + String(stamp.getFullYear()).slice(2);
+    var timeStr = pad(stamp.getHours()) + pad(stamp.getMinutes()) + pad(stamp.getSeconds());
+    var safe = function(s){ return String(s||'').replace(/[^\w\-]+/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,''); };
+    var fname = [PARAMS.style || label, PARAMS.sname, dateStr, timeStr].filter(Boolean).map(safe).join('_') + '.' + ext;
 
     var pv = document.getElementById('preview'); pv.src = url;
     var dl = document.getElementById('dl'); dl.href = url; dl.download = fname;
