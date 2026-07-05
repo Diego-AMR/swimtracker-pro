@@ -1176,31 +1176,40 @@ function maybeShowLastMark() {
 function showLastMark(r) {
   const sw = swimmers.find(s => String(s.id) === String(r.swimmer_id)) || {};
   const tn = tournaments.find(t => String(t.id) === String(r.tournament_id)) || {};
-  const pool = r.pool_length || 50;
-  const prev = timesRaw.filter(x => x.id !== r.id && String(x.swimmer_id) === String(r.swimmer_id) && x.style === r.style && x.time_seconds > 0);
-  const prevBest = prev.length ? Math.min(...prev.map(x => x.time_seconds)) : null;
-  let verdict;
-  if (prevBest == null) {
-    verdict = `<div class="lm-badge lm-new">🎉 Primera marca registrada en ${r.style}. ¡Queda como su base!</div>`;
-  } else if (r.time_seconds <= prevBest) {
-    verdict = `<div class="lm-badge lm-pb">🏆 ¡Nuevo mejor tiempo! Bajó <b>${(prevBest - r.time_seconds).toFixed(2)}s</b> sobre su marca anterior (${formatTime(prevBest)}).</div>`;
+  // Metas definidas para este estilo (cada meta = {name, times:{estilo:seg}})
+  const metas = goals
+    .map(g => ({ name: g.name || 'Meta', t: (g.times || {})[r.style] }))
+    .filter(m => m.t != null && m.t > 0)
+    .map(m => ({ ...m, gap: r.time_seconds - m.t }))     // gap>0 = falta ; gap<=0 = superó
+    .sort((a, b) => a.t - b.t);                           // de la más exigente a la más suave
+
+  let verdict, rows;
+  if (!metas.length) {
+    verdict = `<div class="lm-badge lm-new">Sin meta para ${r.style}. Créala en la pestaña <b>Metas</b> para ver cuánto falta.</div>`;
+    rows = '';
   } else {
-    verdict = `<div class="lm-badge lm-off">Quedó a <b>${(r.time_seconds - prevBest).toFixed(2)}s</b> de su mejor marca (${formatTime(prevBest)}).</div>`;
+    const superadas = metas.filter(m => m.gap <= 0);
+    if (superadas.length) {
+      const mejor = superadas[0];                         // la más exigente superada
+      verdict = `<div class="lm-badge lm-pb">🏆 ¡Meta superada! Le ganó a <b>${mejor.name}</b> por <b>${Math.abs(mejor.gap).toFixed(2)}s</b>${superadas.length > 1 ? ` (${superadas.length} metas)` : ''}.</div>`;
+    } else {
+      const cerca = metas.reduce((a, b) => (b.gap < a.gap ? b : a));
+      verdict = `<div class="lm-badge lm-off">Le faltaron <b>${cerca.gap.toFixed(2)}s</b> para su meta más cercana (<b>${cerca.name}</b>).</div>`;
+    }
+    rows = metas.map(m => {
+      const chip = m.gap <= 0
+        ? `<span style="color:var(--green)">▼ superada ${Math.abs(m.gap).toFixed(2)}s</span>`
+        : `<span style="color:var(--text2)">faltan ${m.gap.toFixed(2)}s</span>`;
+      return `<div class="lm-row"><span>🎯 ${m.name}</span><b>${formatTime(m.t)} · ${chip}</b></div>`;
+    }).join('');
   }
-  const sp = (r.splits || []).filter(s => s && s.split_time > 0);
-  let splitHtml = '';
-  if (sp.length) {
-    let best = sp[0];
-    sp.forEach(s => { if (s.split_time < best.split_time) best = s; });
-    splitHtml = `<div class="lm-row"><span>⚡ Parcial más rápido</span><b>P${best.split_number} · ${best.split_number * pool}m — ${formatTime(best.split_time)}</b></div>`;
-  }
+
   document.getElementById('lastmark-body').innerHTML = `
     <div class="lm-head">${sw.name || '?'} · ${r.style} <span>${tn.name || ''}</span></div>
     <div class="lm-time">${formatTime(r.time_seconds)}</div>
     ${verdict}
     <div class="lm-rows">
-      <div class="lm-row"><span>Parciales</span><b>${sp.length || 0}${pool ? ' · cada '+pool+'m' : ''}</b></div>
-      ${splitHtml}
+      ${rows}
       <div class="lm-row"><span>Estado</span><b style="color:var(--green)">✔ Guardado en la nube</b></div>
       ${r.source === 'video' ? '<div class="lm-row"><span>Origen</span><b>📹 Video</b></div>' : ''}
     </div>`;
