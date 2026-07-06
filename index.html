@@ -1759,12 +1759,31 @@ function renderGoals() {
   empty.style.display = 'none';
   container.innerHTML = goals.map(g => {
     const gtimes = g.times || {};
-    const items = Object.entries(gtimes).filter(([,v]) => v).map(([k,v]) =>
-      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
-        <span style="color:var(--text2)">${k}</span>
-        <span class="time-badge">${formatTime(v)}</span>
-      </div>`
-    ).join('');
+    const items = Object.entries(gtimes).filter(([,v]) => v).map(([k,v]) => {
+      // Progreso: mejor marca registrada en ese estilo vs la meta (menor tiempo = mejor)
+      const recs = timesRaw.filter(r => r.style === k && r.time_seconds > 0);
+      let progHtml = '<div style="font-size:11px;color:var(--text3)">Sin marcas aún</div>';
+      if (recs.length) {
+        const best = Math.min(...recs.map(r => r.time_seconds));
+        const ok = best <= v;
+        const pct = ok ? 100 : Math.max(4, Math.min(100, (v / best) * 100));
+        progHtml = `
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:7px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);overflow:hidden">
+              <div style="width:${pct.toFixed(0)}%;height:100%;background:${ok ? 'var(--green)' : 'var(--cyan)'}"></div>
+            </div>
+            <span style="font-size:11px;font-weight:700;color:${ok ? 'var(--green)' : 'var(--text3)'};white-space:nowrap">${ok ? '✅ Lograda' : `faltan ${(best - v).toFixed(2)}s`}</span>
+          </div>
+          <div style="font-size:10.5px;color:var(--text3);margin-top:2px">Mejor actual: ${formatTime(best)}</div>`;
+      }
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="color:var(--text2)">${k}</span>
+          <span class="time-badge">${formatTime(v)}</span>
+        </div>
+        ${progHtml}
+      </div>`;
+    }).join('');
     return `<div class="card" style="margin-bottom:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="section-title" style="margin-bottom:0">🎯 ${g.name}</div>
@@ -1993,13 +2012,21 @@ function renderTimes() {
   const empty = document.getElementById('times-empty');
   if (!times.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = times.map(t => `<tr>
+  // Mejor marca (PB) por nadador+estilo, para señalarla con 🏅
+  const pbs = {};
+  times.forEach(t => {
+    const k = t.swimmer_id + '|' + t.style;
+    if (!(k in pbs) || t.time_seconds < pbs[k]) pbs[k] = t.time_seconds;
+  });
+  tbody.innerHTML = times.map(t => {
+    const isPB = t.time_seconds === pbs[t.swimmer_id + '|' + t.style];
+    return `<tr>
     <td>${t.swimmer_name}</td>
     <td style="font-size:12px;color:var(--text3)">${t.tournament_name}</td>
     <td><span class="tag">${t.style}</span></td>
-    <td><span class="time-badge">${formatTime(t.time_seconds)}</span>${t.splits?.length ? `<span style="font-size:11px;color:var(--text3);margin-left:4px">(${t.splits.length} parciales)</span>` : ''}</td>
+    <td><span class="time-badge" ${isPB ? 'style="color:var(--green)"' : ''}>${formatTime(t.time_seconds)}</span>${isPB ? '<span title="Mejor marca personal" style="margin-left:4px">🏅</span>' : ''}${t.splits?.length ? `<span style="font-size:11px;color:var(--text3);margin-left:4px">(${t.splits.length} parciales)</span>` : ''}</td>
     <td><button class="btn btn-secondary btn-sm" onclick="openTimeEdit('${t.id}')">✏️</button></td>
-  </tr>`).join('');
+  </tr>`;}).join('');
 }
 function refreshAllSelects() {
   refreshTimeSelects();
@@ -3217,11 +3244,13 @@ function exportExcel() {
 // ════════════════════════════════════════════════════════════
 function exportBackup() {
   const data = {
-    _version: 2,
+    _version: 3,
     swimmers,
     tournaments,
     goals,
-    time_records: timesRaw
+    time_records: timesRaw,
+    comp_plans: compPlans,   // plan de competencia por torneo
+    routine                  // horarios de comida/sueño
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -3252,6 +3281,9 @@ async function importBackup(input) {
     if ((data.tournaments||[]).length)  await fbDB.ref('tournaments').set(toObj(data.tournaments));
     if ((data.goals||[]).length)        await fbDB.ref('goals').set(toObj(data.goals));
     if ((data.time_records||[]).length) await fbDB.ref('time_records').set(toObj(data.time_records));
+    // v3: plan de competencia y rutina (si vienen en el respaldo)
+    if (data.comp_plans && Object.keys(data.comp_plans).length) await fbDB.ref('comp_plans').set(data.comp_plans);
+    if (data.routine && Object.keys(data.routine).length)       await fbDB.ref('routine').set(data.routine);
     showToast('Datos restaurados en la nube ✓', 'success');
   } catch(e) { showToast('Error al restaurar: ' + e.message, 'error'); }
   input.value = '';
