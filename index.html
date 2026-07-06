@@ -2365,8 +2365,8 @@ function showCalDayPopup(dateStr) {
 // PARCIALES HISTÓRICOS (tiempos tab)
 // ════════════════════════════════════════════════════════════
 let parcialesHistChart = null;
-// ── Gráficos de parciales: modo compartido 'acum' (desde 0, acumulado) o 'tramo' (cada 50 m) ──
-let splitsChartMode = 'acum';
+// ── Gráficos de parciales: modo compartido 'tramo' (cada 50 m, default) o 'acum' (desde 0) ──
+let splitsChartMode = 'tramo';
 let _lastHistStyle = null, _asplitsRecs = [];
 function splitsChartData(records, labelFn, COLORS) {
   const maxSplits = Math.max(...records.map(r => r.splits.length));
@@ -2385,7 +2385,8 @@ function splitsChartData(records, labelFn, COLORS) {
 }
 function splitsYOpts() {
   const acum = splitsChartMode === 'acum';
-  return { beginAtZero: true, ticks:{color:'#8299b0', callback: v => acum ? formatTime(v) : `${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
+  // 'tramo' con auto-escala (dinámico, como siempre se vio); 'acum' sí arranca en 0.
+  return { beginAtZero: acum, ticks:{color:'#8299b0', callback: v => acum ? formatTime(v) : `${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
            title:{display:true, text: acum ? 'Tiempo acumulado (desde la salida)' : 'Tiempo del parcial (s)', color:'#8299b0', font:{size:11}} };
 }
 function splitsTooltip() {
@@ -2393,7 +2394,7 @@ function splitsTooltip() {
 }
 function splitsModeToggle() {
   const btn = (m, txt) => `<button class="btn btn-sm splits-mode-btn ${splitsChartMode===m?'btn-primary':'btn-secondary'}" data-mode="${m}" onclick="setSplitsMode('${m}')">${txt}</button>`;
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${btn('acum','📈 Acumulado (desde 0)')}${btn('tramo','⚑ Por tramo (cada 50 m)')}</div>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${btn('tramo','⚑ Por tramo (cada 50 m)')}${btn('acum','📈 Acumulado (desde 0)')}</div>`;
 }
 function setSplitsMode(mode) {
   if (splitsChartMode === mode) return;
@@ -2993,8 +2994,10 @@ function showStyleAnalysis(style) {
     const yVals = evolData.map(d => d.y).concat(styleGoals.map(g => g.time));
     const ySpan = Math.max(...yVals) - Math.min(...yVals);
     const yPad = Math.max(ySpan * 0.08, 0.5);
-    const yMinFixed = Math.max(0, Math.min(...yVals) - yPad);
-    const yMaxFixed = Math.max(...yVals) + yPad;
+    // Salto "bonito" del eje: el menor que dé ≤10 divisiones (2s, 5s, 10s…) → líneas finas, no de a 20s
+    const yStep = [0.25,0.5,1,2,5,10,15,30,60].find(s => (ySpan + 2*yPad) / s <= 10) || 60;
+    const yMinFixed = Math.max(0, Math.floor((Math.min(...yVals) - yPad) / yStep) * yStep);
+    const yMaxFixed = Math.ceil((Math.max(...yVals) + yPad) / yStep) * yStep;
     analysisCharts['evolution'] = new Chart(ctx.getContext('2d'), {
       type: 'line',
       data: {
@@ -3014,7 +3017,7 @@ function showStyleAnalysis(style) {
         },
         scales: {
           x:{ticks:{color:'#8299b0',maxRotation:45},grid:{color:'rgba(220,229,239,0.8)'}},
-          y:{min:yMinFixed, max:yMaxFixed, ticks:{color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
+          y:{min:yMinFixed, max:yMaxFixed, ticks:{stepSize:yStep, color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
         }
       }
     });
