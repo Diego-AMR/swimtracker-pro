@@ -885,6 +885,21 @@ tr:last-child td { border-bottom:none; }
   </div>
 </div>
 
+<div class="modal-overlay" id="dup-modal">
+  <div class="modal" style="max-width:430px">
+    <div class="modal-header">
+      <div class="modal-title">⚠️ Ya existe un tiempo</div>
+      <button class="modal-close" onclick="closeModal('dup-modal')">✕</button>
+    </div>
+    <div class="modal-body"><div id="dup-info" style="font-size:14px;line-height:1.6;color:var(--text2)"></div></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('dup-modal')">Cancelar</button>
+      <button class="btn btn-secondary" onclick="dupResolve('add')">➕ Guardar otro</button>
+      <button class="btn btn-primary" onclick="dupResolve('replace')">🔁 Reemplazar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="routine-modal">
   <div class="modal">
     <div class="modal-header">
@@ -2035,23 +2050,57 @@ function filterStyles() {
   styleSel.innerHTML = '<option value="">— Estilo —</option>' +
     styles.map(s => `<option value="${s}">${s}</option>`).join('');
 }
+let _dupPending = null, _dupExisting = null;
 async function saveTime() {
   const swimmer_id = document.getElementById('tr-swimmer').value;
   const tournament_id = document.getElementById('tr-tournament').value;
   const style = document.getElementById('tr-style').value;
   const timeStr = document.getElementById('tr-time').value;
   if (!swimmer_id || !tournament_id || !style || !timeStr) { showToast('Completa todos los campos', 'error'); return; }
-  // Check duplicate
+  const time_seconds = parseTime(timeStr);
+  if (isNaN(time_seconds) || time_seconds <= 0) { showToast('El tiempo no es válido (usa MM:SS.cc o segundos)', 'error'); return; }
+  const splits = parciales.map((t, i) => ({ split_number: i+1, split_time: t }));
+  const data = { swimmer_id, tournament_id, style, time_seconds, splits, pool_length: poolLen(), created_at: new Date().toISOString() };
+  // Si ya existe un tiempo del mismo nadador/torneo/estilo, preguntar (no bloquear).
   const dup = timesRaw.find(r => String(r.swimmer_id) === String(swimmer_id) && String(r.tournament_id) === String(tournament_id) && r.style === style);
-  if (dup) { showToast('Ya existe un registro para este nadador, torneo y estilo', 'error'); return; }
+  if (dup) { _dupPending = data; _dupExisting = dup; openDupModal(dup); return; }
+  await pushTime(data);
+}
+async function pushTime(data) {
   try {
-    const time_seconds = parseTime(timeStr);
-    const splits = parciales.map((t, i) => ({ split_number: i+1, split_time: t }));
-    await fbDB.ref('time_records').push({ swimmer_id, tournament_id, style, time_seconds, splits, pool_length: poolLen(), created_at: new Date().toISOString() });
+    await fbDB.ref('time_records').push(data);
     showToast('Tiempo registrado ✓', 'success');
     document.getElementById('tr-time').value = '';
     chronoReset();
   } catch(e) { showToast(e.message, 'error'); }
+}
+function openDupModal(dup) {
+  const sw = swimmers.find(s => String(s.id) === String(dup.swimmer_id)) || {};
+  const tn = tournaments.find(t => String(t.id) === String(dup.tournament_id)) || {};
+  document.getElementById('dup-info').innerHTML =
+    `Ya hay un tiempo de <b>${sw.name || '?'}</b> en <b>${dup.style}</b> · ${tn.name || '?'}:` +
+    `<div style="display:flex;justify-content:space-between;gap:12px;margin:12px 0;padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">` +
+    `<span>Actual: <b style="color:var(--text)">${formatTime(dup.time_seconds)}</b></span>` +
+    `<span>Nuevo: <b style="color:var(--cyan)">${formatTime(_dupPending.time_seconds)}</b></span></div>` +
+    `¿Quieres <b>reemplazar</b> el actual o <b>guardar los dos</b>?`;
+  openModal('dup-modal');
+}
+async function dupResolve(mode) {
+  closeModal('dup-modal');
+  if (!_dupPending) return;
+  try {
+    if (mode === 'replace' && _dupExisting) {
+      await fbDB.ref(`time_records/${_dupExisting.id}`).update({
+        time_seconds: _dupPending.time_seconds, splits: _dupPending.splits, pool_length: _dupPending.pool_length
+      });
+      showToast('Tiempo reemplazado ✓', 'success');
+      document.getElementById('tr-time').value = '';
+      chronoReset();
+    } else if (mode === 'add') {
+      await pushTime(_dupPending);
+    }
+  } catch(e) { showToast(e.message, 'error'); }
+  _dupPending = null; _dupExisting = null;
 }
 function openTimeEdit(id) {
   const t = times.find(x => x.id === id);
