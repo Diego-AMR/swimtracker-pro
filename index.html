@@ -2950,13 +2950,27 @@ async function exportPDF() {
   const { swimmer, style_analysis, total_records, total_competitions } = currentAnalysis;
   const cat = getCategory(swimmer.birthdate);
   const allStyles = Object.keys(style_analysis);
+  const section = currentAnalysisSection || 'resumen';
+  // El estilo seleccionado solo aplica a la sub-pestaña "Por Estilo"
   const activeStylePill = document.querySelector('.style-pill.active');
-  const selectedStyle = activeStylePill ? activeStylePill.textContent.trim() : null;
-  let chartImgData = null;
-  if (selectedStyle) {
-    const cc = document.getElementById('chart-evolution');
-    if (cc) chartImgData = cc.toDataURL('image/png');
+  let selectedStyle = null;
+  if (section === 'estilo') {
+    selectedStyle = activeStylePill ? activeStylePill.textContent.trim() : null;
+    if (!selectedStyle) { showToast('Elige un estilo primero (toca uno en «Por Estilo»)', 'error'); return; }
   }
+  // Capturar como imagen los gráficos visibles de la sub-pestaña
+  const imgOf = id => { const c = document.getElementById(id); return c ? c.toDataURL('image/png') : null; };
+  let chartImgData = null, splitsImgData = null, monthlyImgData = null, ritmoImgData = null;
+  if (section === 'estilo') { chartImgData = imgOf('chart-evolution'); splitsImgData = imgOf('chart-style-splits'); }
+  if (section === 'resumen') { monthlyImgData = imgOf('chart-monthly'); }
+  if (section === 'ritmo') {
+    const rc = document.getElementById('ritmo-content');
+    if (rc && rc.innerHTML.trim()) {
+      try { const rcan = await html2canvas(rc, { scale: 2, backgroundColor: '#ffffff', useCORS: true }); ritmoImgData = rcan.toDataURL('image/png'); } catch(e){}
+    }
+  }
+  const sectionLabel = { resumen: 'Resumen', metas: 'Metas', estilo: (selectedStyle || 'Por Estilo'), ritmo: 'Ritmo Objetivo' }[section];
+  window._pdfLabel = sectionLabel;
   const GCOLS = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
   const currentGoals = goals;
   const header = `<div style="background:linear-gradient(135deg,#1c3050,#1a6fc4);color:white;padding:24px 28px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
@@ -2964,7 +2978,7 @@ async function exportPDF() {
     <div style="text-align:right;opacity:0.85;font-size:12px">
       <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px">Generado</div>
       <div style="font-weight:700">${new Date().toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'})}</div>
-      ${selectedStyle ? `<div style="margin-top:4px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;font-size:10px">🏊 ${selectedStyle}</div>` : ''}
+      ${sectionLabel ? `<div style="margin-top:4px;background:rgba(255,255,255,0.2);padding:3px 8px;border-radius:20px;font-size:10px">📄 ${sectionLabel}</div>` : ''}
     </div>
   </div>`;
   const profileBlock = `<div style="display:flex;gap:16px;margin-bottom:16px;align-items:center;padding:14px 18px;background:#f5f8fc;border-radius:10px;border:1px solid #dce5ef">
@@ -3068,6 +3082,8 @@ async function exportPDF() {
       </div>` : ''}
       ${chartImgData ? `<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">📈 Evolución de tiempos</div>
       <img src="${chartImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
+      ${splitsImgData ? `<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">⚑ Comparación de parciales</div>
+      <img src="${splitsImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
       <div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">📋 Historial</div>
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px">
         <thead><tr style="background:#f5f8fc"><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #dce5ef;color:#8299b0">Torneo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Fecha</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Tiempo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Parciales</th></tr></thead>
@@ -3081,8 +3097,22 @@ async function exportPDF() {
       ${recsWithSplits.length ? `<div style="font-size:12px;font-weight:800;margin-bottom:6px;color:#1c3050">⚑ Parciales</div>
       ${recsWithSplits.map(r=>{const sp=r.splits.map(s=>s.split_time);const avg=sp.reduce((a,b)=>a+b,0)/sp.length;const strat=sp[0]<avg?'🚀 Salida rápida':sp[sp.length-1]<sp[0]?'🔄 Negative Split':'➡️ Ritmo constante';return`<div style="padding:8px 12px;background:#f5f8fc;border-radius:6px;border:1px solid #dce5ef;margin-bottom:6px;font-size:11px"><strong>${r.tournament_name}</strong> — ${strat}<br><span style="color:#4a627a">${sp.map((s,i)=>`${(i+1)*50}m: ${s.toFixed(2)}s`).join('  •  ')}</span></div>`;}).join('')}` : ''}`;
   };
-  let bodyHTML = selectedStyle ? profileBlock + styleDetailBlock(selectedStyle) : profileBlock + goalsTable(allStyles) + statsTable(allStyles);
-  const footer = `<div style="margin-top:16px;padding:10px 14px;background:#f5f8fc;border-radius:8px;font-size:10px;color:#8299b0;text-align:center;border:1px solid #dce5ef">Generado por SwimTracker Pro • ${new Date().toLocaleDateString('es-ES')} ${selectedStyle ? `· Estilo: ${selectedStyle}` : '· Reporte General'}</div>`;
+  const sectionTitle = (t) => `<div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:#1c3050;padding-bottom:5px;border-bottom:2px solid #dce5ef">${t}</div>`;
+  let bodyHTML;
+  if (section === 'estilo') {
+    bodyHTML = profileBlock + styleDetailBlock(selectedStyle);
+  } else if (section === 'metas') {
+    bodyHTML = profileBlock + goalsTable(allStyles);
+  } else if (section === 'ritmo') {
+    bodyHTML = profileBlock + sectionTitle('🚀 Ritmo Objetivo por Parcial')
+      + (ritmoImgData ? `<img src="${ritmoImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef">`
+                      : `<div style="font-size:12px;color:#8299b0">Selecciona una meta en «Ritmo Objetivo» para incluir el detalle.</div>`);
+  } else { // resumen
+    bodyHTML = profileBlock
+      + (monthlyImgData ? sectionTitle('📈 Actividad mensual') + `<img src="${monthlyImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:12px">` : '')
+      + statsTable(allStyles);
+  }
+  const footer = `<div style="margin-top:16px;padding:10px 14px;background:#f5f8fc;border-radius:8px;font-size:10px;color:#8299b0;text-align:center;border:1px solid #dce5ef">Generado por SwimTracker Pro • ${new Date().toLocaleDateString('es-ES')} · ${sectionLabel}</div>`;
   document.getElementById('pdf-content').innerHTML = `<div style="font-family:'DM Sans',sans-serif;color:#1c2d3e;max-width:820px;margin:0 auto;padding:4px">${header}${bodyHTML}${footer}</div>`;
   openModal('pdf-modal');
 }
@@ -3098,8 +3128,9 @@ async function downloadPDF() {
   pdf.addImage(imgData,'PNG',0,y,pdfW,pdfH);
   heightLeft -= pageH;
   while (heightLeft > 0) { y = heightLeft - pdfH; pdf.addPage(); pdf.addImage(imgData,'PNG',0,y,pdfW,pdfH); heightLeft -= pageH; }
-  const name = currentAnalysis?.swimmer?.name || 'Reporte';
-  pdf.save(`SwimTracker_${name}_${new Date().toISOString().slice(0,10)}.pdf`);
+  const name = (currentAnalysis?.swimmer?.name || 'Reporte').replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-');
+  const lbl = (window._pdfLabel || '').replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-');
+  pdf.save(`SwimTracker_${name}${lbl ? '_' + lbl : ''}_${new Date().toISOString().slice(0,10)}.pdf`);
   showToast('PDF descargado ✓', 'success');
 }
 
