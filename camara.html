@@ -117,6 +117,7 @@ window.FB_CONFIG = {
   /* ---------- Estado cámara / zoom ---------- */
   var devices = [], devIdx = 0, stream = null;
   var zoom = 1;
+  var capRes = ''; // resolución real de captura (diagnóstico de calidad)
   var mode = 'full'; // 'full' = grabar + tiempos | 'rec' = solo grabar
 
   /* Datos que llegan desde STP por la URL: swimmer_id, tournament_id, style, sname, tname, mode */
@@ -167,6 +168,12 @@ window.FB_CONFIG = {
     }
     cam.srcObject = stream;
     await cam.play().catch(function(){});
+    // Diagnóstico: a qué resolución real está capturando el teléfono.
+    try {
+      var _vt = stream.getVideoTracks()[0];
+      var _s = (_vt && _vt.getSettings) ? _vt.getSettings() : {};
+      if (_s.width) capRes = _s.width + '×' + _s.height + (_s.frameRate ? ' ' + Math.round(_s.frameRate) + 'fps' : '');
+    } catch(e){}
     // refrescar labels de dispositivos (ahora sí con permiso)
     if (!devices.length){ await listCams(); }
     say('');
@@ -287,7 +294,8 @@ window.FB_CONFIG = {
 
   /* ================= Grabación (graba el CANVAS = con overlay) ================= */
   function pickMime(){
-    var opts = ['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'];
+    // H.264 (mp4) primero: usa el codificador por HARDWARE del teléfono → mejor calidad/nitidez.
+    var opts = ['video/mp4;codecs=h264','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'];
     for (var i=0;i<opts.length;i++){ if (window.MediaRecorder && MediaRecorder.isTypeSupported(opts[i])) return opts[i]; }
     return '';
   }
@@ -299,7 +307,7 @@ window.FB_CONFIG = {
     stream.getAudioTracks().forEach(function(t){ mixed.addTrack(t); }); // sonido del ambiente
     var mime = pickMime();
     // Bitrate alto = menos compresión = video más nítido (por defecto queda muy comprimido).
-    var opts = { videoBitsPerSecond: 12000000, audioBitsPerSecond: 128000 };
+    var opts = { videoBitsPerSecond: 20000000, audioBitsPerSecond: 128000 };
     if (mime) opts.mimeType = mime;
     try { recorder = new MediaRecorder(mixed, opts); }
     catch(e){
@@ -547,7 +555,7 @@ window.FB_CONFIG = {
     await listCams();
     draw();
     // Aviso: hace falta un toque para entrar a pantalla completa + horizontal.
-    if (!isFS()) say('👆 Toca la pantalla para pantalla completa (horizontal)');
+    if (!isFS()) say('👆 Toca para pantalla completa · horizontal' + (capRes ? '  ·  📹 ' + capRes : ''));
   })();
 })();
 </script>

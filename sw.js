@@ -1,6 +1,6 @@
 // SwimTracker Pro Service Worker
 // Sube la versión cuando cambies la app para forzar la actualización del cache.
-const CACHE = 'swimtracker-v7-10';
+const CACHE = 'swimtracker-v7-11';
 const APP_SHELL = [
   './',
   'index.html',

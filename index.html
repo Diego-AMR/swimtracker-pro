@@ -131,6 +131,14 @@ body::before {
 .lm-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 2px; border-bottom:1px solid var(--border); font-size:13.5px; color:var(--text3); }
 .lm-row:last-child { border-bottom:none; }
 .lm-row b { color:var(--text); font-weight:600; text-align:right; }
+/* Escala: dónde quedó este tiempo entre su historial del estilo */
+.lm-scale-head { font-size:14px; font-weight:600; color:var(--text); margin:0 0 9px; }
+.lm-scale-head b { color:var(--cyan); }
+.lm-scale { margin:0 0 16px; }
+.lm-scale-track { position:relative; height:9px; border-radius:6px; background:linear-gradient(90deg,var(--green),#d4880a 55%,var(--red)); }
+.lm-scale-dot { position:absolute; top:50%; width:16px; height:16px; border-radius:50%; background:var(--bg2); border:3px solid var(--cyan); transform:translate(-50%,-50%); box-shadow:0 1px 5px rgba(0,0,0,0.35); }
+.lm-scale-ends { display:flex; justify-content:space-between; font-size:11px; color:var(--text3); margin-top:6px; font-variant-numeric:tabular-nums; }
+.lm-scale-ends b { color:var(--text2); font-weight:600; }
 /* SWIMMER CARDS */
 .swimmer-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
 .swimmer-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
@@ -1176,6 +1184,29 @@ function maybeShowLastMark() {
 function showLastMark(r) {
   const sw = swimmers.find(s => String(s.id) === String(r.swimmer_id)) || {};
   const tn = tournaments.find(t => String(t.id) === String(r.tournament_id)) || {};
+
+  // Escala: dónde quedó esta marca entre TODAS sus marcas de este estilo (todos los torneos)
+  const hist = timesRaw
+    .filter(x => String(x.swimmer_id) === String(r.swimmer_id) && x.style === r.style && x.time_seconds > 0)
+    .map(x => x.time_seconds);
+  let scaleHtml = '';
+  if (hist.length >= 2) {
+    const min = Math.min(...hist), max = Math.max(...hist);
+    const rank = hist.filter(t => t < r.time_seconds).length + 1;   // 1 = la más rápida
+    const pct = max > min ? Math.max(0, Math.min(100, (r.time_seconds - min) / (max - min) * 100)) : 0;
+    const head = rank === 1
+      ? `🥇 <b>¡Nueva mejor marca</b> en ${r.style}! (de ${hist.length})`
+      : `Quedó <b>#${rank}</b> de ${hist.length} en ${r.style}`;
+    scaleHtml = `
+      <div class="lm-scale-head">${head}</div>
+      <div class="lm-scale">
+        <div class="lm-scale-track"><div class="lm-scale-dot" style="left:${pct}%"></div></div>
+        <div class="lm-scale-ends"><span>⚡ mejor <b>${formatTime(min)}</b></span><span>más lenta <b>${formatTime(max)}</b></span></div>
+      </div>`;
+  } else {
+    scaleHtml = `<div class="lm-scale-head">Primera marca registrada en ${r.style} — ¡queda como su base!</div>`;
+  }
+
   // Metas definidas para este estilo (cada meta = {name, times:{estilo:seg}})
   const metas = goals
     .map(g => ({ name: g.name || 'Meta', t: (g.times || {})[r.style] }))
@@ -1207,6 +1238,7 @@ function showLastMark(r) {
   document.getElementById('lastmark-body').innerHTML = `
     <div class="lm-head">${sw.name || '?'} · ${r.style} <span>${tn.name || ''}</span></div>
     <div class="lm-time">${formatTime(r.time_seconds)}</div>
+    ${scaleHtml}
     ${verdict}
     <div class="lm-rows">
       ${rows}
