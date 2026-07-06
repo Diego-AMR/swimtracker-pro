@@ -166,6 +166,18 @@ body::before {
 .pf-health .hrow { display:flex; justify-content:space-between; gap:12px; padding:7px 2px; border-bottom:1px solid var(--border); font-size:13px; color:var(--text3); }
 .pf-health .hrow:last-child { border-bottom:none; }
 .pf-health .hrow b { color:var(--text); font-weight:600; text-align:right; }
+/* Tiempos agrupados por estilo */
+details.tgroup { border:1px solid var(--border); border-radius:10px; margin-bottom:8px; background:var(--bg3); overflow:hidden; }
+details.tgroup summary { cursor:pointer; list-style:none; padding:11px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; font-weight:600; font-size:14px; }
+details.tgroup summary::-webkit-details-marker { display:none; }
+details.tgroup summary::before { content:'▸'; color:var(--text3); margin-right:2px; transition:transform 0.15s; }
+details.tgroup[open] summary::before { transform:rotate(90deg); }
+details.tgroup summary > span:first-of-type { flex:1; }
+.tg-count { font-size:11px; color:var(--text3); font-weight:600; white-space:nowrap; }
+.tg-row { display:flex; align-items:center; gap:10px; padding:8px 14px; border-top:1px solid var(--border); font-size:13px; background:var(--bg2); }
+.tg-tour { flex:1; min-width:0; }
+.tg-tour .t1 { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tg-tour .t2 { font-size:11px; color:var(--text3); }
 /* SWIMMER CARDS */
 .swimmer-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
 .swimmer-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
@@ -704,13 +716,8 @@ tr:last-child td { border-bottom:none; }
       </div>
     </div>
     <div class="card">
-      <div class="section-title">📋 Tiempos Registrados</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Nadador</th><th>Torneo</th><th>Estilo</th><th>Tiempo</th><th></th></tr></thead>
-          <tbody id="times-body"></tbody>
-        </table>
-      </div>
+      <div class="section-title">📋 Tiempos Registrados <span style="font-weight:400;color:var(--text3);font-size:11px">— agrupados por estilo, toca para abrir</span></div>
+      <div id="times-groups"></div>
       <div id="times-empty" class="empty-state" style="display:none">
         <div class="empty-icon">⏱️</div><p>No hay tiempos registrados.</p>
       </div>
@@ -2008,10 +2015,11 @@ function chronoFinish() {
 // TIME RECORDS
 // ════════════════════════════════════════════════════════════
 function loadTimes() { /* handled by Firebase listener */ }
+let _timesOpenStyles = null; // estilos con acordeón abierto (persiste entre re-renders)
 function renderTimes() {
-  const tbody = document.getElementById('times-body');
+  const wrap = document.getElementById('times-groups');
   const empty = document.getElementById('times-empty');
-  if (!times.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  if (!times.length) { wrap.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
   // Mejor marca (PB) por nadador+estilo, para señalarla con 🏅
   const pbs = {};
@@ -2019,16 +2027,37 @@ function renderTimes() {
     const k = t.swimmer_id + '|' + t.style;
     if (!(k in pbs) || t.time_seconds < pbs[k]) pbs[k] = t.time_seconds;
   });
-  tbody.innerHTML = times.map(t => {
-    const isPB = t.time_seconds === pbs[t.swimmer_id + '|' + t.style];
-    return `<tr>
-    <td>${t.swimmer_name}</td>
-    <td style="font-size:12px;color:var(--text3)">${t.tournament_name}</td>
-    <td><span class="tag">${t.style}</span></td>
-    <td><span class="time-badge" ${isPB ? 'style="color:var(--green)"' : ''}>${formatTime(t.time_seconds)}</span>${isPB ? '<span title="Mejor marca personal" style="margin-left:4px">🏅</span>' : ''}${t.splits?.length ? `<span style="font-size:11px;color:var(--text3);margin-left:4px">(${t.splits.length} parciales)</span>` : ''}</td>
-    <td><button class="btn btn-secondary btn-sm" onclick="openTimeEdit('${t.id}')">✏️</button></td>
-  </tr>`;}).join('');
+  // Agrupar por estilo (en el orden de ALL_STYLES; estilos raros al final)
+  const groups = {};
+  times.forEach(t => { (groups[t.style] = groups[t.style] || []).push(t); });
+  const styleOrder = ALL_STYLES.filter(s => groups[s]).concat(Object.keys(groups).filter(s => !ALL_STYLES.includes(s)));
+  // Primera vez: abrir solo el estilo del registro más reciente
+  if (_timesOpenStyles === null) {
+    const recent = times.slice().sort((a,b) => String(b.created_at||'').localeCompare(String(a.created_at||'')))[0];
+    _timesOpenStyles = new Set(recent ? [recent.style] : []);
+  }
+  const multiSw = swimmers.length > 1;
+  wrap.innerHTML = styleOrder.map(st => {
+    const rs = groups[st].slice().sort((a,b) => (b.tournament_date||'').localeCompare(a.tournament_date||''));
+    const rows = rs.map(r => {
+      const isPB = r.time_seconds === pbs[r.swimmer_id + '|' + r.style];
+      return `<div class="tg-row">
+        <div class="tg-tour">
+          <div class="t1">${multiSw ? r.swimmer_name + ' · ' : ''}${r.tournament_name}</div>
+          <div class="t2">${r.tournament_date || ''}${r.splits?.length ? ` · ${r.splits.length} parciales` : ''}</div>
+        </div>
+        <span class="time-badge" ${isPB ? 'style="color:var(--green)"' : ''}>${formatTime(r.time_seconds)}</span>${isPB ? '<span title="Mejor marca personal">🏅</span>' : ''}
+        <button class="btn btn-secondary btn-sm" onclick="openTimeEdit('${r.id}')">✏️</button>
+      </div>`;
+    }).join('');
+    const best = Math.min(...rs.map(r => r.time_seconds));
+    return `<details class="tgroup"${_timesOpenStyles.has(st) ? ' open' : ''} ontoggle="tgToggle(this,'${st}')">
+      <summary><span>🏊 ${st}</span><span class="tg-count">${rs.length} reg. · mejor ${formatTime(best)}</span></summary>
+      ${rows}
+    </details>`;
+  }).join('');
 }
+function tgToggle(el, style) { if (el.open) _timesOpenStyles.add(style); else _timesOpenStyles.delete(style); }
 function refreshAllSelects() {
   refreshTimeSelects();
   refreshAnalysisSelect();
