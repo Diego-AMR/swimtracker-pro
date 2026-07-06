@@ -139,6 +139,33 @@ body::before {
 .lm-scale-dot { position:absolute; top:50%; width:16px; height:16px; border-radius:50%; background:var(--bg2); border:3px solid var(--cyan); transform:translate(-50%,-50%); box-shadow:0 1px 5px rgba(0,0,0,0.35); }
 .lm-scale-ends { display:flex; justify-content:space-between; font-size:11px; color:var(--text3); margin-top:6px; font-variant-numeric:tabular-nums; }
 .lm-scale-ends b { color:var(--text2); font-weight:600; }
+/* Perfil del nadador */
+.pf-head { display:flex; gap:16px; align-items:flex-start; }
+.pf-photo { width:74px; height:74px; border-radius:16px; overflow:hidden; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:34px; flex-shrink:0; }
+.pf-photo img { width:100%; height:100%; object-fit:cover; }
+.pf-name { font-family:var(--font-head); font-size:24px; letter-spacing:1px; }
+.pf-sub { color:var(--text2); font-size:13.5px; margin-top:2px; }
+.pf-measures { color:var(--text3); font-size:13px; margin-top:5px; font-variant-numeric:tabular-nums; }
+.pf-remind { margin-top:9px; font-size:12.5px; font-weight:600; color:#d4880a; background:rgba(212,136,10,0.12); border:1px solid rgba(212,136,10,0.3); border-radius:8px; padding:6px 10px; display:inline-block; }
+.pf-stats { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; }
+.pf-stat { flex:1; min-width:96px; background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:11px 12px; text-align:center; }
+.pf-stat .v { font-family:var(--font-head); font-size:20px; color:var(--cyan); font-variant-numeric:tabular-nums; }
+.pf-stat .l { font-size:10.5px; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; margin-top:3px; }
+.pf-styles { display:grid; grid-template-columns:repeat(auto-fill,minmax(94px,1fr)); gap:8px; }
+.pf-sc { background:var(--bg3); border:1px solid var(--border); border-radius:10px; padding:9px 8px; text-align:center; cursor:pointer; transition:border-color 0.15s, background 0.15s; }
+.pf-sc:hover { border-color:var(--cyan); }
+.pf-sc.active { border-color:var(--cyan); background:rgba(26,111,196,0.08); }
+.pf-sc.empty { opacity:0.45; cursor:default; }
+.pf-sc .st { font-size:10.5px; color:var(--text3); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pf-sc .bt { font-family:var(--font-head); font-size:15px; color:var(--cyan); margin:3px 0; font-variant-numeric:tabular-nums; }
+.pf-sc.empty .bt { color:var(--text3); }
+.pf-sc .ct { font-size:10px; color:var(--text3); }
+.pf-health { margin-top:16px; border-top:1px solid var(--border); }
+.pf-health summary { cursor:pointer; font-weight:600; color:var(--text2); padding:12px 0 8px; list-style:none; }
+.pf-health summary::-webkit-details-marker { display:none; }
+.pf-health .hrow { display:flex; justify-content:space-between; gap:12px; padding:7px 2px; border-bottom:1px solid var(--border); font-size:13px; color:var(--text3); }
+.pf-health .hrow:last-child { border-bottom:none; }
+.pf-health .hrow b { color:var(--text); font-weight:600; text-align:right; }
 /* SWIMMER CARDS */
 .swimmer-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; }
 .swimmer-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius2); padding:20px; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
@@ -922,6 +949,21 @@ tr:last-child td { border-bottom:none; }
 
 <!-- ═══════════════════ MODALS ═══════════════════════ -->
 
+<!-- Swimmer Profile -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">Perfil del nadador</div>
+      <button class="modal-close" onclick="closeProfile()">✕</button>
+    </div>
+    <div class="modal-body" id="profile-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeProfile()">Cerrar</button>
+      <button class="btn btn-primary" id="pf-edit-btn">✏️ Editar datos</button>
+    </div>
+  </div>
+</div>
+
 <!-- Swimmer Modal -->
 <div class="modal-overlay" id="swimmer-modal">
   <div class="modal">
@@ -1440,13 +1482,117 @@ function renderSwimmers() {
   grid.innerHTML = swimmers.map(s => {
     const age = getAge(s.birthdate);
     const cat = getCategory(s.birthdate);
-    return `<div class="swimmer-card" onclick="openSwimmerModal('${s.id}')">
+    return `<div class="swimmer-card" onclick="openSwimmerProfile('${s.id}')">
       <div class="swimmer-avatar">${s.photo ? `<img src="${s.photo}">` : '🏊'}</div>
       <div class="swimmer-name">${s.name}</div>
       <div class="swimmer-meta">${age ? age+' años' : ''}</div>
       <div class="category-badge">${cat}</div>
     </div>`;
   }).join('');
+}
+// ── Perfil del nadador ───────────────────────────────────────
+let profileChart = null, currentProfileId = null;
+function openSwimmerProfile(id) {
+  const s = swimmers.find(x => String(x.id) === String(id));
+  if (!s) return;
+  currentProfileId = id;
+  const recs = timesRaw.filter(r => String(r.swimmer_id) === String(id) && r.time_seconds > 0);
+  const age = getAge(s.birthdate), cat = getCategory(s.birthdate);
+
+  const measuresStr = [
+    s.weight ? `${s.weight} kg` : null,
+    s.height ? `${s.height} cm` : null,
+    s.wingspan ? `env. ${s.wingspan} cm` : null
+  ].filter(Boolean).join(' · ');
+
+  // Recordatorio trimestral de medidas
+  let remind = '';
+  const hasMeasures = s.weight || s.height || s.wingspan;
+  const mu = s.measures_updated ? new Date(s.measures_updated) : null;
+  if (hasMeasures) {
+    if (!mu) {
+      remind = `<div class="pf-remind">📏 Edita y guarda sus medidas para activar el recordatorio trimestral</div>`;
+    } else {
+      const days = (Date.now() - mu.getTime()) / 86400000;
+      if (days > 90) {
+        const m = Math.round(days / 30);
+        remind = `<div class="pf-remind">⚠️ Actualiza medidas — última hace ${m} ${m === 1 ? 'mes' : 'meses'}</div>`;
+      }
+    }
+  }
+
+  const practiced = ALL_STYLES.filter(st => recs.some(r => r.style === st)).length;
+  const recent = recs.slice().sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')))[0];
+
+  const styleCards = ALL_STYLES.map(st => {
+    const rs = recs.filter(r => r.style === st);
+    if (!rs.length) return `<div class="pf-sc empty"><div class="st">${st}</div><div class="bt">—</div><div class="ct">0</div></div>`;
+    const best = Math.min(...rs.map(r => r.time_seconds));
+    return `<div class="pf-sc" onclick="showStyleChart('${st}', this)"><div class="st">${st}</div><div class="bt">${formatTime(best)}</div><div class="ct">${rs.length} ${rs.length === 1 ? 'vez' : 'veces'}</div></div>`;
+  }).join('');
+
+  const health = `<details class="pf-health"><summary>🩺 Datos de salud (tocar para mostrar)</summary>
+    <div class="hrow"><span>🩸 Tipo de sangre</span><b>${s.blood_type || '—'}</b></div>
+    <div class="hrow"><span>Alergias</span><b>${s.allergies || '—'}</b></div>
+    <div class="hrow"><span>Lesiones / condiciones</span><b>${s.injuries || '—'}</b></div>
+    <div class="hrow"><span>Seguro / póliza</span><b>${s.insurance || '—'}</b></div>
+    <div class="hrow"><span>Contacto emergencia</span><b>${s.emergency_name || '—'}${s.emergency_phone ? ' · ' + s.emergency_phone : ''}</b></div>
+  </details>`;
+
+  document.getElementById('profile-body').innerHTML = `
+    <div class="pf-head">
+      <div class="pf-photo">${s.photo ? `<img src="${s.photo}">` : '🏊'}</div>
+      <div>
+        <div class="pf-name">${s.name}</div>
+        <div class="pf-sub">${age ? age + ' años · ' : ''}${cat}</div>
+        <div class="pf-measures">${measuresStr || 'Sin medidas registradas'}</div>
+        ${remind}
+      </div>
+    </div>
+    <div class="pf-stats">
+      <div class="pf-stat"><div class="v">${recs.length}</div><div class="l">Pruebas</div></div>
+      <div class="pf-stat"><div class="v">${practiced}/${ALL_STYLES.length}</div><div class="l">Estilos</div></div>
+      <div class="pf-stat"><div class="v">${recent ? formatTime(recent.time_seconds) : '—'}</div><div class="l">${recent ? 'Reciente · ' + recent.style : 'Sin marcas'}</div></div>
+    </div>
+    <div class="section-title" style="font-size:13px">🏊 Marcas por estilo <span style="font-weight:400;color:var(--text3);font-size:11px">— toca un estilo para ver su evolución</span></div>
+    <div class="pf-styles">${styleCards}</div>
+    <div id="pf-chart-wrap" style="display:none;margin-top:16px">
+      <div class="section-title" style="font-size:13px" id="pf-chart-title"></div>
+      <div class="chart-container" style="height:220px"><canvas id="pf-chart"></canvas></div>
+    </div>
+    ${health}`;
+
+  document.getElementById('pf-edit-btn').onclick = () => { closeProfile(); openSwimmerModal(id); };
+  document.getElementById('profile-modal').classList.add('open');
+}
+function showStyleChart(style, el) {
+  const rs = timesRaw
+    .filter(r => String(r.swimmer_id) === String(currentProfileId) && r.style === style && r.time_seconds > 0)
+    .slice()
+    .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')));
+  document.querySelectorAll('.pf-sc').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const labels = rs.map((r, i) => {
+    const t = tournaments.find(x => String(x.id) === String(r.tournament_id));
+    return t ? (t.name.length > 14 ? t.name.slice(0, 13) + '…' : t.name) : ('#' + (i + 1));
+  });
+  document.getElementById('pf-chart-title').textContent = `📈 Evolución · ${style}`;
+  document.getElementById('pf-chart-wrap').style.display = '';
+  if (profileChart) { profileChart.destroy(); profileChart = null; }
+  profileChart = new Chart(document.getElementById('pf-chart').getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets: [{ label: style, data: rs.map(r => r.time_seconds),
+      borderColor: 'rgba(26,111,196,1)', backgroundColor: 'rgba(26,111,196,0.08)', tension: 0.3, fill: true,
+      pointRadius: 5, pointBackgroundColor: 'rgba(26,111,196,1)', pointBorderColor: '#fff', pointBorderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => formatTime(c.raw) } } },
+      scales: { x: { ticks: { color: '#8299b0', maxRotation: 45 } }, y: { ticks: { color: '#8299b0', callback: v => formatTime(v) } } } }
+  });
+  document.getElementById('pf-chart-wrap').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function closeProfile() {
+  if (profileChart) { profileChart.destroy(); profileChart = null; }
+  document.getElementById('profile-modal').classList.remove('open');
 }
 function openSwimmerModal(id = null) {
   currentEditId = id; currentPhotoData = null;
@@ -1514,6 +1660,12 @@ async function saveSwimmer() {
     emergency_name: document.getElementById('sw-emname').value || null,
     emergency_phone: document.getElementById('sw-emphone').value || null,
   };
+  // Sello de "medidas actualizadas" (para el recordatorio trimestral): solo si cambiaron.
+  const prev = currentEditId ? swimmers.find(s => String(s.id) === String(currentEditId)) : null;
+  const measuresChanged = !prev || prev.weight !== data.weight || prev.height !== data.height || prev.wingspan !== data.wingspan;
+  if ((data.weight || data.height || data.wingspan) && measuresChanged) {
+    data.measures_updated = new Date().toISOString();
+  }
   try {
     if (currentEditId) {
       await fbDB.ref(`swimmers/${currentEditId}`).update(data);
