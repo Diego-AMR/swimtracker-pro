@@ -2991,13 +2991,6 @@ function showStyleAnalysis(style) {
     if (!ctx) return;
     // Eje Y FIJO: calculado con los tiempos + TODAS las metas del estilo, para que
     // activar/desactivar una línea de meta NO re-escale el gráfico (salto brusco).
-    const yVals = evolData.map(d => d.y).concat(styleGoals.map(g => g.time));
-    const ySpan = Math.max(...yVals) - Math.min(...yVals);
-    const yPad = Math.max(ySpan * 0.08, 0.5);
-    // Salto "bonito" del eje: el menor que dé ≤10 divisiones (2s, 5s, 10s…) → líneas finas, no de a 20s
-    const yStep = [0.25,0.5,1,2,5,10,15,30,60].find(s => (ySpan + 2*yPad) / s <= 10) || 60;
-    const yMinFixed = Math.max(0, Math.floor((Math.min(...yVals) - yPad) / yStep) * yStep);
-    const yMaxFixed = Math.ceil((Math.max(...yVals) + yPad) / yStep) * yStep;
     analysisCharts['evolution'] = new Chart(ctx.getContext('2d'), {
       type: 'line',
       data: {
@@ -3017,7 +3010,7 @@ function showStyleAnalysis(style) {
         },
         scales: {
           x:{ticks:{color:'#8299b0',maxRotation:45},grid:{color:'rgba(220,229,239,0.8)'}},
-          y:{min:yMinFixed, max:yMaxFixed, ticks:{stepSize:yStep, color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
+          y:{ticks:{color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
         }
       }
     });
