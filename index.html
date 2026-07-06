@@ -690,6 +690,7 @@ tr:last-child td { border-bottom:none; }
       <div class="card" id="parciales-hist-container" style="margin-bottom:24px;display:none">
         <div class="section-title">📊 Parciales históricos — <span id="parciales-hist-style" style="color:var(--cyan)"></span></div>
         <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Splits registrados en pruebas anteriores del mismo estilo. Cada línea = una competencia.</div>
+        <div id="hist-mode-toggle"></div>
         <div class="chart-container" style="height:200px"><canvas id="chart-parciales-hist"></canvas></div>
       </div>
       <div class="card">
@@ -2364,27 +2365,66 @@ function showCalDayPopup(dateStr) {
 // PARCIALES HISTÓRICOS (tiempos tab)
 // ════════════════════════════════════════════════════════════
 let parcialesHistChart = null;
+// ── Gráficos de parciales: modo compartido 'acum' (desde 0, acumulado) o 'tramo' (cada 50 m) ──
+let splitsChartMode = 'acum';
+let _lastHistStyle = null, _asplitsRecs = [];
+function splitsChartData(records, labelFn, COLORS) {
+  const maxSplits = Math.max(...records.map(r => r.splits.length));
+  const acum = splitsChartMode === 'acum';
+  const labels = acum
+    ? Array.from({length: maxSplits + 1}, (_, i) => `${i*50}m`)          // incluye la salida (0m)
+    : Array.from({length: maxSplits}, (_, i) => `${(i+1)*50}m`);
+  const datasets = records.map((r, idx) => {
+    const color = COLORS[idx % COLORS.length];
+    let data;
+    if (acum) { let acc = 0; data = [0].concat(r.splits.map(s => { acc += s.split_time; return parseFloat(acc.toFixed(2)); })); }
+    else data = r.splits.map(s => parseFloat(s.split_time.toFixed(3)));
+    return { label: labelFn(r), data, borderColor: color, backgroundColor: color+'20', tension: 0.3, fill: false, pointRadius: 5, pointBorderColor:'#fff', pointBorderWidth: 2, pointBackgroundColor: color };
+  });
+  return { labels, datasets };
+}
+function splitsYOpts() {
+  const acum = splitsChartMode === 'acum';
+  return { beginAtZero: true, ticks:{color:'#8299b0', callback: v => acum ? formatTime(v) : `${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
+           title:{display:true, text: acum ? 'Tiempo acumulado (desde la salida)' : 'Tiempo del parcial (s)', color:'#8299b0', font:{size:11}} };
+}
+function splitsTooltip() {
+  return { callbacks: { label: ctx => `${ctx.dataset.label}: ${splitsChartMode === 'acum' ? formatTime(ctx.raw) : ctx.raw + 's'}` } };
+}
+function splitsModeToggle() {
+  const btn = (m, txt) => `<button class="btn btn-sm splits-mode-btn ${splitsChartMode===m?'btn-primary':'btn-secondary'}" data-mode="${m}" onclick="setSplitsMode('${m}')">${txt}</button>`;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${btn('acum','📈 Acumulado (desde 0)')}${btn('tramo','⚑ Por tramo (cada 50 m)')}</div>`;
+}
+function setSplitsMode(mode) {
+  if (splitsChartMode === mode) return;
+  splitsChartMode = mode;
+  document.querySelectorAll('.splits-mode-btn').forEach(b => {
+    const on = b.dataset.mode === mode;
+    b.classList.toggle('btn-primary', on);
+    b.classList.toggle('btn-secondary', !on);
+  });
+  if (_lastHistStyle) renderParcialesHistChart(_lastHistStyle);
+  renderAnalysisSplitsChart();
+}
+
 function renderParcialesHistChart(style) {
   const container = document.getElementById('parciales-hist-container');
   const label = document.getElementById('parciales-hist-style');
+  _lastHistStyle = style || null;
   if (!style) { container.style.display = 'none'; return; }
   // Gather all records of this style that have splits
   const records = timesRaw.filter(r => r.style === style && r.splits && r.splits.length > 0);
   if (!records.length) { container.style.display = 'none'; return; }
   container.style.display = '';
   label.textContent = style;
-  // Determine max splits length
-  const maxSplits = Math.max(...records.map(r => r.splits.length));
-  const labels = Array.from({length: maxSplits}, (_, i) => `${(i+1)*50}m`);
+  const toggleEl = document.getElementById('hist-mode-toggle');
+  if (toggleEl) toggleEl.innerHTML = splitsModeToggle();
   const COLORS = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025'];
-  const datasets = records.map((r, idx) => {
+  const { labels, datasets } = splitsChartData(records, r => {
     const tn = tournaments.find(t => t.id === r.tournament_id);
     const sw = swimmers.find(s => s.id === r.swimmer_id);
-    const label = `${sw ? sw.name : '?'} — ${tn ? tn.name : '?'}`;
-    const color = COLORS[idx % COLORS.length];
-    const data = r.splits.map(s => parseFloat(s.split_time.toFixed(3)));
-    return { label, data, borderColor: color, backgroundColor: color+'20', tension: 0.3, fill: false, pointRadius: 5, pointBorderColor:'#fff', pointBorderWidth:2, pointBackgroundColor: color };
-  });
+    return `${sw ? sw.name : '?'} — ${tn ? tn.name : '?'}`;
+  }, COLORS);
   if (parcialesHistChart) { parcialesHistChart.destroy(); parcialesHistChart = null; }
   const ctx = document.getElementById('chart-parciales-hist').getContext('2d');
   parcialesHistChart = new Chart(ctx, {
@@ -2394,12 +2434,11 @@ function renderParcialesHistChart(style) {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: true, position: 'top', labels: { color:'#4a627a', usePointStyle:true, font:{size:11} } },
-        tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw}s` } }
+        tooltip: splitsTooltip()
       },
       scales: {
         x: { ticks:{color:'#8299b0'}, grid:{color:'rgba(220,229,239,0.8)'} },
-        y: { ticks:{color:'#8299b0', callback: v => `${v}s`}, grid:{color:'rgba(220,229,239,0.8)'},
-             title:{display:true,text:'Tiempo del parcial (s)',color:'#8299b0',font:{size:11}} }
+        y: splitsYOpts()
       }
     }
   });
@@ -2877,6 +2916,7 @@ function showStyleAnalysis(style) {
     splitsSection = `
       <div class="section-title" style="margin-top:20px">⚑ Análisis de Parciales (50&nbsp;m)</div>
       <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.65">Cada línea del gráfico y cada fila de la tabla es una competencia; cada tramo (50m, 100m…) es el tiempo de ese largo. En la tabla, <span style="color:var(--green);font-weight:600">verde</span> = tu 50 más rápido de esa prueba y <span style="color:var(--red);font-weight:600">rojo</span> = el más lento. <strong>Prom/50</strong> es el promedio por tramo. La <strong>estrategia</strong> resume cómo repartiste el esfuerzo: 🚀 salida rápida, 🔄 negative split (2ª mitad más veloz, lo ideal) o ➡️ ritmo constante.</div>
+      <div id="asplits-mode-toggle">${splitsModeToggle()}</div>
       <div class="chart-container" style="height:280px;margin:4px 0 18px"><canvas id="chart-style-splits"></canvas></div>
       <div class="table-wrap"><table>
         <thead><tr><th>Competencia</th><th style="text-align:center">Total</th>${headCols}<th style="text-align:center">Prom/50</th><th style="text-align:center">Estrategia</th></tr></thead>
@@ -2944,9 +2984,17 @@ function showStyleAnalysis(style) {
     </div>` : ''}
     <div class="chart-container" style="height:260px"><canvas id="chart-evolution"></canvas></div>
     ${splitsSection}`;
+  _asplitsRecs = splitRecs; // datos para el gráfico de parciales (y su toggle)
   setTimeout(() => {
     const ctx = document.getElementById('chart-evolution');
     if (!ctx) return;
+    // Eje Y FIJO: calculado con los tiempos + TODAS las metas del estilo, para que
+    // activar/desactivar una línea de meta NO re-escale el gráfico (salto brusco).
+    const yVals = evolData.map(d => d.y).concat(styleGoals.map(g => g.time));
+    const ySpan = Math.max(...yVals) - Math.min(...yVals);
+    const yPad = Math.max(ySpan * 0.08, 0.5);
+    const yMinFixed = Math.max(0, Math.min(...yVals) - yPad);
+    const yMaxFixed = Math.max(...yVals) + yPad;
     analysisCharts['evolution'] = new Chart(ctx.getContext('2d'), {
       type: 'line',
       data: {
@@ -2966,35 +3014,28 @@ function showStyleAnalysis(style) {
         },
         scales: {
           x:{ticks:{color:'#8299b0',maxRotation:45},grid:{color:'rgba(220,229,239,0.8)'}},
-          y:{ticks:{color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
+          y:{min:yMinFixed, max:yMaxFixed, ticks:{color:'#8299b0',callback:v=>formatTime(v)},grid:{color:'rgba(220,229,239,0.8)'}}
         }
       }
     });
     activeGoalLines = {};
-    // Gráfico de parciales por competencia (fusionado desde la antigua pestaña Estilos)
-    if (splitRecs.length) {
-      destroyChart('stylesplits');
-      const sc = document.getElementById('chart-style-splits');
-      if (sc) {
-        const maxSeg = Math.max(...splitRecs.map(r => r.splits.length));
-        const slabels = Array.from({length:maxSeg}, (_,i) => `${(i+1)*50}m`);
-        const SCOL = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025','#e8821a','#6b4fdb'];
-        const sds = splitRecs.map((r, idx) => {
-          const c = SCOL[idx % SCOL.length];
-          return { label: r.tournament_name || '?', data: r.splits.map(s => parseFloat(s.split_time.toFixed(3))),
-            borderColor:c, backgroundColor:c+'18', tension:0.3, fill:false, pointRadius:5, pointBorderColor:'#fff', pointBorderWidth:2, pointBackgroundColor:c };
-        });
-        analysisCharts['stylesplits'] = new Chart(sc.getContext('2d'), {
-          type:'line', data:{ labels:slabels, datasets:sds },
-          options:{ responsive:true, maintainAspectRatio:false,
-            plugins:{ legend:{display:true,position:'top',labels:{color:'#4a627a',usePointStyle:true,font:{size:11}}},
-              tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.raw}s`}} },
-            scales:{ x:{ticks:{color:'#8299b0'},grid:{color:'rgba(220,229,239,0.8)'}},
-              y:{ticks:{color:'#8299b0',callback:v=>`${v}s`},grid:{color:'rgba(220,229,239,0.8)'},title:{display:true,text:'Tiempo por tramo (s)',color:'#8299b0',font:{size:11}}} } }
-        });
-      }
-    }
+    renderAnalysisSplitsChart(); // gráfico de parciales por competencia (con toggle acum/tramo)
   }, 100);
+}
+function renderAnalysisSplitsChart() {
+  const sc = document.getElementById('chart-style-splits');
+  if (!sc || !_asplitsRecs.length) return;
+  destroyChart('stylesplits');
+  const SCOL = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025','#e8821a','#6b4fdb'];
+  const { labels, datasets } = splitsChartData(_asplitsRecs, r => r.tournament_name || '?', SCOL);
+  analysisCharts['stylesplits'] = new Chart(sc.getContext('2d'), {
+    type:'line', data:{ labels, datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:true,position:'top',labels:{color:'#4a627a',usePointStyle:true,font:{size:11}}},
+        tooltip: splitsTooltip() },
+      scales:{ x:{ticks:{color:'#8299b0'},grid:{color:'rgba(220,229,239,0.8)'}},
+        y: splitsYOpts() } }
+  });
 }
 function toggleGoalLine(goalName, styleKey) {
   const chart = analysisCharts['evolution'];
