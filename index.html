@@ -475,6 +475,12 @@ tr:last-child td { border-bottom:none; }
   #chrono-display { font-size:36px; }
   .chrono-controls .btn { font-size:11px; }
 }
+.sw-toggle{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+.sw-toggle input{opacity:0;width:0;height:0}
+.sw-slider{position:absolute;cursor:pointer;inset:0;background:var(--border);border-radius:26px;transition:.2s}
+.sw-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw-toggle input:checked + .sw-slider{background:var(--cyan)}
+.sw-toggle input:checked + .sw-slider:before{transform:translateX(20px)}
 </style>
 </head>
 <body>
@@ -1054,6 +1060,13 @@ tr:last-child td { border-bottom:none; }
           <label class="form-label">Fecha de fin</label>
           <input class="form-input" id="tn-end-date" type="date">
         </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+          <span class="sw-toggle"><input type="checkbox" id="tn-mandatory"><span class="sw-slider"></span></span>
+          <span class="form-label" style="margin:0">⚠️ Asistencia obligatoria</span>
+        </label>
+        <div style="font-size:11.5px;color:var(--text3);margin-top:4px">Actívalo si el club exige asistir sí o sí a este torneo.</div>
       </div>
       <div class="form-group">
         <label class="form-label">Estilos que se compiten</label>
@@ -1689,7 +1702,7 @@ function renderTournaments() {
       ? `${formatDate(t.date)} → ${formatDate(t.end_date)}`
       : formatDate(t.date);
     return `<tr>
-      <td><strong>${t.name}</strong></td>
+      <td><strong>${t.name}</strong>${t.mandatory?' <span class="tag" style="background:rgba(217,48,37,0.12);color:var(--red);border-color:rgba(217,48,37,0.3)">⚠️ Obligatorio</span>':''}</td>
       <td>${dateRange}</td>
       <td style="font-size:12px;color:var(--text2)">${t.city || '—'}</td>
       <td><div class="tags">${styles.slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('')}${styles.length>4?`<span class="tag">+${styles.length-4}</span>`:''}</div></td>
@@ -1713,6 +1726,7 @@ function openTournamentModal(id = null) {
     document.getElementById('tn-date').value = t.date;
     document.getElementById('tn-end-date').value = t.end_date || '';
     document.getElementById('tn-city').value = t.city || '';
+    document.getElementById('tn-mandatory').checked = !!t.mandatory;
     const selectedStyles = t.styles || [];
     document.querySelectorAll('.style-check').forEach(cb => { cb.checked = selectedStyles.includes(cb.value); });
     document.getElementById('tn-delete-btn').style.display = '';
@@ -1723,6 +1737,7 @@ function openTournamentModal(id = null) {
     document.getElementById('tn-date').value = '';
     document.getElementById('tn-end-date').value = '';
     document.getElementById('tn-city').value = '';
+    document.getElementById('tn-mandatory').checked = false;
     document.getElementById('tn-delete-btn').style.display = 'none';
   }
   openModal('tournament-modal');
@@ -1734,12 +1749,13 @@ async function saveTournament() {
   const end_date = document.getElementById('tn-end-date').value || null;
   const city = document.getElementById('tn-city').value.trim() || null;
   const styles = [...document.querySelectorAll('.style-check:checked')].map(c => c.value);
+  const mandatory = document.getElementById('tn-mandatory').checked;
   try {
     if (currentEditId) {
-      await fbDB.ref(`tournaments/${currentEditId}`).update({ name, date, end_date, city, styles });
+      await fbDB.ref(`tournaments/${currentEditId}`).update({ name, date, end_date, city, styles, mandatory });
       showToast('Torneo actualizado ✓', 'success');
     } else {
-      await fbDB.ref('tournaments').push({ name, date, end_date, city, styles, created_at: new Date().toISOString() });
+      await fbDB.ref('tournaments').push({ name, date, end_date, city, styles, mandatory, created_at: new Date().toISOString() });
       showToast('Torneo creado ✓', 'success');
     }
     closeModal('tournament-modal');
