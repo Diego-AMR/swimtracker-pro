@@ -2875,12 +2875,10 @@ function renderRitmo() {
   const pct = parseFloat(document.getElementById('ritmo-pct').value) || 0;
   const dive = parseFloat(document.getElementById('ritmo-dive').value) || 0;
   const times = g.times || {};
-  const stylesG = Object.keys(times)
-    .filter(s => times[s] > 0 && !/^Combinado/i.test(s))   // Combinado excluido (mezcla estilos)
-    .sort((a,b) => ALL_STYLES.indexOf(a) - ALL_STYLES.indexOf(b));
+  const stylesG = Object.keys(times).filter(s => times[s] > 0 && !/^Combinado/i.test(s)).sort((a,b) => ALL_STYLES.indexOf(a) - ALL_STYLES.indexOf(b));
   if (!stylesG.length) { content.innerHTML = '<p style="color:var(--text3);font-size:13px">Esta meta no tiene tiempos definidos (sin contar Combinado).</p>'; return; }
   const sa = (currentAnalysis && currentAnalysis.style_analysis) || {};
-  // Celda de ritmo para una piscina de largo `len` (50 ó 25)
+  const SEP = 'border-left:2px solid var(--text3)';
   function poolCell(target, dist, len, effDive) {
     const seg = Math.max(1, Math.round(dist/len));
     const avg = target/seg;
@@ -2893,22 +2891,39 @@ function renderRitmo() {
     return `<div style="font-family:var(--font-head);font-size:17px;color:var(--teal);letter-spacing:0.5px">${formatTime(avg)}</div>
       <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${seg} × ${len} m</div>`;
   }
+  const fmtD = x => (x>0?'+':'−') + Math.abs(x).toFixed(2) + 's';
   const rows = stylesG.map(style => {
     const goalT = times[style];
     const target = goalT * (1 - pct/100);
     const dist = styleDistance(style) || 50;
     const isBack = /^Espalda/i.test(style);
-    const effDive = isBack ? 0 : dive;          // Espalda: salida dentro del agua, sin ventaja
+    const effDive = isBack ? 0 : dive;
     const vel = target > 0 ? (dist / target) : 0;
     const a = sa[style];
     const bestCell = (a && a.best != null) ? formatTime(a.best) : '—';
     const backNote = (isBack && dive > 0) ? ` <span style="font-size:10px;color:var(--text3)">↔ sin salida</span>` : '';
+    // Mejor parcial de 50 m (el más rápido de todas las carreras de ese estilo)
+    let best50 = null;
+    if (a && a.records) a.records.forEach(r => (r.splits||[]).forEach(sp => { if (best50==null || sp.split_time < best50) best50 = sp.split_time; }));
+    const obj50 = target / Math.max(1, Math.round(dist/50));
+    let actualCell, difCell;
+    if (best50 != null) {
+      actualCell = `<div style="font-family:var(--font-head);font-size:17px;letter-spacing:0.5px">${formatTime(best50)}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">25 m: ${formatTime(best50/2)}</div>`;
+      const d50 = best50 - obj50; const d25 = d50/2;
+      const col = d50 > 0.05 ? 'var(--red)' : 'var(--green)';
+      difCell = `<div style="font-family:var(--font-head);font-size:17px;letter-spacing:0.5px;color:${col}">${fmtD(d50)}</div><div style="font-size:10.5px;color:${col};margin-top:2px">25 m: ${fmtD(d25)}</div>`;
+    } else {
+      actualCell = `<span style="color:var(--text3)">—</span><div style="font-size:10px;color:var(--text3)">sin parciales</div>`;
+      difCell = `<span style="color:var(--text3)">—</span>`;
+    }
     return `<tr>
       <td style="font-weight:700">${style}${backNote}</td>
       <td style="text-align:center">${bestCell}</td>
       <td style="text-align:center">${formatTime(goalT)}</td>
       <td style="text-align:center;color:var(--cyan);font-weight:700">${formatTime(target)}</td>
-      <td style="text-align:center">${poolCell(target, dist, 50, effDive)}</td>
+      <td style="text-align:center">${actualCell}</td>
+      <td style="text-align:center">${difCell}</td>
+      <td style="text-align:center;${SEP}">${poolCell(target, dist, 50, effDive)}</td>
       <td style="text-align:center">${poolCell(target, dist, 25, effDive)}</td>
       <td style="text-align:center;color:var(--text3)">${vel.toFixed(2)} m/s</td>
     </tr>`;
@@ -2917,11 +2932,13 @@ function renderRitmo() {
     <thead><tr>
       <th>Estilo</th><th style="text-align:center">Tu mejor</th><th style="text-align:center">Meta</th>
       <th style="text-align:center">Objetivo −${pct}%</th>
-      <th style="text-align:center">🏊 Piscina 50&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">por cada 50</span></th>
-      <th style="text-align:center">🏊 Piscina 25&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">por cada 25</span></th>
+      <th style="text-align:center">⏱️ Ritmo actual<br><span style="font-weight:400;font-size:10px;color:var(--text3)">mejor 50 (25 abajo)</span></th>
+      <th style="text-align:center">Δ Diferencia<br><span style="font-weight:400;font-size:10px;color:var(--text3)">para llegar</span></th>
+      <th style="text-align:center;${SEP}">🏊 Piscina 50&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">objetivo por 50</span></th>
+      <th style="text-align:center">🏊 Piscina 25&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">objetivo por 25</span></th>
       <th style="text-align:center">Velocidad</th>
     </tr></thead><tbody>${rows}</tbody></table></div>
-    <div style="margin-top:12px;font-size:11.5px;color:var(--text3);line-height:1.6">💡 Cada columna de piscina te dice el ritmo a mantener en cada largo según dónde entrenes. La <strong>ventaja de salida</strong> solo aplica a Libre, Pecho y Mariposa (salen del partidor); en <strong>Espalda</strong> se ignora (sale dentro del agua) y verás «↔ sin salida». Con ventaja de salida, el primer largo va más rápido y el número grande es el ritmo del <strong>resto</strong> de largos. <strong>Combinado</strong> no se incluye.</div>`;
+    <div style="margin-top:12px;font-size:11.5px;color:var(--text3);line-height:1.6">💡 <strong>Ritmo actual</strong> = tu <strong>mejor parcial de 50&nbsp;m</strong> registrado en ese estilo (el verde en «Por Estilo»). <strong>Diferencia</strong> = cuánto debes bajar por cada 50 para alcanzar el objetivo (<span style="color:var(--red)">rojo</span> = te falta, <span style="color:var(--green)">verde</span> = ya lo superas). A la derecha de la línea están los ritmos <strong>objetivo</strong> a los que debes llegar (piscina 50 y 25) y la velocidad. La <strong>ventaja de salida</strong> solo aplica a Libre/Pecho/Mariposa; en Espalda se ignora. <strong>Combinado</strong> no se incluye.</div>`;
 }
 
 function showStyleAnalysis(style) {
