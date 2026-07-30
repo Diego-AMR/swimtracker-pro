@@ -481,6 +481,10 @@ tr:last-child td { border-bottom:none; }
 .sw-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .sw-toggle input:checked + .sw-slider{background:var(--cyan)}
 .sw-toggle input:checked + .sw-slider:before{transform:translateX(20px)}
+/* Torneos: fila ya realizada (verde suave) + separador de renglones más claro */
+#tournaments-body td { border-bottom:1.5px solid var(--border); }
+tr.t-done td { background:rgba(26,138,69,0.08); }
+tr.t-done:hover td { background:rgba(26,138,69,0.14); }
 /* Cronometro: botones grandes en celular */
 @media (max-width:768px){
   .chrono-controls{ flex-wrap:wrap; gap:10px; }
@@ -1722,16 +1726,18 @@ function renderTournaments() {
   const empty = document.getElementById('tournaments-empty');
   if (!tournaments.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
+  const _n=new Date(); const todayStr=_n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
   tbody.innerHTML = tournaments.map(t => {
     const styles = t.styles || [];
     const dateRange = t.end_date && t.end_date !== t.date
       ? `${formatDate(t.date)} → ${formatDate(t.end_date)}`
       : formatDate(t.date);
-    return `<tr>
-      <td><strong>${t.name}</strong>${t.mandatory?' <span class="tag" style="background:rgba(217,48,37,0.12);color:var(--red);border-color:rgba(217,48,37,0.3)">⚠️ Obligatorio</span>':''}</td>
+    const done = (t.end_date||t.date) < todayStr;
+    return `<tr class="${done?'t-done':''}">
+      <td><strong style="${done?'color:var(--green)':''}">${t.name}</strong>${done?' <span class="tag" style="background:rgba(26,138,69,0.15);color:var(--green);border-color:rgba(26,138,69,0.35)">✓ Realizado</span>':''}${t.mandatory?' <span class="tag" style="background:rgba(217,48,37,0.12);color:var(--red);border-color:rgba(217,48,37,0.3)">⚠️ Obligatorio</span>':''}</td>
       <td>${dateRange}</td>
       <td style="font-size:12px;color:var(--text2)">${t.city || '—'}</td>
-      <td><div class="tags">${styles.slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('')}${styles.length>4?`<span class="tag">+${styles.length-4}</span>`:''}</div></td>
+      <td><div class="tags">${styles.length ? styles.map(s=>`<span class="tag">${s}</span>`).join('') : '<span style="color:var(--text3)">—</span>'}</div></td>
       <td><button class="btn btn-secondary btn-sm" onclick="openTournamentModal('${t.id}')">✏️ Editar</button></td>
     </tr>`;
   }).join('');
