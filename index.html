@@ -481,6 +481,13 @@ tr:last-child td { border-bottom:none; }
 .sw-slider:before{content:'';position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
 .sw-toggle input:checked + .sw-slider{background:var(--cyan)}
 .sw-toggle input:checked + .sw-slider:before{transform:translateX(20px)}
+/* Cronometro: botones grandes en celular */
+@media (max-width:768px){
+  .chrono-controls{ flex-wrap:wrap; gap:10px; }
+  #btn-crono{ flex:1 1 100%; font-size:26px; padding:30px 12px; font-weight:800; }
+  #btn-crono-reset{ flex:1 1 100%; font-size:15px; padding:14px; }
+  #chrono-display{ font-size:56px; padding:20px; }
+}
 </style>
 </head>
 <body>
@@ -693,10 +700,8 @@ tr:last-child td { border-bottom:none; }
         </div>
         <div id="chrono-display" style="opacity:0.45">00:00.00</div>
         <div class="chrono-controls">
-          <button class="btn btn-primary" id="btn-chrono-start" onclick="chronoStart()">▶ Iniciar</button>
-          <button class="btn btn-secondary" id="btn-chrono-split" onclick="chronoSplit()" disabled>⚑ Parcial</button>
-          <button class="btn btn-success" id="btn-chrono-use" onclick="chronoFinish()" disabled>🏁 Finalizar</button>
-          <button class="btn btn-secondary" onclick="chronoReset()">↺ Reiniciar</button>
+          <button class="btn btn-primary" id="btn-crono" onclick="cronoAction()">▶ Iniciar</button>
+          <button class="btn btn-secondary" id="btn-crono-reset" onclick="chronoReset()">↺ Reiniciar</button>
         </div>
         <button class="btn" id="btn-video" onclick="launchVideo()" style="width:100%;margin:2px 0 10px;background:#7c3aed;color:#fff">📹 Grabar video (con estos datos)</button>
         <div id="split-hint" style="font-size:11.5px;color:var(--text3);text-align:center;margin-bottom:10px;line-height:1.6"></div>
@@ -1151,6 +1156,27 @@ tr:last-child td { border-bottom:none; }
 </div>
 
 <!-- Toast -->
+<!-- Pop-up de resultado -->
+<div class="modal-overlay" id="result-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">🏁 Resultado</div>
+      <button class="modal-close" onclick="closeModal('result-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text3)" id="result-style"></div>
+        <div style="font-family:var(--font-head);font-size:46px;color:var(--cyan);letter-spacing:2px" id="result-time">—</div>
+        <div style="font-size:12px;color:var(--green);margin-top:2px" id="result-saved"></div>
+      </div>
+      <div style="font-weight:700;margin:8px 0 8px">🎯 Comparación con tus metas</div>
+      <div id="result-goals"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal('result-modal')">Cerrar</button>
+    </div>
+  </div>
+</div>
 <div id="toast-container"></div>
 
 <script>
@@ -1997,16 +2023,90 @@ function chronoSplit() {
     showToast('Listo los parciales. Ahora dale 🏁 Finalizar para el último y parar.', 'info');
   }
 }
+function cronoDisplay(ms){
+  const cs=Math.floor(ms/10)%100, s=Math.floor(ms/1000)%60, m=Math.floor(ms/60000);
+  document.getElementById('chrono-display').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+String(cs).padStart(2,'0');
+}
+function cronoTickNew(){ cronoDisplay(chronoElapsed + (Date.now()-chronoStartTime)); }
+function cronoUpdateBtn(){
+  const b=document.getElementById('btn-crono'); if(!b) return;
+  const N=maxSplitsForCurrent();
+  if(!chronoRunning){ b.textContent='▶ Iniciar'; b.classList.remove('running'); }
+  else if(N>=1 && parciales.length>=N-1){ b.textContent='🏁 Finalizar'; b.classList.add('running'); }
+  else { b.textContent='⚑ Parcial'; b.classList.add('running'); }
+}
+function cronoAction(){
+  if(!chronoRunning){
+    const ready=document.getElementById('tr-swimmer').value && document.getElementById('tr-tournament').value && document.getElementById('tr-style').value;
+    if(!ready){ showToast('Primero selecciona nadador, torneo y estilo','error'); return; }
+    if(chronoElapsed===0){ parciales=[]; parcialesBase=0; }
+    chronoStartTime=Date.now(); chronoInterval=setInterval(cronoTickNew,10); chronoRunning=true;
+    document.getElementById('chrono-display').classList.add('running');
+    cronoUpdateBtn(); return;
+  }
+  const N=maxSplitsForCurrent();
+  if(N>=1 && parciales.length>=N-1){ cronoFinalize(); return; }
+  const elapsed=chronoElapsed+(Date.now()-chronoStartTime);
+  const splitTime=(elapsed-parcialesBase)/1000;
+  if(splitTime>0){ parcialesBase=elapsed; parciales.push(splitTime); renderParcialesList(); if(navigator.vibrate) navigator.vibrate(35); }
+  cronoUpdateBtn();
+}
+function cronoFinalize(){
+  if(chronoRunning){ chronoElapsed+=Date.now()-chronoStartTime; clearInterval(chronoInterval); chronoRunning=false; }
+  const elapsed=chronoElapsed;
+  if(elapsed<=0){ showToast('Primero inicia el cronómetro','error'); return; }
+  const finalSeg=(elapsed-parcialesBase)/1000;
+  if(finalSeg>0.05){ parciales.push(finalSeg); parcialesBase=elapsed; }
+  renderParcialesList();
+  document.getElementById('chrono-display').classList.remove('running');
+  cronoDisplay(elapsed);
+  if(navigator.vibrate) navigator.vibrate([60,40,60]);
+  autoSaveAndPopup(elapsed/1000, parciales.slice());
+}
+async function autoSaveAndPopup(total, splitsArr){
+  const swimmer_id=document.getElementById('tr-swimmer').value, tournament_id=document.getElementById('tr-tournament').value, style=document.getElementById('tr-style').value;
+  let savedMsg='';
+  const dup=(typeof timesRaw!=='undefined'?timesRaw:[]).find(r=>String(r.swimmer_id)===String(swimmer_id)&&String(r.tournament_id)===String(tournament_id)&&r.style===style);
+  if(dup){ savedMsg='⚠ Ya existía un registro para este nadador/torneo/estilo — no se duplicó.'; }
+  else {
+    try{
+      const splits=splitsArr.map((t,i)=>({split_number:i+1, split_time:t}));
+      await fbDB.ref('time_records').push({ swimmer_id, tournament_id, style, time_seconds: total, splits, created_at:new Date().toISOString() });
+      savedMsg='✔ Guardado automáticamente en la app ✓';
+    }catch(e){ savedMsg='⚠ No se pudo guardar: '+(e.message||e); }
+  }
+  showResultPopup(style, total, savedMsg);
+  document.getElementById('tr-time').value='';
+  chronoReset();
+}
+function showResultPopup(style, total, savedMsg){
+  document.getElementById('result-style').textContent = style;
+  document.getElementById('result-time').textContent = formatTime(total);
+  document.getElementById('result-saved').textContent = savedMsg||'';
+  const gl = (typeof goals!=='undefined'?goals:[]);
+  const withGoal = gl.filter(g=>(g.times||{})[style]>0);
+  let html='';
+  if(!withGoal.length){
+    html='<div style="color:var(--text3);font-size:13px">No hay metas con tiempo para este estilo. Créalas en «Metas» para comparar.</div>';
+  } else {
+    html=withGoal.map(g=>{
+      const gt=(g.times||{})[style];
+      const ok=total<=gt; const diff=Math.abs(total-gt);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:6px;background:'+(ok?'rgba(26,138,69,0.1)':'rgba(217,48,37,0.08)')+'">'
+        +'<span style="font-size:13px">🎯 <strong>'+g.name+'</strong> <span style="color:var(--text3)">('+formatTime(gt)+')</span></span>'
+        +'<span style="font-weight:700;font-size:13px;color:'+(ok?'var(--green)':'var(--red)')+'">'+(ok?'✅ ¡Alcanzada! −'+formatTime(diff):'⏳ faltan '+formatTime(diff))+'</span></div>';
+    }).join('');
+  }
+  document.getElementById('result-goals').innerHTML=html;
+  openModal('result-modal');
+}
 function chronoReset() {
   clearInterval(chronoInterval); chronoRunning = false; chronoElapsed = 0; parcialesBase = 0; parciales = [];
   document.getElementById('chrono-display').textContent = '00:00.00';
   document.getElementById('chrono-display').classList.remove('running');
-  document.getElementById('btn-chrono-start').textContent = '▶ Iniciar';
-  document.getElementById('btn-chrono-start').disabled = false;
-  document.getElementById('btn-chrono-split').disabled = true;
-  document.getElementById('btn-chrono-use').disabled = true;
   document.getElementById('parciales-list').innerHTML = '';
   document.getElementById('parciales-container').style.display = 'none';
+  cronoUpdateBtn();
   checkChronoReady();
 }
 function chronoFinish() {
