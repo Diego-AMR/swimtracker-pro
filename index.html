@@ -2847,7 +2847,7 @@ function renderAnalysis(data) {
     },
     options: chartOptions('Registros')
   });
-  const styles = Object.keys(style_analysis);
+  const styles = Object.keys(style_analysis).sort((a,b)=>{const ia=ALL_STYLES.indexOf(a),ib=ALL_STYLES.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib);});
   document.getElementById('style-pills').innerHTML = styles.map(s =>
     `<span class="style-pill" onclick="showStyleAnalysis('${s}')">${s}</span>`
   ).join('');
@@ -2900,7 +2900,7 @@ function renderAnalysis(data) {
   } else { goalDash.style.display = 'none'; }
   // Improvements chart
   destroyChart('improvements');
-  const impData = styles.map(s => ({ style: s, diff: style_analysis[s].last_delta, pct: style_analysis[s].last_delta_pct })).sort((a,b) => b.diff - a.diff);
+  const impData = styles.map(s => ({ style: s, diff: style_analysis[s].last_delta, pct: style_analysis[s].last_delta_pct }));
   analysisCharts['improvements'] = new Chart(document.getElementById('chart-improvements').getContext('2d'), {
     type: 'bar',
     data: {
