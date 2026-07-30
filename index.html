@@ -2367,7 +2367,7 @@ function buildTourMap() {
 
 // ── Single month mini-calendar
 function renderMonthMini(year, month, tourMap, showMonthTitle=true) {
-  const todayStr = new Date().toISOString().slice(0,10);
+  const _n = new Date(); const todayStr = _n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
   const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
   const daysInMonth = new Date(year, month+1, 0).getDate();
   const monthName = new Date(year, month).toLocaleDateString('es',{month:'long',year:'numeric'});
@@ -2408,8 +2408,8 @@ function renderCalMes() {
   const endOfMonth   = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${new Date(calYear,calMonth+1,0).getDate().toString().padStart(2,'0')}`;
   const monthTours = tournaments.filter(t => t.date <= endOfMonth && (t.end_date||t.date) >= startOfMonth)
     .sort((a,b) => a.date.localeCompare(b.date));
-  const todayStr = new Date().toISOString().slice(0,10);
-  const daysDiff = d => Math.round((new Date(d)-new Date())/86400000);
+  const _n = new Date(); const todayStr = _n.getFullYear()+'-'+String(_n.getMonth()+1).padStart(2,'0')+'-'+String(_n.getDate()).padStart(2,'0');
+  const daysDiff = d => { const a=d.split('-').map(Number); const t0=new Date(a[0],a[1]-1,a[2]); const n=new Date(); n.setHours(0,0,0,0); return Math.round((t0-n)/86400000); };
   const listHTML = monthTours.length ? monthTours.map(t => {
     const diff = daysDiff(t.date);
     const past = t.date < todayStr;
