@@ -71,7 +71,9 @@ module.exports = async (req, res) => {
   try {
     const data = await scrapeMeet(url);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    res.setHeader('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
     res.status(200).send(JSON.stringify(data));
   } catch (e) {
     res.status(502).json({ error: e.message });
