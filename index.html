@@ -904,6 +904,13 @@ tr:last-child td { border-bottom:none; }
     .tv-acc-body .table-wrap{padding-left:8px}
     .tv .tv-better{color:#1f8a5b;font-weight:700}
     .tv .tv-worse{color:#c0392b;font-weight:700}
+    .tv-day{font-family:var(--font-head);font-size:17px;letter-spacing:1px;color:var(--cyan2);margin:22px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--cyan);text-transform:capitalize}
+    .tv-badge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
+    .tv-badge.dq{background:rgba(192,57,43,.14);color:#c0392b}
+    .tv-badge.ns{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+    .tv tr.flagged td{background:var(--bg3);color:var(--text3)}
+    .tv-better{color:#1f8a5b}
+    .tv-worse{color:#c0392b}
   </style>
   <div class="page-header">
     <div>
@@ -925,7 +932,7 @@ tr:last-child td { border-bottom:none; }
       </div>
       <div style="flex:1;min-width:150px">
         <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Nadador/a (opcional)</label>
-        <input class="form-input" id="tv-swimmer" value="Danna Salome" placeholder="nombre">
+        <input class="form-input" id="tv-swimmer" value="Mora Bueno" placeholder="apellido">
       </div>
       <button class="btn btn-primary" onclick="loadTorneo(true)">Conectar / Actualizar</button>
     </div>
@@ -1624,6 +1631,15 @@ function tvOnShow(){ const t=document.getElementById('tab-torneovivo'); if(t&&t.
 document.addEventListener('visibilitychange',tvOnShow);
 window.addEventListener('focus',tvOnShow);
 
+function tvCap(s){ s=s||''; return s.charAt(0).toUpperCase()+s.slice(1); }
+function tvDayKey(d){ const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(d||''); return m? +(m[3]+m[2].padStart(2,'0')+m[1].padStart(2,'0')) : 99999999; }
+function tvDelta(seed,finals){
+  if(!finals||!seed||/[A-Za-z]/.test(finals)||/[A-Za-z]/.test(seed)) return null;
+  const d=tvSecs(finals)-tvSecs(seed); if(!isFinite(d)) return null;
+  if(Math.abs(d)<0.005) return {txt:'=',cls:''};
+  const a=Math.abs(d), t=a>=60?(Math.floor(a/60)+':'+(a%60).toFixed(2).padStart(5,'0')):a.toFixed(2);
+  return {txt:(d<0?'▼ ':'▲ ')+t, cls:d<0?'tv-better':'tv-worse'};
+}
 function renderTorneo(data){
   const box=document.getElementById('tv-results'); if(!box) return;
   const club=tvVal('tv-club','NARV').toUpperCase();
@@ -1632,35 +1648,44 @@ function renderTorneo(data){
   const events=(data.events||[]).filter(e=>e.rows&&e.rows.length);
   let h='';
 
-  // Cronograma del nadador (recuadros compactos)
+  // Cronograma del nadador (recuadros compactos) — con delta y estado (DQ/NS)
   if(who){
     const mine=[];
     events.forEach(e=>e.rows.forEach(r=>{ if(r.name.toLowerCase().includes(who)&&(!club||r.club===club)) mine.push({e,r}); }));
     if(mine.length){
       h+='<div class="section-title">🗓️ Cronograma — '+tvEsc(whoRaw)+'</div><div class="tv-sched">';
       mine.sort((a,b)=>a.e.num-b.e.num).forEach(({e,r})=>{
-        const nt=/NT|DQ|SCR/i.test(r.seed);
-        h+='<div class="tv-sc"><div class="top"><span>Ev '+e.num+'</span><span class="t">'+tvEsc(e.age||'')+' · '+e.gender+'</span></div>'+
+        const dl=tvDelta(r.seed,r.finals);
+        let chip = r.status ? '<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
+                 : (r.finals ? '<span class="lane">🏁 '+tvEsc(r.finals)+'</span>' : '');
+        const pill = r.status ? r.status : (r.pos ? r.pos+'º' : (r.finals?'—':'estreno'));
+        h+='<div class="tv-sc"><div class="top"><span>'+tvCap(e.dow||'')+' '+((e.date||'').slice(0,5))+'</span><span class="t">Ev '+e.num+'</span></div>'+
            '<div class="pr">'+tvEsc(e.label)+'</div>'+
-           '<div class="meta"><span>Seed: <b style="color:var(--text2)">'+tvEsc(r.seed)+'</b></span>'+(r.finals?'<span class="lane">🏁 '+tvEsc(r.finals)+'</span>':'')+'</div>'+
-           '<div class="foot"><span class="seed">'+(r.finals?'Resultado':'Inscrita')+'</span><span class="pill '+(nt?'nm':'')+'">'+(nt?'estreno':r.pos+'º')+'</span></div></div>';
+           '<div class="meta"><span>Seed: <b style="color:var(--text2)">'+tvEsc(r.seed||'—')+'</b></span>'+chip+(dl?' <span class="'+dl.cls+'" style="font-weight:700">'+dl.txt+'</span>':'')+'</div>'+
+           '<div class="foot"><span class="seed">'+tvEsc(e.age||'')+' · '+e.gender+'</span><span class="pill '+(r.status?'nm':'')+'">'+pill+'</span></div></div>';
       });
       h+='</div>';
     }
   }
 
-  // Resultados por prueba (acordeón), ORGANIZADOS POR EDAD; medallas por cada edad.
+  // Resultados AGRUPADOS POR DÍA; dentro, acordeón por prueba; medallas por edad.
   let evs=events;
   if(club && !showAll) evs=events.filter(e=>e.rows.some(r=>r.club===club));
   const isHers=e=> who && e.rows.some(r=>r.name.toLowerCase().includes(who)&&(!club||r.club===club));
-  h+='<div class="section-title" style="margin-top:28px">🏅 Resultados por prueba <span style="font-weight:400;color:var(--text3);font-size:11px">— '+evs.length+' pruebas · ⭐ donde está '+(whoRaw?tvEsc(whoRaw):'tu nadador/a')+'</span></div>';
-  evs.forEach(e=>{
-    const her=isHers(e);
-    const hasF=e.rows.filter(r=>r.finals).length>=2;
-    const mineCount=e.rows.filter(r=>r.club===club).length;
-    const note=(her?'⭐ ':'')+(hasF?'🏁 Final · ':'')+(mineCount?mineCount+' '+tvEsc(club):'');
-    h+='<div class="tv-acc'+(her?' her':'')+'"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+tvEsc(e.label)+' · '+tvEsc(e.age||'')+' ('+e.gender+')</span><span class="tv-acc-meta">'+note+' <span class="tv-caret">▸</span></span></button>';
-    h+='<div class="tv-acc-body">'+renderEventBody(e,club,who,hasF)+'</div></div>';
+  h+='<div class="section-title" style="margin-top:28px">🏅 Resultados por día <span style="font-weight:400;color:var(--text3);font-size:11px">— '+evs.length+' pruebas · ⭐ donde está '+(whoRaw?tvEsc(whoRaw):'tu nadador/a')+'</span></div>';
+  const byDay={};
+  evs.forEach(e=>{ const k=e.date||'zzz'; (byDay[k]=byDay[k]||{dow:e.dow,date:e.date,list:[]}).list.push(e); });
+  Object.keys(byDay).sort((a,b)=>tvDayKey(a)-tvDayKey(b)).forEach(k=>{
+    const day=byDay[k];
+    h+='<div class="tv-day">'+(day.date? tvCap(day.dow||'')+' '+tvEsc(day.date.slice(0,5)) : 'Sin fecha')+'</div>';
+    day.list.forEach(e=>{
+      const her=isHers(e);
+      const hasF=e.rows.filter(r=>r.finals).length>=2;
+      const mineCount=e.rows.filter(r=>r.club===club).length;
+      const note=(her?'⭐ ':'')+(hasF?'🏁 Final · ':'')+(mineCount?mineCount+' '+tvEsc(club):'');
+      h+='<div class="tv-acc'+(her?' her':'')+'"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+tvEsc(e.label)+' · '+tvEsc(e.age||'')+' ('+e.gender+')</span><span class="tv-acc-meta">'+note+' <span class="tv-caret">▸</span></span></button>';
+      h+='<div class="tv-acc-body">'+renderEventBody(e,club,who,hasF)+'</div></div>';
+    });
   });
   if(!evs.length) h+='<div class="empty-state"><div class="empty-icon">🏊</div><p>No se encontraron pruebas'+(club?' de '+tvEsc(club):'')+'.</p></div>';
   box.innerHTML=h;
@@ -1671,19 +1696,26 @@ function renderEventBody(e,club,who,hasF){
   const ages=Object.keys(byAge).map(Number).sort((a,b)=>a-b);
   let b='';
   ages.forEach(age=>{
-    const grp=byAge[age].slice().sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
-    b+='<div class="tv-agehdr">'+age+' años <span>'+grp.length+' nadador'+(grp.length>1?'es':'')+'</span></div>';
-    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Resultado</th>':'')+'</tr></thead><tbody>';
-    grp.forEach((r,idx)=>{
+    const all=byAge[age].slice();
+    const timed=all.filter(r=>!r.status);                       // con tiempo → puesto/medalla
+    const flagged=all.filter(r=>r.status);                      // DQ / NS → al final
+    timed.sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
+    b+='<div class="tv-agehdr">'+age+' años <span>'+all.length+'</span></div>';
+    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+'</tr></thead><tbody>';
+    timed.forEach((r,idx)=>{
       const place=idx+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place;
       const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
-      let resCell='';
+      let cells='';
       if(hasF){
-        let c='';
-        if(r.finals&&r.seed&&!/NT|DQ|SCR/i.test(r.seed)){ const d=tvSecs(r.finals)-tvSecs(r.seed); c=d<0?'tv-better':(d>0?'tv-worse':''); }
-        resCell='<td class="time '+c+'">'+tvEsc(r.finals||'—')+'</td>';
+        const dl=tvDelta(r.seed,r.finals), c=dl?dl.cls:'';
+        cells='<td class="time '+c+'">'+tvEsc(r.finals||'—')+'</td><td class="time '+c+'" style="font-size:11px;font-weight:700">'+(dl?dl.txt:'')+'</td>';
       }
-      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed)+'</td>'+resCell+'</tr>';
+      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+cells+'</tr>';
+    });
+    flagged.forEach(r=>{
+      const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
+      const badge='<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>';
+      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+' flagged"><td class="rank">–</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time" colspan="'+(hasF?3:1)+'">'+(r.seed?tvEsc(r.seed)+' · ':'')+badge+'</td></tr>';
     });
     b+='</tbody></table></div>';
   });
