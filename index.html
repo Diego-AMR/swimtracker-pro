@@ -1581,33 +1581,48 @@ function closeBackupDrawer() { document.getElementById('backup-drawer').classLis
 // TORNEO EN VIVO  (Fase 1: vista previa con datos de ejemplo)
 // La Fase 2 reemplaza TV_SAMPLE por una lectura real vía /api/torneo.
 // ════════════════════════════════════════════════════════════
-let tvTimer = null;
+let tvTimer = null, tvSig = null;
 function tvSecs(t){ if(!t||/NT|DQ|SCR/i.test(t)) return Infinity; const p=String(t).split(':'); return p.length>1?(+p[0])*60+parseFloat(p[1]):parseFloat(t); }
 function tvEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function tvVal(id,def){ const el=document.getElementById(id); return ((el&&el.value)||def||'').trim(); }
 
+function tvOpenSet(){ const s=new Set(); document.querySelectorAll('#tv-results .tv-acc.open .tv-acc-h span:first-child').forEach(b=>s.add(b.textContent)); return s; }
+function tvRestoreOpen(set){ if(!set||!set.size) return; document.querySelectorAll('#tv-results .tv-acc').forEach(a=>{ const b=a.querySelector('.tv-acc-h span:first-child'); if(b&&set.has(b.textContent)) a.classList.add('open'); }); }
 async function loadTorneo(manual){
   const box=document.getElementById('tv-results');
   const st=document.getElementById('tv-status');
   const url=tvVal('tv-url','https://resultados.liganatacionbogota.com/2026/0014/');
-  if(st) st.innerHTML='<span class="dot"></span>Cargando…';
+  if(st) st.innerHTML='<span class="dot"></span>'+(manual?'Cargando…':'Actualizando…');
   try{
-    const r=await fetch('/api/torneo?url='+encodeURIComponent(url));
+    const r=await fetch('/api/torneo?url='+encodeURIComponent(url),{cache:'no-store'});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const data=await r.json();
     if(data.error) throw new Error(data.error);
-    renderTorneo(data);
+    // Solo re-dibuja si cambió algo (así no se cierran los acordeones abiertos).
+    const sig=(data.generated||'')+'|'+(data.events||[]).reduce((n,e)=>n+((e.rows||[]).filter(x=>x.finals).length),0);
+    const hasRender=!!(box&&box.querySelector('.tv-acc'));
+    if(manual||sig!==tvSig||!hasRender){
+      const openSet=tvOpenSet();
+      renderTorneo(data);
+      tvRestoreOpen(openSet);
+      tvSig=sig;
+    }
     if(st) st.innerHTML='<span class="dot"></span>En vivo';
     const up=document.getElementById('tv-updated');
     if(up) up.textContent=new Date().toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})+(data.generated?' · sitio: '+data.generated:'');
   }catch(e){
     if(st) st.innerHTML='Sin conexión';
-    if(box) box.innerHTML='<div class="tv-banner">⚠️ No se pudo conectar al lector del torneo ('+tvEsc(e.message)+'). Si abriste STP ya publicado, el lector todavía no está desplegado (ese es el último paso). En el servidor local de prueba sí funciona.</div>';
+    // No borres los resultados ya mostrados por un fallo momentáneo de red.
+    if(box&&!box.querySelector('.tv-acc')) box.innerHTML='<div class="tv-banner">⚠️ No se pudo conectar al lector del torneo ('+tvEsc(e.message)+').</div>';
   }
   if(tvTimer) clearInterval(tvTimer);
   const auto=document.getElementById('tv-auto');
-  if(auto&&auto.checked) tvTimer=setInterval(()=>loadTorneo(false),5*60*1000);
+  if(auto&&auto.checked) tvTimer=setInterval(()=>loadTorneo(false),60*1000);
 }
+// Refresca al volver a abrir/enfocar la app (en el celular los timers se congelan en segundo plano)
+function tvOnShow(){ const t=document.getElementById('tab-torneovivo'); if(t&&t.classList.contains('active')&&!document.hidden) loadTorneo(false); }
+document.addEventListener('visibilitychange',tvOnShow);
+window.addEventListener('focus',tvOnShow);
 
 function renderTorneo(data){
   const box=document.getElementById('tv-results'); if(!box) return;
