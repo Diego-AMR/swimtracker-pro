@@ -187,18 +187,22 @@ details.tgroup summary > span:first-of-type { flex:1; }
 .swimmer-avatar img { width:100%; height:100%; object-fit:cover; }
 .swimmer-name { font-weight:700; font-size:15px; margin-bottom:4px; }
 .swimmer-meta { font-size:11px; color:var(--text3); }
-/* Pestaña Metas: 2 columnas + filas delgadas + barra vino→verde */
-#goals-container{ display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; align-items:start; }
+/* Pestaña Metas: 2 columnas reales, filas delgadas, barra debajo en 4 bloques (25%) vino→verde */
+#goals-container{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:start; }
+@media (max-width:700px){ #goals-container{ grid-template-columns:1fr; } }
 .gcard{ margin-bottom:0; }
 .gcard-h{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 .glist{ display:flex; flex-direction:column; }
-.grow{ display:grid; grid-template-columns:94px 56px 1fr 54px; gap:8px; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; }
+.grow{ padding:6px 0; border-bottom:1px solid var(--border); }
 .grow:last-child{ border-bottom:none; }
-.gname{ color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.gtime{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--text2); text-align:right; font-size:11.5px; }
-.gbar{ height:8px; border-radius:5px; background:var(--bg3); border:1px solid var(--border); overflow:hidden; }
-.gbar-fill{ height:100%; border-radius:5px 0 0 5px; transition:width .45s ease, background .45s ease; }
-.gstat{ font-size:11px; font-weight:700; color:var(--text3); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.grow-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:5px; font-size:13px; }
+.gname{ color:var(--text2); }
+.grow-bar{ display:flex; align-items:center; gap:8px; }
+.gbar{ position:relative; flex:1; height:9px; border-radius:5px; overflow:hidden; border:1px solid var(--border);
+  background:linear-gradient(90deg,#7b1432 0 25%,#c0562a 25% 50%,#d0a41e 50% 75%,#1a8a45 75% 100%); }
+.gbar.sinmarca{ background:var(--bg3); }
+.gbar-dim{ position:absolute; top:0; bottom:0; right:0; background:var(--bg3); transition:width .45s ease; }
+.gstat{ font-size:11px; font-weight:700; color:var(--text3); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .gstat.ok{ color:var(--green); }
 .gstat.none{ font-weight:600; font-style:italic; }
 .category-badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; margin-top:6px; background:rgba(26,111,196,0.1); color:var(--cyan); border:1px solid rgba(26,111,196,0.2); }
@@ -2088,17 +2092,6 @@ async function deleteTournament() {
 // GOALS
 // ════════════════════════════════════════════════════════════
 function loadGoals() { /* handled by Firebase listener */ }
-// Color de la barra según cercanía a la meta: vino tinto (lejos) → ámbar → verde (cerca/lograda)
-function goalBarColor(pct, ok) {
-  if (ok) return 'var(--green)';
-  const stops = [[0,[123,20,50]],[55,[199,120,30]],[100,[26,138,69]]]; // vino → ámbar → verde
-  const p = Math.max(0, Math.min(100, pct));
-  let lo = stops[0], hi = stops[stops.length-1];
-  for (let i=0; i<stops.length-1; i++) { if (p>=stops[i][0] && p<=stops[i+1][0]) { lo=stops[i]; hi=stops[i+1]; break; } }
-  const t = (p-lo[0]) / ((hi[0]-lo[0]) || 1);
-  const c = lo[1].map((v,i)=>Math.round(v + (hi[1][i]-v)*t));
-  return `rgb(${c[0]},${c[1]},${c[2]})`;
-}
 function renderGoals() {
   const container = document.getElementById('goals-container');
   const empty = document.getElementById('goals-empty');
@@ -2116,19 +2109,17 @@ function renderGoals() {
       if (recs.length) {
         const best = Math.min(...recs.map(r => r.time_seconds));
         const ok = best <= v;
-        const pct = ok ? 100 : Math.max(4, Math.min(100, (v / best) * 100));
-        bar = `<div class="gbar"><div class="gbar-fill" style="width:${pct.toFixed(0)}%;background:${goalBarColor(pct, ok)}"></div></div>`;
-        stat = ok ? `<span class="gstat ok">✅</span>` : `<span class="gstat">−${(best - v).toFixed(2)}s</span>`;
-        titleAttr = `title="Mejor actual: ${formatTime(best)} · Meta: ${formatTime(v)}"`;
+        const pct = ok ? 100 : Math.max(3, Math.min(100, (v / best) * 100));
+        bar = `<div class="gbar"><div class="gbar-dim" style="width:${(100 - pct).toFixed(0)}%"></div></div>`;
+        stat = ok ? `<span class="gstat ok">✅ Lograda</span>` : `<span class="gstat">faltan ${(best - v).toFixed(2)}s</span>`;
+        titleAttr = `title="Mejor actual: ${formatTime(best)}"`;
       } else {
-        bar = `<div class="gbar"></div>`;
+        bar = `<div class="gbar sinmarca"></div>`;
         stat = `<span class="gstat none">sin marca</span>`;
       }
       return `<div class="grow" ${titleAttr}>
-        <span class="gname">${k}</span>
-        <span class="gtime">${formatTime(v)}</span>
-        ${bar}
-        ${stat}
+        <div class="grow-top"><span class="gname">${k}</span><span class="time-badge">${formatTime(v)}</span></div>
+        <div class="grow-bar">${bar}${stat}</div>
       </div>`;
     }).join('');
     return `<div class="card gcard">
