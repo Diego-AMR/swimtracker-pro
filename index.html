@@ -191,6 +191,11 @@ details.tgroup summary > span:first-of-type { flex:1; }
 #goals-container{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:start; }
 @media (max-width:700px){ #goals-container{ grid-template-columns:1fr; } }
 .gcard{ margin-bottom:0; }
+/* Meta oficial FECNA "Nacional 2026" — se ve distinta a las demás metas */
+.gcard-nacional{ border:2px solid #e0a80a; box-shadow:0 0 0 3px rgba(224,168,10,.14); background:linear-gradient(180deg,rgba(224,168,10,.07),transparent 55%); order:-1; }
+.gcard-nacional .section-title{ color:#b7860b; }
+.gnat-badge{ display:inline-block; margin-left:8px; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#0b3b8c; background:#eaf1ff; border:1px solid #c9d9ff; border-radius:999px; padding:2px 8px; vertical-align:middle; }
+@media (prefers-color-scheme:dark){ .gnat-badge{ color:#bcd3ff; background:rgba(59,110,220,.18); border-color:rgba(120,160,240,.35); } }
 .gcard-h{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 .glist{ display:flex; flex-direction:column; }
 .grow{ padding:6px 0; border-bottom:1px solid var(--border); }
@@ -1312,6 +1317,16 @@ const ALL_STYLES = [
   'Mariposa 50m','Mariposa 100m','Mariposa 200m',
   'Combinado 200m','Combinado 400m'
 ];
+// ── Tabla oficial de MÍNIMAS NACIONALES FECNA 2026 (Infantil femenino 13 años — categoría de Danna).
+// Editable desde la app (✏️) para actualizarla el próximo año. Valores en segundos.
+const NACIONAL_2026_NAME = 'Nacional 2026';
+const NACIONAL_2026_TIMES = {
+  'Libre 50m':31.69, 'Libre 100m':69.23, 'Libre 200m':150.55, 'Libre 400m':323.40, 'Libre 800m':675.76, 'Libre 1500m':1315.19,
+  'Espalda 100m':81.39, 'Espalda 200m':176.75,
+  'Pecho 100m':92.92, 'Pecho 200m':204.85,
+  'Mariposa 100m':81.84, 'Mariposa 200m':197.57,
+  'Combinado 200m':174.51, 'Combinado 400m':373.41
+};
 const GOAL_PALETTE = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
 
 // ════════════════════════════════════════════════════════════
@@ -1483,6 +1498,7 @@ function setupListeners() {
   fbDB.ref('goals').on('value', snap => {
     goals = snapToArray(snap).sort((a,b) => (a.name||'').localeCompare(b.name||''));
     renderGoals();
+    ensureNacional2026();   // crea la meta oficial FECNA si aún no existe
   });
 
   // Time records
@@ -2135,14 +2151,40 @@ function renderGoals() {
         <div class="grow-bar">${bar}${stat}</div>
       </div>`;
     }).join('');
-    return `<div class="card gcard">
+    const isNat = /nacional\s*2026/i.test(g.name||'');
+    return `<div class="card gcard${isNat?' gcard-nacional':''}">
       <div class="gcard-h">
-        <div class="section-title" style="margin-bottom:0">🎯 ${g.name}</div>
-        <button class="btn btn-secondary btn-sm" onclick="openGoalModal('${g.id}')">✏️</button>
+        <div>
+          <div class="section-title" style="margin-bottom:0">${isNat?'🇨🇴':'🎯'} ${g.name}${isNat?' <span class="gnat-badge">Oficial FECNA</span>':''}</div>
+          ${isNat?'<div style="font-size:11px;color:var(--text3);margin-top:3px">Mínimas nacionales · Infantil 13F · editable ✏️ para el próximo año</div>':''}
+        </div>
+        <div style="display:flex;gap:6px;flex:0 0 auto">
+          ${isNat?`<button class="btn btn-secondary btn-sm" title="Restablecer con los tiempos oficiales FECNA 2026" onclick="resetNacional()">↺ Oficial</button>`:''}
+          <button class="btn btn-secondary btn-sm" onclick="openGoalModal('${g.id}')">✏️</button>
+        </div>
       </div>
       <div class="glist">${items || '<p style="color:var(--text3);font-size:13px">Sin tiempos definidos</p>'}</div>
     </div>`;
   }).join('');
+}
+// ── Meta oficial FECNA "Nacional 2026" ──────────────────────────────
+let _natSeeding = false;
+function ensureNacional2026() {
+  if (_natSeeding) return;
+  if (goals.some(g => /nacional\s*2026/i.test(g.name||''))) return;   // ya existe
+  _natSeeding = true;
+  fbDB.ref('goals').push({ name: NACIONAL_2026_NAME, official: true, times: { ...NACIONAL_2026_TIMES }, created_at: new Date().toISOString() })
+    .then(() => { _natSeeding = false; })
+    .catch(() => { _natSeeding = false; });
+}
+async function resetNacional() {
+  const g = goals.find(x => /nacional\s*2026/i.test(x.name||''));
+  if (g && !confirm('¿Restablecer la meta «Nacional 2026» con los tiempos OFICIALES FECNA 2026? Se perderán las ediciones manuales.')) return;
+  try {
+    if (g) await fbDB.ref('goals/' + g.id).update({ name: NACIONAL_2026_NAME, times: { ...NACIONAL_2026_TIMES } });
+    else   await fbDB.ref('goals').push({ name: NACIONAL_2026_NAME, official: true, times: { ...NACIONAL_2026_TIMES }, created_at: new Date().toISOString() });
+    showToast('Meta Nacional 2026 (oficial FECNA) cargada ✓', 'success');
+  } catch (e) { showToast(e.message, 'error'); }
 }
 function openGoalModal(id = null) {
   currentEditId = id;
