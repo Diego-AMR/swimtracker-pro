@@ -1733,6 +1733,12 @@ function renderEventBody(e,club,who,hasF){
   const byAge={};
   e.rows.forEach(r=>{ (byAge[r.age]=byAge[r.age]||[]).push(r); });
   const ages=Object.keys(byAge).map(Number).sort((a,b)=>a-b);
+  // Meta "Nacional 2026": tiempo objetivo para el estilo de esta prueba (si existe).
+  const natGoal=(goals||[]).find(g=>/nacional\s*2026/i.test(g.name||''));
+  const lm=(e.label||'').match(/^(\d+)\s*m\s+(.+)$/);            // "100 m Espalda" -> ["100","Espalda"]
+  const goalKey=lm?(lm[2].trim()+' '+lm[1]+'m'):null;           // clave de meta: "Espalda 100m"
+  const natTarget=(natGoal&&goalKey)?(natGoal.times||{})[goalKey]:null;
+  const showNat=hasF&&natTarget>0;                              // solo si hay final y la meta tiene ese estilo
   let b='';
   ages.forEach(age=>{
     const all=byAge[age].slice();
@@ -1740,7 +1746,7 @@ function renderEventBody(e,club,who,hasF){
     const flagged=all.filter(r=>r.status);                      // DQ / NS → al final
     timed.sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
     b+='<div class="tv-agehdr">'+age+' años <span>'+all.length+'</span></div>';
-    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+'</tr></thead><tbody>';
+    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+(showNat?'<th class="time" title="Meta Nacional 2026 para este estilo">🎯 Nac.\'26<br><span style="font-weight:400;font-size:10px;color:var(--text3)">'+formatTime(natTarget)+'</span></th>':'')+'</tr></thead><tbody>';
     timed.forEach((r,idx)=>{
       const place=idx+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place;
       const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
@@ -1749,12 +1755,19 @@ function renderEventBody(e,club,who,hasF){
         const dl=tvDelta(r.seed,r.finals), c=dl?dl.cls:'';
         cells='<td class="time '+c+'">'+tvEsc(r.finals||'—')+'</td><td class="time '+c+'" style="font-size:11px;font-weight:700">'+(dl?dl.txt:'')+'</td>';
       }
+      if(showNat){
+        const fs=tvSecs(r.finals);
+        if(!r.finals||!isFinite(fs)) cells+='<td class="time" style="color:var(--text3)">—</td>';
+        else if(fs<=natTarget+0.005) cells+='<td class="time" style="color:#16a34a;font-weight:800;white-space:nowrap">✓ Logró</td>';
+        else cells+='<td class="time" style="color:#dc2626;font-weight:700;white-space:nowrap">✗ No</td>';
+      }
       b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+cells+'</tr>';
     });
     flagged.forEach(r=>{
       const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
       const badge='<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>';
-      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+' flagged"><td class="rank">–</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time" colspan="'+(hasF?3:1)+'">'+(r.seed?tvEsc(r.seed)+' · ':'')+badge+'</td></tr>';
+      const csp=(hasF?3:1)+(showNat?1:0);
+      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+' flagged"><td class="rank">–</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time" colspan="'+csp+'">'+(r.seed?tvEsc(r.seed)+' · ':'')+badge+'</td></tr>';
     });
     b+='</tbody></table></div>';
   });
