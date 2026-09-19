@@ -196,6 +196,13 @@ details.tgroup summary > span:first-of-type { flex:1; }
 .gcard-nacional .section-title{ color:#b7860b; }
 .gnat-badge{ display:inline-block; margin-left:8px; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#0b3b8c; background:#eaf1ff; border:1px solid #c9d9ff; border-radius:999px; padding:2px 8px; vertical-align:middle; }
 @media (prefers-color-scheme:dark){ .gnat-badge{ color:#bcd3ff; background:rgba(59,110,220,.18); border-color:rgba(120,160,240,.35); } }
+/* Tabla Nacional editable */
+.nac-tbl{ border-collapse:collapse; font-size:11px; }
+.nac-tbl th,.nac-tbl td{ border:1px solid var(--border); padding:3px 4px; text-align:center; white-space:nowrap; }
+.nac-tbl th{ background:var(--bg3); color:var(--text3); font-weight:700; }
+.nac-tbl td.nac-style{ text-align:left; font-weight:600; color:var(--text2); background:var(--bg3); position:sticky; left:0; }
+.nac-in{ width:66px; border:1px solid var(--border); border-radius:6px; padding:3px 4px; font-size:11px; text-align:center; background:var(--bg2); color:var(--text); }
+.nac-in:focus{ outline:none; border-color:#e0a80a; }
 .gcard-h{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; }
 .glist{ display:flex; flex-direction:column; }
 .grow{ padding:6px 0; border-bottom:1px solid var(--border); }
@@ -680,6 +687,25 @@ tr:last-child td { border-bottom:none; }
   </div>
   <div class="alert alert-info">
     ℹ️ Descarga la plantilla Excel, llena los tiempos en formato <strong>MM:SS.cc</strong> (ej: 1:25.50) o <strong>SS.cc</strong> (ej: 25.50) y luego impórtala.
+  </div>
+
+  <!-- Tabla Nacional FECNA (todas las categorías) — la usa el Torneo en Vivo -->
+  <div class="card" id="nac-card" style="margin-bottom:20px">
+    <div class="gcard-h" style="align-items:flex-start;gap:10px">
+      <div>
+        <div class="section-title" style="margin-bottom:2px">🇨🇴 Tabla Nacional FECNA 2026 <span class="gnat-badge">Oficial · editable</span></div>
+        <div style="font-size:11px;color:var(--text3)">Mínimas por <b>sexo y categoría</b>. La usa el <b>Torneo en Vivo</b> para marcar ✓/✗. Edita y guarda para el próximo año.</div>
+      </div>
+      <div style="display:flex;gap:6px;flex:0 0 auto">
+        <button class="btn btn-primary btn-sm" id="nac-sex-F" onclick="setNacSex('F')">Femenino</button>
+        <button class="btn btn-secondary btn-sm" id="nac-sex-M" onclick="setNacSex('M')">Masculino</button>
+      </div>
+    </div>
+    <div id="nac-table-wrap" style="overflow-x:auto;margin-top:12px">—</div>
+    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="saveNacTable()">💾 Guardar tabla</button>
+      <button class="btn btn-secondary btn-sm" onclick="resetNacTable()">↺ Restablecer oficial</button>
+    </div>
   </div>
   <div id="goals-container"></div>
   <div id="goals-empty" class="empty-state" style="display:none">
@@ -1317,16 +1343,39 @@ const ALL_STYLES = [
   'Mariposa 50m','Mariposa 100m','Mariposa 200m',
   'Combinado 200m','Combinado 400m'
 ];
-// ── Tabla oficial de MÍNIMAS NACIONALES FECNA 2026 (Infantil femenino 13 años — categoría de Danna).
-// Editable desde la app (✏️) para actualizarla el próximo año. Valores en segundos.
-const NACIONAL_2026_NAME = 'Nacional 2026';
-const NACIONAL_2026_TIMES = {
-  'Libre 50m':31.69, 'Libre 100m':69.23, 'Libre 200m':150.55, 'Libre 400m':323.40, 'Libre 800m':675.76, 'Libre 1500m':1315.19,
-  'Espalda 100m':81.39, 'Espalda 200m':176.75,
-  'Pecho 100m':92.92, 'Pecho 200m':204.85,
-  'Mariposa 100m':81.84, 'Mariposa 200m':197.57,
-  'Combinado 200m':174.51, 'Combinado 400m':373.41
+// ── Tabla oficial de MÍNIMAS NACIONALES FECNA 2026 — TODAS las categorías y sexos.
+// Valores por defecto (en segundos). Editable en la app (pestaña Metas) y guardada en Firebase (nacional_2026).
+const NAC_DEFAULT = {
+  F: {
+    '10': { 'Libre 50m':38.76, 'Libre 100m':87.16, 'Libre 200m':190.51, 'Libre 400m':400.3, 'Espalda 50m':47, 'Pecho 50m':53.95, 'Mariposa 50m':48.46, 'Combinado 200m':218.35 },
+    '11': { 'Libre 50m':34.73, 'Libre 100m':76.22, 'Libre 200m':170.33, 'Libre 400m':363.91, 'Libre 800m':775.05, 'Espalda 50m':42.3, 'Espalda 100m':91.78, 'Pecho 50m':48.12, 'Pecho 100m':106.47, 'Mariposa 50m':39.85, 'Mariposa 100m':100.54, 'Combinado 200m':193.92 },
+    '12': { 'Libre 50m':32.87, 'Libre 100m':71.58, 'Libre 200m':156.94, 'Libre 400m':335.95, 'Libre 800m':704.59, 'Espalda 100m':86.19, 'Espalda 200m':184.29, 'Pecho 100m':96.83, 'Pecho 200m':210.14, 'Mariposa 100m':87.33, 'Mariposa 200m':214.78, 'Combinado 200m':181.59, 'Combinado 400m':402.5 },
+    '13': { 'Libre 50m':31.69, 'Libre 100m':69.23, 'Libre 200m':150.55, 'Libre 400m':323.4, 'Libre 800m':675.76, 'Libre 1500m':1315.19, 'Espalda 100m':81.39, 'Espalda 200m':176.75, 'Pecho 100m':92.92, 'Pecho 200m':204.85, 'Mariposa 100m':81.84, 'Mariposa 200m':197.57, 'Combinado 200m':174.51, 'Combinado 400m':373.41 },
+    '14': { 'Libre 50m':30.47, 'Libre 100m':66.24, 'Libre 200m':148.25, 'Libre 400m':311.79, 'Libre 800m':654.82, 'Libre 1500m':1259.87, 'Espalda 50m':36.37, 'Espalda 100m':80.14, 'Espalda 200m':171.95, 'Pecho 50m':41.02, 'Pecho 100m':91.71, 'Pecho 200m':201.46, 'Mariposa 50m':33.25, 'Mariposa 100m':79.1, 'Mariposa 200m':188.18, 'Combinado 200m':170.37, 'Combinado 400m':364.57 },
+    '15': { 'Libre 50m':30.47, 'Libre 100m':66.24, 'Libre 200m':147.36, 'Libre 400m':316.25, 'Libre 800m':637.38, 'Libre 1500m':1210.21, 'Espalda 50m':35.96, 'Espalda 100m':79.05, 'Espalda 200m':172.22, 'Pecho 50m':41.01, 'Pecho 100m':90.8, 'Pecho 200m':199.19, 'Mariposa 50m':33.05, 'Mariposa 100m':77.44, 'Mariposa 200m':183.92, 'Combinado 200m':173.36, 'Combinado 400m':350.2 },
+    '16-17': { 'Libre 50m':29.56, 'Libre 100m':64.47, 'Libre 200m':142.08, 'Libre 400m':304.21, 'Libre 800m':614.92, 'Libre 1500m':1167.56, 'Espalda 50m':34.6, 'Espalda 100m':75.98, 'Espalda 200m':165.53, 'Pecho 50m':39.34, 'Pecho 100m':87.07, 'Pecho 200m':190.19, 'Mariposa 50m':31.69, 'Mariposa 100m':72.94, 'Mariposa 200m':177.86, 'Combinado 200m':162.72, 'Combinado 400m':337.86 },
+    '18-20': { 'Libre 50m':29.17, 'Libre 100m':63.12, 'Libre 200m':139.1, 'Libre 400m':301.36, 'Libre 800m':610.85, 'Libre 1500m':1159.83, 'Espalda 50m':34.07, 'Espalda 100m':75.98, 'Espalda 200m':165.2, 'Pecho 50m':38.83, 'Pecho 100m':86.2, 'Pecho 200m':189.39, 'Mariposa 50m':31.34, 'Mariposa 100m':71.73, 'Mariposa 200m':176.98, 'Combinado 200m':162.23, 'Combinado 400m':335.62 },
+    'mayores': { 'Libre 50m':28.79, 'Libre 100m':61.77, 'Libre 200m':136.12, 'Libre 400m':298.51, 'Libre 800m':606.77, 'Libre 1500m':1152.1, 'Espalda 50m':33.55, 'Espalda 100m':74.38, 'Espalda 200m':164.88, 'Pecho 50m':38.32, 'Pecho 100m':85.33, 'Pecho 200m':188.59, 'Mariposa 50m':30.99, 'Mariposa 100m':70.51, 'Mariposa 200m':176.1, 'Combinado 200m':161.75, 'Combinado 400m':333.38 },
+  },
+  M: {
+    '10': { 'Libre 50m':38.03, 'Libre 100m':84.79, 'Libre 200m':188.71, 'Libre 400m':393.15, 'Espalda 50m':48.51, 'Pecho 50m':53.87, 'Mariposa 50m':45.08, 'Combinado 200m':220.99 },
+    '11': { 'Libre 50m':34.71, 'Libre 100m':77.4, 'Libre 200m':169.45, 'Libre 400m':357.41, 'Libre 800m':766.57, 'Espalda 50m':42.11, 'Espalda 100m':91.55, 'Pecho 50m':48.95, 'Pecho 100m':108.11, 'Mariposa 50m':40.14, 'Mariposa 100m':97.95, 'Combinado 200m':191.61 },
+    '12': { 'Libre 50m':31.57, 'Libre 100m':69.72, 'Libre 200m':152.19, 'Libre 400m':327.88, 'Libre 800m':696.88, 'Espalda 100m':86.26, 'Espalda 200m':185.84, 'Pecho 100m':96.89, 'Pecho 200m':209.93, 'Mariposa 100m':83.83, 'Mariposa 200m':204.49, 'Combinado 200m':178.35, 'Combinado 400m':414.1 },
+    '13': { 'Libre 50m':29.51, 'Libre 100m':65.79, 'Libre 200m':143.66, 'Libre 400m':305.12, 'Libre 800m':640.42, 'Libre 1500m':1253.49, 'Espalda 100m':79.28, 'Espalda 200m':168.88, 'Pecho 100m':88.42, 'Pecho 200m':191.68, 'Mariposa 100m':76.09, 'Mariposa 200m':188.57, 'Combinado 200m':164.89, 'Combinado 400m':376.88 },
+    '14': { 'Libre 50m':27.23, 'Libre 100m':59.13, 'Libre 200m':131.28, 'Libre 400m':288.11, 'Libre 800m':602.46, 'Libre 1500m':1166.75, 'Espalda 50m':33.04, 'Espalda 100m':71.94, 'Espalda 200m':158.81, 'Pecho 50m':35.94, 'Pecho 100m':81.42, 'Pecho 200m':181.44, 'Mariposa 50m':29.29, 'Mariposa 100m':67, 'Mariposa 200m':164.5, 'Combinado 200m':152.49, 'Combinado 400m':347.67 },
+    '15': { 'Libre 50m':26.52, 'Libre 100m':58.38, 'Libre 200m':129.55, 'Libre 400m':278.87, 'Libre 800m':581.01, 'Libre 1500m':1127.07, 'Espalda 50m':31.61, 'Espalda 100m':69.25, 'Espalda 200m':154.56, 'Pecho 50m':34.3, 'Pecho 100m':79.15, 'Pecho 200m':172.18, 'Mariposa 50m':28.23, 'Mariposa 100m':63.85, 'Mariposa 200m':156.87, 'Combinado 200m':149.21, 'Combinado 400m':332.62 },
+    '16-17': { 'Libre 50m':25.55, 'Libre 100m':55.6, 'Libre 200m':123.71, 'Libre 400m':268.39, 'Libre 800m':570.71, 'Libre 1500m':1104.83, 'Espalda 50m':29.78, 'Espalda 100m':65.29, 'Espalda 200m':143.82, 'Pecho 50m':32.72, 'Pecho 100m':73.95, 'Pecho 200m':164.23, 'Mariposa 50m':27.13, 'Mariposa 100m':60.31, 'Mariposa 200m':142.42, 'Combinado 200m':143.11, 'Combinado 400m':309.29 },
+    '18-20': { 'Libre 50m':25.21, 'Libre 100m':54.73, 'Libre 200m':121.28, 'Libre 400m':266.13, 'Libre 800m':568.3, 'Libre 1500m':1097.51, 'Espalda 50m':29.45, 'Espalda 100m':65.11, 'Espalda 200m':143.82, 'Pecho 50m':32.21, 'Pecho 100m':72.78, 'Pecho 200m':161.68, 'Mariposa 50m':26.76, 'Mariposa 100m':60, 'Mariposa 200m':142.42, 'Combinado 200m':142.07, 'Combinado 400m':307.24 },
+    'mayores': { 'Libre 50m':24.71, 'Libre 100m':54.59, 'Libre 200m':118.85, 'Libre 400m':263.21, 'Libre 800m':565.88, 'Libre 1500m':1090.19, 'Espalda 50m':29.44, 'Espalda 100m':65.1, 'Espalda 200m':143.82, 'Pecho 50m':31.7, 'Pecho 100m':71.11, 'Pecho 200m':159.14, 'Mariposa 50m':26.39, 'Mariposa 100m':58.95, 'Mariposa 200m':142.42, 'Combinado 200m':141.02, 'Combinado 400m':305.19 },
+  },
 };
+const NAC_CATS = ['10','11','12','13','14','15','16-17','18-20','mayores'];
+const NAC_CATLBL = { '10':'10 a','11':'11 a','12':'12 a','13':'13 a','14':'14 a','15':'15 a','16-17':'16-17','18-20':'18-20','mayores':'Mayores' };
+let nacTable = null;   // tabla desde Firebase (F/M×cat×estilo); null => usar NAC_DEFAULT
+let nacSex = 'F';      // sexo mostrado en la tabla editable
+function nacGet(){ return nacTable || NAC_DEFAULT; }
+function nacCatForAge(a){ a=+a; if(a>=10&&a<=13)return String(a); if(a===14)return'14'; if(a===15)return'15'; if(a>=16&&a<=17)return'16-17'; if(a>=18&&a<=20)return'18-20'; if(a>=21)return'mayores'; return null; }
+function nacTarget(sex,age,styleKey){ const t=nacGet(); const c=nacCatForAge(age); return (c&&t[sex]&&t[sex][c])?t[sex][c][styleKey]:null; }
 const GOAL_PALETTE = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
 
 // ════════════════════════════════════════════════════════════
@@ -1497,9 +1546,13 @@ function setupListeners() {
   // Goals
   fbDB.ref('goals').on('value', snap => {
     goals = snapToArray(snap).sort((a,b) => (a.name||'').localeCompare(b.name||''));
+    // limpieza: elimina la "meta oficial" de una sola categoría creada por una versión anterior
+    goals.filter(g => g.official === true).forEach(g => fbDB.ref('goals/' + g.id).remove().catch(()=>{}));
+    goals = goals.filter(g => g.official !== true);
     renderGoals();
-    ensureNacional2026();   // crea la meta oficial FECNA si aún no existe
   });
+  // Tabla nacional FECNA (todas las categorías) — editable/compartida
+  fbDB.ref('nacional_2026').on('value', snap => { nacTable = snap.val() || null; renderNacTable(); });
 
   // Time records
   fbDB.ref('time_records').on('value', snap => {
@@ -1749,12 +1802,10 @@ function renderEventBody(e,club,who,hasF){
   const byAge={};
   e.rows.forEach(r=>{ (byAge[r.age]=byAge[r.age]||[]).push(r); });
   const ages=Object.keys(byAge).map(Number).sort((a,b)=>a-b);
-  // Meta "Nacional 2026": tiempo objetivo para el estilo de esta prueba (si existe).
-  const natGoal=(goals||[]).find(g=>/nacional\s*2026/i.test(g.name||''));
+  // Mínima nacional FECNA por categoría (se evalúa por sexo + edad de cada nadador).
   const lm=(e.label||'').match(/^(\d+)\s*m\s+(.+)$/);            // "100 m Espalda" -> ["100","Espalda"]
-  const goalKey=lm?(lm[2].trim()+' '+lm[1]+'m'):null;           // clave de meta: "Espalda 100m"
-  const natTarget=(natGoal&&goalKey)?(natGoal.times||{})[goalKey]:null;
-  const showNat=hasF&&natTarget>0;                              // solo si hay final y la meta tiene ese estilo
+  const styleKey=lm?(lm[2].trim()+' '+lm[1]+'m'):null;          // "Espalda 100m"
+  const showNat=hasF&&!!styleKey&&!e.relay;                     // columna en pruebas individuales con final
   let b='';
   ages.forEach(age=>{
     const all=byAge[age].slice();
@@ -1762,7 +1813,7 @@ function renderEventBody(e,club,who,hasF){
     const flagged=all.filter(r=>r.status);                      // DQ / NS → al final
     timed.sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
     b+='<div class="tv-agehdr">'+age+' años <span>'+all.length+'</span></div>';
-    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+(showNat?'<th class="time" title="Meta Nacional 2026 para este estilo">🎯 Nac.\'26<br><span style="font-weight:400;font-size:10px;color:var(--text3)">'+formatTime(natTarget)+'</span></th>':'')+'</tr></thead><tbody>';
+    b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+(showNat?'<th class="time" title="Mínima nacional FECNA por categoría">🎯 Nacional</th>':'')+'</tr></thead><tbody>';
     timed.forEach((r,idx)=>{
       const place=idx+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place;
       const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
@@ -1772,10 +1823,10 @@ function renderEventBody(e,club,who,hasF){
         cells='<td class="time '+c+'">'+tvEsc(r.finals||'—')+'</td><td class="time '+c+'" style="font-size:11px;font-weight:700">'+(dl?dl.txt:'')+'</td>';
       }
       if(showNat){
-        const fs=tvSecs(r.finals);
-        if(!r.finals||!isFinite(fs)) cells+='<td class="time" style="color:var(--text3)">—</td>';
-        else if(fs<=natTarget+0.005) cells+='<td class="time" style="color:#16a34a;font-weight:800;white-space:nowrap">✓ Logró</td>';
-        else cells+='<td class="time" style="color:#dc2626;font-weight:700;white-space:nowrap">✗ No</td>';
+        const tgt=nacTarget(e.gender,r.age,styleKey), fs=tvSecs(r.finals);
+        if(tgt==null||!r.finals||!isFinite(fs)) cells+='<td class="time" style="color:var(--text3)">—</td>';
+        else if(fs<=tgt+0.005) cells+='<td class="time" style="color:#16a34a;font-weight:800;white-space:nowrap" title="mínima '+formatTime(tgt)+'">✓ Logró</td>';
+        else cells+='<td class="time" style="color:#dc2626;font-weight:700;white-space:nowrap" title="mínima '+formatTime(tgt)+'">✗ +'+(fs-tgt).toFixed(2)+'s</td>';
       }
       b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+cells+'</tr>';
     });
@@ -2151,40 +2202,54 @@ function renderGoals() {
         <div class="grow-bar">${bar}${stat}</div>
       </div>`;
     }).join('');
-    const isNat = /nacional\s*2026/i.test(g.name||'');
-    return `<div class="card gcard${isNat?' gcard-nacional':''}">
+    return `<div class="card gcard">
       <div class="gcard-h">
-        <div>
-          <div class="section-title" style="margin-bottom:0">${isNat?'🇨🇴':'🎯'} ${g.name}${isNat?' <span class="gnat-badge">Oficial FECNA</span>':''}</div>
-          ${isNat?'<div style="font-size:11px;color:var(--text3);margin-top:3px">Mínimas nacionales · Infantil 13F · editable ✏️ para el próximo año</div>':''}
-        </div>
-        <div style="display:flex;gap:6px;flex:0 0 auto">
-          ${isNat?`<button class="btn btn-secondary btn-sm" title="Restablecer con los tiempos oficiales FECNA 2026" onclick="resetNacional()">↺ Oficial</button>`:''}
-          <button class="btn btn-secondary btn-sm" onclick="openGoalModal('${g.id}')">✏️</button>
-        </div>
+        <div class="section-title" style="margin-bottom:0">🎯 ${g.name}</div>
+        <button class="btn btn-secondary btn-sm" onclick="openGoalModal('${g.id}')">✏️</button>
       </div>
       <div class="glist">${items || '<p style="color:var(--text3);font-size:13px">Sin tiempos definidos</p>'}</div>
     </div>`;
   }).join('');
 }
-// ── Meta oficial FECNA "Nacional 2026" ──────────────────────────────
-let _natSeeding = false;
-function ensureNacional2026() {
-  if (_natSeeding) return;
-  if (goals.some(g => /nacional\s*2026/i.test(g.name||''))) return;   // ya existe
-  _natSeeding = true;
-  fbDB.ref('goals').push({ name: NACIONAL_2026_NAME, official: true, times: { ...NACIONAL_2026_TIMES }, created_at: new Date().toISOString() })
-    .then(() => { _natSeeding = false; })
-    .catch(() => { _natSeeding = false; });
+// ── Tabla Nacional FECNA 2026 (todas las categorías, editable) ───────
+function setNacSex(s){ nacCaptureInputs(); nacSex=s; renderNacTable(); }
+function renderNacTable(){
+  const wrap=document.getElementById('nac-table-wrap'); if(!wrap) return;
+  const bF=document.getElementById('nac-sex-F'), bM=document.getElementById('nac-sex-M');
+  if(bF){ bF.classList.toggle('btn-primary', nacSex==='F'); bF.classList.toggle('btn-secondary', nacSex!=='F'); }
+  if(bM){ bM.classList.toggle('btn-primary', nacSex==='M'); bM.classList.toggle('btn-secondary', nacSex!=='M'); }
+  const t=(nacGet()[nacSex])||{};
+  let h='<table class="nac-tbl"><thead><tr><th>Prueba</th>'+NAC_CATS.map(c=>'<th>'+NAC_CATLBL[c]+'</th>').join('')+'</tr></thead><tbody>';
+  ALL_STYLES.forEach(st=>{
+    h+='<tr><td class="nac-style">'+st+'</td>'+NAC_CATS.map(c=>{
+      const v=(t[c]||{})[st];
+      return '<td><input class="nac-in" data-cat="'+c+'" data-style="'+st+'" value="'+(v?formatTime(v):'')+'" placeholder="—"></td>';
+    }).join('')+'</tr>';
+  });
+  wrap.innerHTML=h+'</tbody></table>';
 }
-async function resetNacional() {
-  const g = goals.find(x => /nacional\s*2026/i.test(x.name||''));
-  if (g && !confirm('¿Restablecer la meta «Nacional 2026» con los tiempos OFICIALES FECNA 2026? Se perderán las ediciones manuales.')) return;
-  try {
-    if (g) await fbDB.ref('goals/' + g.id).update({ name: NACIONAL_2026_NAME, times: { ...NACIONAL_2026_TIMES } });
-    else   await fbDB.ref('goals').push({ name: NACIONAL_2026_NAME, official: true, times: { ...NACIONAL_2026_TIMES }, created_at: new Date().toISOString() });
-    showToast('Meta Nacional 2026 (oficial FECNA) cargada ✓', 'success');
-  } catch (e) { showToast(e.message, 'error'); }
+function nacCaptureInputs(){
+  const wrap=document.getElementById('nac-table-wrap'); if(!wrap) return;
+  const base=JSON.parse(JSON.stringify(nacTable||NAC_DEFAULT));
+  base[nacSex]=base[nacSex]||{};
+  wrap.querySelectorAll('.nac-in').forEach(inp=>{
+    const c=inp.dataset.cat, st=inp.dataset.style, v=inp.value.trim();
+    base[nacSex][c]=base[nacSex][c]||{};
+    if(v){ try{ base[nacSex][c][st]=parseTime(v); }catch(e){} }
+    else { delete base[nacSex][c][st]; }
+  });
+  nacTable=base;
+}
+async function saveNacTable(){
+  nacCaptureInputs();
+  try{ await fbDB.ref('nacional_2026').set(nacTable); showToast('Tabla nacional guardada ✓','success'); }
+  catch(e){ showToast(e.message,'error'); }
+}
+async function resetNacTable(){
+  if(!confirm('¿Restablecer TODA la tabla nacional con los valores oficiales FECNA 2026? Se perderán las ediciones.')) return;
+  nacTable=JSON.parse(JSON.stringify(NAC_DEFAULT));
+  try{ await fbDB.ref('nacional_2026').set(nacTable); showToast('Tabla nacional restablecida (oficial FECNA) ✓','success'); renderNacTable(); }
+  catch(e){ showToast(e.message,'error'); }
 }
 function openGoalModal(id = null) {
   currentEditId = id;
