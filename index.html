@@ -3537,9 +3537,9 @@ function showStyleAnalysis(style) {
   const _swE=(currentAnalysis&&currentAnalysis.swimmer)||(typeof obligSwimmer==='function'?obligSwimmer():null);
   const _byrE=(_swE&&_swE.birthdate)?new Date(_swE.birthdate).getFullYear():(new Date().getFullYear()-13);
   const _edadE=new Date().getFullYear()-_byrE;
-  const _catEN=(typeof nacCatForAge==='function')?nacCatForAge(_edadE):String(_edadE), _catEX=(typeof nacCatForAge==='function')?nacCatForAge(_edadE+1):String(_edadE+1);
-  const _pickMin=(T)=>{ const v1=(T[_catEN]||{})[style]; if(v1!=null) return {v:v1,age:_edadE}; const v2=(T[_catEX]||{})[style]; if(v2!=null) return {v:v2,age:_edadE+1}; return null; };
-  const _feM=_pickMin((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F)||{}), _liM=_pickMin((typeof LIGA_BOG!=='undefined'&&LIGA_BOG.F)||{});
+  const _catEN=(typeof nacCatForAge==='function')?nacCatForAge(_edadE):String(_edadE);  // categoría del año actual (auto-avanza)
+  const _feV=(((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F)||{})[_catEN]||{})[style];
+  const _liV=(((typeof LIGA_BOG!=='undefined'&&LIGA_BOG.F)||{})[_catEN]||{})[style];
   destroyChart('evolution');
   const evolData = a.records.map(r => ({ x: r.tournament_date, y: r.time_seconds, label: r.tournament_name }));
   const currentGoals = goals;
@@ -3642,8 +3642,8 @@ function showStyleAnalysis(style) {
     <div class="section-title" style="margin-top:20px">📈 Evolución de tiempos</div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <span style="font-size:12px;color:var(--text3);font-weight:600">Ver línea de meta:</span>
-      ${_feM?`<button class="min-toggle-btn" data-min="FECNA" onclick="toggleMinLine('FECNA','${style}',${_feM.v})" style="padding:5px 12px;border-radius:20px;border:2px solid #b7860b;background:transparent;color:#b7860b;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s">🇨🇴 FECNA ${_feM.age}a</button>`:''}
-      ${_liM?`<button class="min-toggle-btn" data-min="Liga" onclick="toggleMinLine('Liga','${style}',${_liM.v})" style="padding:5px 12px;border-radius:20px;border:2px solid #0e7c86;background:transparent;color:#0e7c86;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.2s">🏙️ Liga ${_liM.age}a</button>`:''}
+      <button class="min-toggle-btn" data-min="FECNA" ${_feV!=null?`onclick="toggleMinLine('FECNA','${style}',${_feV})"`:'disabled'} title="${_feV!=null?'Mostrar/ocultar la mínima FECNA':'Sin mínima FECNA para esta categoría'}" style="padding:5px 12px;border-radius:20px;border:2px solid ${_feV!=null?'#b7860b':'var(--border)'};background:transparent;color:${_feV!=null?'#b7860b':'var(--text3)'};opacity:${_feV!=null?'1':'.5'};font-size:12px;font-weight:700;cursor:${_feV!=null?'pointer':'not-allowed'};transition:all 0.2s">🇨🇴 FECNA ${_edadE}a</button>
+      <button class="min-toggle-btn" data-min="Liga" ${_liV!=null?`onclick="toggleMinLine('Liga','${style}',${_liV})"`:'disabled'} title="${_liV!=null?'Mostrar/ocultar la mínima Liga':'Liga Bogotá arranca en 14 años'}" style="padding:5px 12px;border-radius:20px;border:2px solid ${_liV!=null?'#0e7c86':'var(--border)'};background:transparent;color:${_liV!=null?'#0e7c86':'var(--text3)'};opacity:${_liV!=null?'1':'.5'};font-size:12px;font-weight:700;cursor:${_liV!=null?'pointer':'not-allowed'};transition:all 0.2s">🏙️ Liga ${_edadE}a</button>
       ${styleGoals.map(g => `<button class="goal-toggle-btn" data-goal="${g.name}" data-style="${style}" onclick="toggleGoalLine('${g.name}','${style}')" style="padding:5px 12px;border-radius:20px;border:2px solid ${g.color};background:transparent;color:${g.color};font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s">${g.name}</button>`).join('')}
       <span style="font-size:11px;color:var(--text3);margin-left:4px">← clic para mostrar/ocultar</span>
     </div>
