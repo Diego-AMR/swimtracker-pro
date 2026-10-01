@@ -3327,14 +3327,15 @@ function renderAnalysis(data) {
     const _cN=(typeof nacCatForAge==='function')?nacCatForAge(_aN):String(_aN), _cX=(typeof nacCatForAge==='function')?nacCatForAge(_aX):String(_aX);
     const _FE=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F)||{}), _LI=((typeof LIGA_BOG!=='undefined'&&LIGA_BOG.F)||{});
     const _miniCell=(mn,best)=>{ if(mn==null) return '<span style="color:var(--text3)">—</span>'; const d=best-mn, ok=d<=0.005; return `<div style="font-family:var(--font-head);font-size:13px;line-height:1.15;color:${ok?'var(--green)':'var(--red)'}">${ok?'✅':'⏳'} ${formatTime(mn)}</div><div style="font-size:10px;font-weight:700;color:${ok?'var(--green)':'var(--red)'}">${ok?'+'+formatTime(Math.abs(d))+'s':'faltan '+formatTime(Math.abs(d))+'s'}</div>`; };
-    const _mTd=(tbl,cat,s,best,bl)=>`<td style="padding:8px 8px;text-align:center;background:rgba(224,168,10,.06)${bl?';border-left:2px solid rgba(224,168,10,.4)':''}">${_miniCell((tbl[cat]||{})[s],best)}</td>`;
-    const _obTh=(lbl,a,bl)=>`<th style="padding:10px 8px;background:rgba(224,168,10,.14);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase${bl?';border-left:2px solid rgba(224,168,10,.45)':''}"><span style="color:#b7860b;font-weight:800">${lbl}</span><div style="font-size:9px;color:var(--text3);font-weight:700">${a}a</div></th>`;
+    const _sep={gap:';border-left:3px solid rgba(224,168,10,.5);padding-left:18px',sub:';border-left:1px solid rgba(224,168,10,.3)','':''};
+    const _mTd=(tbl,cat,s,best,sep)=>`<td style="padding:8px 8px;text-align:center;background:rgba(224,168,10,.06)${_sep[sep||'']}">${_miniCell((tbl[cat]||{})[s],best)}</td>`;
+    const _obTh=(lbl,a,sep)=>`<th style="padding:10px 8px;background:rgba(224,168,10,.14);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase${_sep[sep||'']}"><span style="color:#b7860b;font-weight:800">${lbl}</span><div style="font-size:9px;color:var(--text3);font-weight:700">${a}a</div></th>`;
     goalContent.innerHTML = `<div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr>
           <th style="padding:10px 14px;text-align:left;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase">Estilo</th>
-          ${_obTh('🇨🇴 FECNA',_aN,true)}${_obTh('🇨🇴 FECNA',_aX,false)}${_obTh('🏙️ Liga',_aN,true)}${_obTh('🏙️ Liga',_aX,false)}
           <th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;text-align:center">Tu Mejor Marca</th>
+          ${_obTh('🇨🇴 FECNA',_aN,'gap')}${_obTh('🇨🇴 FECNA',_aX,'')}${_obTh('🏙️ Liga',_aN,'sub')}${_obTh('🏙️ Liga',_aX,'')}
           ${currentGoals.map((g,i) => `<th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase"><span style="color:${GOAL_PALETTE[i%GOAL_PALETTE.length]};font-weight:700">🎯 ${g.name}</span></th>`).join('')}
         </tr></thead>
         <tbody>
@@ -3342,8 +3343,8 @@ function renderAnalysis(data) {
             const a = style_analysis[s];
             return `<tr style="${idx%2===0?'':'background:var(--bg3)'}">
               <td style="padding:10px 14px;font-weight:700;color:var(--text)">${s}</td>
-              ${_mTd(_FE,_cN,s,a.best,true)}${_mTd(_FE,_cX,s,a.best,false)}${_mTd(_LI,_cN,s,a.best,true)}${_mTd(_LI,_cX,s,a.best,false)}
               <td style="padding:10px 14px;text-align:center;font-family:var(--font-head);font-size:17px;color:var(--cyan);letter-spacing:1px">${formatTime(a.best)}</td>
+              ${_mTd(_FE,_cN,s,a.best,'gap')}${_mTd(_FE,_cX,s,a.best,'')}${_mTd(_LI,_cN,s,a.best,'sub')}${_mTd(_LI,_cX,s,a.best,'')}
               ${currentGoals.map((g,i) => {
                 const gt = (g.times||{})[s];
                 if (!gt) return `<td style="padding:10px 14px;text-align:center;color:var(--text3)">—</td>`;
