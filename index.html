@@ -261,6 +261,25 @@ tr:last-child td { border-bottom:none; }
 .asub-tab { padding:10px 18px; font-size:13.5px; font-weight:600; color:var(--text3); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.2s; white-space:nowrap; }
 .asub-tab:hover { color:var(--cyan); }
 .asub-tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
+/* ✨ Mi Potencial (interactivo) */
+.pot-desc{ font-size:12.5px;color:var(--text3);line-height:1.65;margin-bottom:14px; }
+.pot-pills{ display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px; }
+.pot-pill{ padding:8px 16px;border-radius:22px;border:2px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s; }
+.pot-pill:hover{ border-color:var(--cyan);color:var(--cyan); }
+.pot-pill.active{ background:var(--cyan);border-color:var(--cyan);color:#fff; }
+.pot-level{ font-size:12.5px;color:var(--text3);margin-bottom:12px; }
+.pot-level b{ color:var(--cyan); }
+.pot-row{ background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;gap:14px;align-items:center; }
+.pot-dist{ font-family:var(--font-head);font-size:19px;color:var(--text);min-width:58px;letter-spacing:.5px; }
+.pot-body{ flex:1;min-width:0; }
+.pot-times{ display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text3);margin-bottom:6px; }
+.pot-times b{ color:var(--text);font-family:var(--font-head);font-size:15px;letter-spacing:.3px; }
+.pot-track{ height:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden; }
+.pot-fill{ height:100%;border-radius:8px;transition:width .6s cubic-bezier(.22,.61,.36,1); }
+.pot-foot{ display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;flex-wrap:wrap; }
+.pot-pct{ font-weight:800; }
+.pot-ctx{ color:var(--text3); }
+@media(max-width:560px){ .pot-row{ flex-direction:column;align-items:stretch;gap:8px; } }
 /* CALENDAR */
 .tournament-upcoming { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
 .tournament-upcoming:hover { border-color:var(--cyan); }
@@ -3266,7 +3285,12 @@ function chartOptions(label) {
     }
   };
 }
-// ✨ B · Proyección corto ↔ largo (ritmo puro, por estilo) — usa las mejores marcas
+// ✨ "Mi Potencial" — interactivo (pills por estilo + tarjetas por distancia)
+let _potSel=null;
+function setPotStroke(n){ _potSel=n;
+  document.querySelectorAll('.pot-pill').forEach(p=>p.classList.toggle('active',p.dataset.str===n));
+  document.querySelectorAll('.pot-detail').forEach(d=>d.style.display=d.dataset.str===n?'':'none');
+}
 function renderPotencial(){
   const host=document.getElementById('potencial-content'); if(!host) return;
   const sa=(currentAnalysis&&currentAnalysis.style_analysis)||{};
@@ -3286,19 +3310,7 @@ function renderPotencial(){
     dn[hi]=real[hi]; for(let i=dists.indexOf(hi)-1;i>=0;i--){ const nd=dists[i+1],[m,s]=DN[nd]; dn[dists[i]]=dn[nd]*m-s; }
     return {up,dn,real,lo,hi};
   }
-  // color estricto y PASTEL: compara TU marca vs la proyección (más lento = más rojo); la referencia (ancla) no se pinta
-  const heatT=(actual,prj,isRef)=>{ if(isRef||actual==null||prj==null) return ''; const dev=(actual-prj)/prj; const hue= dev<=0 ? 120 : 120*(1-Math.min(dev/0.03,1)); return 'background:hsl('+hue.toFixed(0)+',58%,92%)'; };
-  const cellP=(val,actual,isRef)=>{ if(val==null) return '<td style="text-align:center;color:var(--text3)">—</td>'; return '<td style="text-align:center;'+heatT(actual,val,isRef)+'">'+formatTime(val)+(isRef?' <span style="font-size:9px;color:var(--text3)">ref</span>':'')+'</td>'; };
-  let any=false, h='<div class="card"><div class="section-title">✨ Proyección corto ↔ largo</div>'
-    +'<div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6"><b>Tu marca</b> real vs. lo que <i>deberías</i> hacer en cada distancia: <b>↑ desde tu prueba más corta</b> (lo que implica tu velocidad) y <b>↓ desde tu más larga</b> (lo que implica tu fondo). El <b>color</b> compara tu marca con esa proyección: <b style="color:#2e7d32">verde</b> = a ese nivel o mejor, <b style="color:#c62828">rojo</b> = te quedas corto ahí (estricto: ~2&nbsp;s ya pesa). El tiempo de <b>referencia</b> (tu ancla) no se pinta; solo se evalúan las distancias que ya nadaste. Es ritmo puro, sin récords ni puntos.</div>'
-    +'<div class="table-wrap"><table style="width:100%;table-layout:fixed;font-size:13px"><colgroup><col style="width:28%"><col style="width:24%"><col style="width:24%"><col style="width:24%"></colgroup><thead><tr><th style="text-align:left">Prueba</th><th style="text-align:center">Tu marca</th><th style="text-align:center">Desde corta ↑</th><th style="text-align:center">Desde larga ↓</th></tr></thead><tbody>';
-  STR.forEach(({name,steps})=>{ const P=proj(steps); if(!P) return; any=true;
-    h+='<tr><td colspan="4" style="font-weight:800;color:var(--cyan);background:var(--bg3);padding:6px 8px">'+name+'</td></tr>';
-    steps.forEach(([k,d])=>{ const u=P.up[d],dn=P.dn[d],rm=P.real[d];
-      h+='<tr><td style="font-weight:600">'+k.replace(name+' ','')+'</td><td style="text-align:center;font-weight:700">'+(rm!=null?formatTime(rm):'—')+'</td>'+cellP(u,rm,d===P.lo)+cellP(dn,rm,d===P.hi)+'</tr>'; });
-  });
-  h+='</tbody></table></div></div>'; // cierra tabla + card B
-  // ✨ A · Potencialidades por distancia (puntos World Aquatics / FINA, base oficial 1000 pts)
+  // datos: tiempos base FINA (1000 pts, oficiales) + mínima FECNA de su categoría
   const FINA_REF={ 'Libre 50m':23.67,'Libre 100m':51.71,'Libre 200m':112.98,'Libre 400m':236.40,'Libre 800m':484.79,'Libre 1500m':920.48,
     'Espalda 50m':26.98,'Espalda 100m':57.45,'Espalda 200m':123.35,'Pecho 50m':29.30,'Pecho 100m':64.13,'Pecho 200m':138.95,
     'Mariposa 50m':24.43,'Mariposa 100m':55.48,'Mariposa 200m':121.81,'Combinado 200m':126.12,'Combinado 400m':266.36 };
@@ -3306,19 +3318,47 @@ function renderPotencial(){
   const _swP=(currentAnalysis&&currentAnalysis.swimmer), _byP=(_swP&&_swP.birthdate)?new Date(_swP.birthdate).getFullYear():(new Date().getFullYear()-13);
   const _catP=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byP):null;
   const FEC=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F&&_catP)?NAC_DEFAULT.F[_catP]:null)||{};
-  let anyA=false, hA='<div class="card"><div class="section-title">🎯 Potencialidades por distancia</div><div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Qué tiempo <b>deberías</b> hacer en cada distancia si nadaras a tu <b>nivel promedio de puntos</b> (World Aquatics) en ese estilo. <b>Potencial</b> = ese objetivo; <b>Diferencia</b> vs. tu tiempo; <b>Mín FECNA</b> = la mínima de tu categoría (✅ ya cumples / cuánto falta).</div>'
-    +'<div class="table-wrap"><table style="width:100%;table-layout:fixed;font-size:13px"><colgroup><col style="width:24%"><col style="width:19%"><col style="width:19%"><col style="width:19%"><col style="width:19%"></colgroup><thead><tr><th style="text-align:left">Prueba</th><th style="text-align:center">Tu tiempo</th><th style="text-align:center">Potencial</th><th style="text-align:center">Diferencia</th><th style="text-align:center">Mín FECNA</th></tr></thead><tbody>';
+  const blocks=[];
   STR.forEach(({name,steps})=>{
-    const have=steps.filter(([k])=>best(k)!=null && FINA_REF[k]); if(!have.length) return; anyA=true;
-    const gAvg=have.reduce((s,[k])=>s+finaPts(best(k),FINA_REF[k]),0)/have.length;
-    hA+='<tr><td colspan="5" style="font-weight:800;color:var(--cyan);background:var(--bg3);padding:6px 8px">'+name+' · nivel '+Math.round(gAvg)+' pts</td></tr>';
-    steps.forEach(([k,d])=>{ const ref=FINA_REF[k]; if(!ref) return; const pot=ref*Math.pow(1000/gAvg,1/3), b=best(k);
-      let dif='<td style="text-align:center;color:var(--text3)">—</td>'; if(b!=null){ const x=b-pot, col=x<-0.05?'var(--green)':(x>0.05?'var(--red)':'var(--text3)'); dif='<td style="text-align:center;color:'+col+';font-weight:700">'+(x<0?'−':'+')+formatTime(Math.abs(x))+'</td>'; }
-      const mn=FEC[k]; let mc='<td style="text-align:center;color:var(--text3)">—</td>'; if(mn!=null){ if(b!=null){ const ok=b<=mn+0.005; mc='<td style="text-align:center;color:'+(ok?'var(--green)':'var(--red)')+';font-weight:700">'+(ok?'✅':'+'+formatTime(b-mn))+'</td>'; } else mc='<td style="text-align:center;color:var(--text3)">'+formatTime(mn)+'</td>'; }
-      hA+='<tr><td style="font-weight:600">'+k.replace(name+' ','')+'</td><td style="text-align:center">'+(b!=null?formatTime(b):'—')+'</td><td style="text-align:center;font-weight:700">'+formatTime(pot)+'</td>'+dif+mc+'</tr>'; });
+    const P=proj(steps), fh=steps.filter(([k])=>best(k)!=null&&FINA_REF[k]);
+    if(!fh.length && !P) return;
+    const gAvg=fh.length?fh.reduce((s,[k])=>s+finaPts(best(k),FINA_REF[k]),0)/fh.length:null;
+    const rows=steps.map(([k,d])=>({ label:k.replace(name+' ',''), marca:best(k),
+      pot:(gAvg&&FINA_REF[k])?FINA_REF[k]*Math.pow(1000/gAvg,1/3):null,
+      up:P?P.up[d]:null, dn:P?P.dn[d]:null, min:(FEC[k]!=null?FEC[k]:null) }));
+    blocks.push({name, gAvg, rows});
   });
-  hA+='</tbody></table></div></div>';
-  host.innerHTML = (any||anyA) ? ((any?h:'')+(anyA?hA:'')) : '<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo para proyectar.</p></div>';
+  if(!blocks.length){ host.innerHTML='<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo.</p></div>'; return; }
+  if(!_potSel || !blocks.some(b=>b.name===_potSel)) _potSel=blocks[0].name;
+  function rowHtml(r){
+    if(r.marca==null && r.pot==null) return '';
+    let bar='', pct='';
+    if(r.marca!=null && r.pot!=null){
+      const d=(r.marca-r.pot)/r.pot*100, hue=120*(1-Math.min(Math.max(0,d)/3,1)), fill=Math.max(8,Math.min(100,(r.pot/r.marca)*100));
+      bar='<div class="pot-track"><div class="pot-fill" style="width:'+fill.toFixed(0)+'%;background:hsl('+hue.toFixed(0)+',55%,62%)"></div></div>';
+      pct= d<=0.05 ? '<span style="color:hsl(120,55%,34%)">−'+Math.abs(d).toFixed(1)+'% ✨ ¡vas por debajo!</span>'
+                   : '<span style="color:hsl('+hue.toFixed(0)+',55%,34%)">+'+d.toFixed(1)+'% · te faltan '+formatTime(r.marca-r.pot)+'</span>';
+    } else if(r.marca!=null){ bar='<div class="pot-track"><div class="pot-fill" style="width:100%;background:var(--bg2)"></div></div>'; pct='<span style="color:var(--text3)">sin referencia</span>'; }
+    else { bar='<div class="pot-track"></div>'; pct='<span style="color:var(--text3)">aún sin marca · objetivo '+(r.pot!=null?formatTime(r.pot):'—')+'</span>'; }
+    const ctx=[];
+    if(r.up!=null) ctx.push('↑ veloc. '+formatTime(r.up));
+    if(r.dn!=null) ctx.push('↓ fondo '+formatTime(r.dn));
+    if(r.min!=null) ctx.push('mín '+formatTime(r.min)+(r.marca!=null?(r.marca<=r.min+0.005?' ✅':' (+'+formatTime(r.marca-r.min)+')'):''));
+    return '<div class="pot-row"><div class="pot-dist">'+r.label+'</div><div class="pot-body">'
+      +'<div class="pot-times"><span>Tu marca <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b></span><span>Deberías <b>'+(r.pot!=null?formatTime(r.pot):'—')+'</b></span></div>'
+      +bar+'<div class="pot-foot"><span class="pot-pct">'+pct+'</span><span class="pot-ctx">'+ctx.join(' · ')+'</span></div></div></div>';
+  }
+  let h='<div class="card"><div class="section-title">✨ Mi Potencial</div>'
+    +'<div class="pot-desc">Elige un estilo y mira, en cada distancia, qué tan cerca estás de tu <b>potencial</b> (lo que te corresponde según tu nivel de puntos en ese estilo). El <b>%</b> te dice cuánto te falta — o si ya vas <b>por debajo</b> ✨. De contexto, abajo: lo que implican tu <b>velocidad ↑</b> y tu <b>fondo ↓</b>, y la <b>mínima FECNA</b>.</div>';
+  h+='<div class="pot-pills">'+blocks.map(b=>'<button class="pot-pill'+(b.name===_potSel?' active':'')+'" data-str="'+b.name+'" onclick="setPotStroke(\''+b.name+'\')">'+b.name+'</button>').join('')+'</div>';
+  blocks.forEach(b=>{
+    h+='<div class="pot-detail" data-str="'+b.name+'" style="display:'+(b.name===_potSel?'':'none')+'">'
+      +'<div class="pot-level">Tu nivel en <b>'+b.name+'</b>: '+(b.gAvg?('<b>'+Math.round(b.gAvg)+' pts</b> (World Aquatics)'):'—')+'</div>';
+    const rr=b.rows.map(rowHtml).join('');
+    h+=(rr||'<div style="color:var(--text3);font-size:13px">Sin marcas en este estilo.</div>')+'</div>';
+  });
+  h+='</div>';
+  host.innerHTML=h;
 }
 function renderAnalysis(data) {
   document.getElementById('analysis-content').style.display = '';
