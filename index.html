@@ -195,8 +195,8 @@ details.tgroup summary > span:first-of-type { flex:1; }
 .gcard-nacional{ border:2px solid #e0a80a; box-shadow:0 0 0 3px rgba(224,168,10,.14); background:linear-gradient(180deg,rgba(224,168,10,.07),transparent 55%); order:-1; }
 .gcard-nacional .section-title{ color:#b7860b; }
 /* Metas obligadas (oficiales, inmodificables) */
-#oblig-metas{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:start; margin-bottom:14px; }
-@media (max-width:700px){ #oblig-metas{ grid-template-columns:1fr; } }
+#oblig-metas,#oblig-metas-an{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:start; margin-bottom:14px; }
+@media (max-width:700px){ #oblig-metas,#oblig-metas-an{ grid-template-columns:1fr; } }
 .om-tbl{ width:100%; border-collapse:collapse; font-size:12px; }
 .om-tbl th,.om-tbl td{ padding:5px 6px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
 .om-tbl th{ color:var(--text3); font-weight:700; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; }
@@ -702,24 +702,7 @@ tr:last-child td { border-bottom:none; }
     ℹ️ Descarga la plantilla Excel, llena los tiempos en formato <strong>MM:SS.cc</strong> (ej: 1:25.50) o <strong>SS.cc</strong> (ej: 25.50) y luego impórtala.
   </div>
 
-  <!-- Tabla Nacional FECNA (todas las categorías) — la usa el Torneo en Vivo -->
-  <div class="card" id="nac-card" style="margin-bottom:20px">
-    <div class="gcard-h" style="align-items:flex-start;gap:10px">
-      <div>
-        <div class="section-title" style="margin-bottom:2px">🇨🇴 Tabla Nacional FECNA 2026 <span class="gnat-badge">Oficial · editable</span></div>
-        <div style="font-size:11px;color:var(--text3)">Mínimas por <b>sexo y categoría</b>. La usa el <b>Torneo en Vivo</b> para marcar ✓/✗. Edita y guarda para el próximo año.</div>
-      </div>
-      <div style="display:flex;gap:6px;flex:0 0 auto">
-        <button class="btn btn-primary btn-sm" id="nac-sex-F" onclick="setNacSex('F')">Femenino</button>
-        <button class="btn btn-secondary btn-sm" id="nac-sex-M" onclick="setNacSex('M')">Masculino</button>
-      </div>
-    </div>
-    <div id="nac-table-wrap" style="overflow-x:auto;margin-top:12px">—</div>
-    <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" onclick="saveNacTable()">💾 Guardar tabla</button>
-      <button class="btn btn-secondary btn-sm" onclick="resetNacTable()">↺ Restablecer oficial</button>
-    </div>
-  </div>
+  <!-- (Tabla FECNA editable retirada: las mínimas oficiales viven en las metas obligadas de abajo) -->
   <div id="oblig-metas"></div>
   <div id="goals-container"></div>
   <div id="goals-empty" class="empty-state" style="display:none">
@@ -844,6 +827,7 @@ tr:last-child td { border-bottom:none; }
 
     <!-- SECCIÓN: METAS -->
     <div class="asec" id="asec-metas" style="display:none">
+      <div id="oblig-metas-an"></div>
       <div class="card" id="goals-dashboard" style="display:none">
         <div class="section-title">🎯 Comparación con Metas — Resumen General</div>
         <div id="goals-dashboard-content"></div>
@@ -1403,7 +1387,7 @@ const NAC_CATS = ['10','11','12','13','14','15','16-17','18-20','mayores'];
 const NAC_CATLBL = { '10':'10 a','11':'11 a','12':'12 a','13':'13 a','14':'14 a','15':'15 a','16-17':'16-17','18-20':'18-20','mayores':'Mayores' };
 let nacTable = null;   // tabla desde Firebase (F/M×cat×estilo); null => usar NAC_DEFAULT
 let nacSex = 'F';      // sexo mostrado en la tabla editable
-function nacGet(){ return nacTable || NAC_DEFAULT; }
+function nacGet(){ return NAC_DEFAULT; }  /* tabla editable retirada: siempre la oficial al día */
 function nacCatForAge(a){ a=+a; if(a>=10&&a<=13)return String(a); if(a===14)return'14'; if(a===15)return'15'; if(a>=16&&a<=17)return'16-17'; if(a>=18&&a<=20)return'18-20'; if(a>=21)return'mayores'; return null; }
 function nacTarget(sex,age,styleKey){ const t=nacGet(); const c=nacCatForAge(age); return (c&&t[sex]&&t[sex][c])?t[sex][c][styleKey]:null; }
 const GOAL_PALETTE = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
@@ -2209,7 +2193,7 @@ function loadGoals() { /* handled by Firebase listener */ }
 // (edad actual) y la del año siguiente, para apuntar más fuerte.
 function obligSwimmer(){ return (swimmers||[]).find(s=>s.birthdate) || (swimmers||[])[0] || null; }
 function renderObligMetas(){
-  const host=document.getElementById('oblig-metas'); if(!host) return;
+  const hosts=['oblig-metas','oblig-metas-an'].map(id=>document.getElementById(id)).filter(Boolean); if(!hosts.length) return;
   const sw=obligSwimmer(), yr=new Date().getFullYear();
   const by = (sw&&sw.birthdate)?new Date(sw.birthdate).getFullYear():(yr-13);
   const ageNow=yr-by, ageNext=ageNow+1, sex='F';            // app personal (femenino)
@@ -2234,9 +2218,10 @@ function renderObligMetas(){
       +'<div class="table-wrap"><table class="om-tbl"><thead><tr><th>Prueba</th><th>Tu mejor</th><th>'+ageNow+' años</th><th>'+ageNext+' años</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }
   const ligaNote=(LIGA_BOG[sex] && !LIGA_BOG[sex][catNow]) ? ('Liga Bogotá aplica desde los 14 años (a los '+ageNow+' no hay mínima de Liga).') : '';
-  host.innerHTML =
+  const html =
       card('🇨🇴 Mínima FECNA (Nacional)', NAC_DEFAULT, 'Femenino · la marca que hay que cumplir en el año. Se muestran '+ageNow+' y '+ageNext+' años para apuntar más fuerte.')
     + card('🏙️ Mínima Liga Bogotá', LIGA_BOG, ligaNote);
+  hosts.forEach(h=>{ h.innerHTML=html; });
 }
 function renderGoals() {
   try{ renderObligMetas(); }catch(e){ console.warn('obligMetas',e); }
