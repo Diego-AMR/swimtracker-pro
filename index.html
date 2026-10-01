@@ -1003,6 +1003,13 @@ tr:last-child td { border-bottom:none; }
     .tv tr.flagged td{background:var(--bg3);color:var(--text3)}
     .tv-better{color:#1f8a5b}
     .tv-worse{color:#c0392b}
+    .tvsub-tabs{display:flex;gap:8px;margin:20px 0 14px;border-bottom:1px solid var(--border)}
+    .tvsub-btn{padding:9px 16px;font-size:13.5px;font-weight:700;color:var(--text3);background:none;border:none;border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer}
+    .tvsub-btn:hover{color:var(--cyan)}
+    .tvsub-btn.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+    .tv tr.her td{background:rgba(214,150,26,.16)}
+    .tv tr.her .name{font-weight:800;color:#a9740a}
+    .tv tr.her .club,.tv tr.her .rank{color:#a9740a}
   </style>
   <div class="page-header">
     <div>
@@ -1020,7 +1027,7 @@ tr:last-child td { border-bottom:none; }
       </div>
       <div style="flex:1;min-width:100px">
         <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Mi club</label>
-        <input class="form-input" id="tv-club" value="NABO">
+        <input class="form-input" id="tv-club" value="NARV">
       </div>
       <div style="flex:1;min-width:150px">
         <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Nadador/a (opcional)</label>
@@ -1784,6 +1791,8 @@ async function loadTorneo(manual){
 function tvOnShow(){ const t=document.getElementById('tab-torneovivo'); if(t&&t.classList.contains('active')&&!document.hidden) loadTorneo(false); }
 document.addEventListener('visibilitychange',tvOnShow);
 window.addEventListener('focus',tvOnShow);
+// Muestra las tarjetas fijas (cronograma precargado) aunque aún no se conecte
+window.addEventListener('load',()=>{ try{ if(document.getElementById('tv-results')) renderTorneo({events:[]}); }catch(e){} });
 
 function tvCap(s){ s=s||''; return s.charAt(0).toUpperCase()+s.slice(1); }
 function tvDayKey(d){ const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(d||''); return m? +(m[3]+m[2].padStart(2,'0')+m[1].padStart(2,'0')) : 99999999; }
@@ -1794,6 +1803,66 @@ function tvDelta(seed,finals){
   const a=Math.abs(d), t=a>=60?(Math.floor(a/60)+':'+(a%60).toFixed(2).padStart(5,'0')):a.toFixed(2);
   return {txt:(d<0?'▼ ':'▲ ')+t, cls:d<0?'tv-better':'tv-worse'};
 }
+// ── Cronograma PRECARGADO de Danna (Bogotano II) + sub-pestañas En vivo / Ranking ──
+const TV_CRONO=[
+  {ev:1, pr:'400 Libre',     sk:'Libre 400m',     day:'Vie', hora:'2:30 PM', heat:'1/3',  lane:1, seed:'5:33.85'},
+  {ev:7, pr:'100 Libre',     sk:'Libre 100m',     day:'Vie', hora:'4:31 PM', heat:'8/9',  lane:6, seed:'1:10.80'},
+  {ev:25,pr:'50 Libre',      sk:'Libre 50m',      day:'Sáb', hora:'8:41 AM', heat:'8/10', lane:5, seed:'33.22'},
+  {ev:39,pr:'100 Pecho',     sk:'Pecho 100m',     day:'Sáb', hora:'4:41 PM', heat:'4/5',  lane:7, seed:'1:42.17'},
+  {ev:53,pr:'400 Combinado', sk:'Combinado 400m', day:'Dom', hora:'7:38 AM', heat:'2/2',  lane:8, seed:'6:50.56'},
+  {ev:59,pr:'200 Libre',     sk:'Libre 200m',     day:'Dom', hora:'8:47 AM', heat:'6/8',  lane:3, seed:'2:48.34'}
+];
+let tvSubSel='vivo';
+function tvSubShow(k){ tvSubSel=k; document.querySelectorAll('.tvsub-btn').forEach(b=>b.classList.toggle('active',b.dataset.k===k)); document.querySelectorAll('.tvsub').forEach(d=>d.style.display=d.dataset.k===k?'':'none'); }
+function tvMyBest(sk){ const rs=(timesRaw||[]).filter(r=>r.style===sk&&r.time_seconds>0); return rs.length?Math.min(...rs.map(r=>r.time_seconds)):null; }
+function tvAgeNow(){ const s=(currentAnalysis&&currentAnalysis.swimmer)||(typeof obligSwimmer==='function'?obligSwimmer():null); const by=(s&&s.birthdate)?new Date(s.birthdate).getFullYear():(new Date().getFullYear()-13); return new Date().getFullYear()-by; }
+function tvFindLive(events,ev,who){ const e=(events||[]).find(x=>String(x.num)===String(ev)); if(!e||!who) return {e:e||null,r:null}; const r=(e.rows||[]).find(x=>x.name&&x.name.toLowerCase().includes(who)); return {e:e||null, r:r||null}; }
+function tvCronoCardsHtml(events, club, who){
+  const age=tvAgeNow();
+  let h='<div class="tv-sched">';
+  TV_CRONO.forEach(c=>{
+    const {e,r}=tvFindLive(events,c.ev,who);
+    const done = r && r.finals && !r.status;
+    let pos=null;
+    if(done && e){ const grp=(e.rows||[]).filter(x=>String(x.age)===String(age)&&!x.status&&x.finals).sort((a,b)=>tvSecs(a.finals)-tvSecs(b.finals)); pos=grp.indexOf(r)+1; }
+    const dl = done? tvDelta(r.seed||c.seed, r.finals):null;
+    const best=tvMyBest(c.sk), pb = done && best!=null && tvSecs(r.finals)<best-0.005;
+    const minT = (typeof nacTarget==='function')? nacTarget('F',age,c.sk):null;
+    const hitMin = done && minT!=null && tvSecs(r.finals)<=minT+0.005;
+    const stBadge = (r&&r.status)? '<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
+                   : done? '<span style="background:#1f8a5b;color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:.04em">✔ NADADA</span>'
+                   : '<span style="background:var(--bg3);color:var(--text3);font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px">POR NADAR</span>';
+    const timeLine = done? ('<span class="seed" style="color:#1f8a5b;font-size:15px">'+tvEsc(r.finals)+' <span style="color:var(--text3);font-weight:500;font-size:10.5px">(seed '+tvEsc(r.seed||c.seed)+')</span></span>')
+                   : ('<span class="seed">'+tvEsc(c.seed)+' <span style="color:var(--text3);font-size:10.5px">· seed</span></span>');
+    const pill = (r&&r.status)? '<span class="pill nm">'+r.status+'</span>' : (pos? '<span class="pill">'+pos+'º · '+age+'a</span>' : '<span class="pill nm">por nadar</span>');
+    const extras=[]; if(dl) extras.push('<span class="'+dl.cls+'" style="font-weight:700">'+dl.txt+'</span>'); if(pb) extras.push('<span style="color:#a9740a;font-weight:800">⭐ ¡PB!</span>'); if(hitMin) extras.push('<span style="color:#1f8a5b;font-weight:800">✓ mínima</span>');
+    h+='<div class="tv-sc"><div class="top"><span>'+c.day+' '+c.hora+' '+stBadge+'</span><span class="t">Ev '+c.ev+'</span></div>'
+      +'<div class="pr">'+c.pr+'</div>'
+      +'<div class="meta"><span>Heat <b style="color:var(--text2)">'+c.heat+'</b></span><span class="lane">Carril '+c.lane+'</span></div>'
+      +'<div class="foot">'+timeLine+pill+'</div>'
+      +(extras.length? '<div style="margin-top:7px;padding-top:6px;border-top:1px dashed var(--border);font-size:11.5px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">'+extras.join('')+'</div>':'')
+      +'</div>';
+  });
+  return h+'</div>';
+}
+function tvRankingHtml(events, club, who){
+  const age=tvAgeNow(); let h='', any=false;
+  TV_CRONO.forEach(c=>{
+    const e=(events||[]).find(x=>String(x.num)===String(c.ev)); if(!e) return;
+    const grp=(e.rows||[]).filter(r=>String(r.age)===String(age)); if(!grp.length) return; any=true;
+    const hasF=grp.filter(r=>r.finals).length>=1;
+    const timed=grp.filter(r=>!r.status).sort((a,b)=>tvSecs(hasF?(a.finals||a.seed):a.seed)-tvSecs(hasF?(b.finals||b.seed):b.seed));
+    const minT=(typeof nacTarget==='function')?nacTarget('F',age,c.sk):null;
+    const meIdx=timed.findIndex(r=>r.name&&r.name.toLowerCase().includes(who));
+    h+='<div class="tv-acc open her"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+c.pr+' · '+age+' años '+(hasF?'<span style="color:#1f8a5b">· RESULTADOS</span>':'<span style="color:var(--text3)">· seed</span>')+'</span><span class="tv-acc-meta">'+(meIdx>=0?'Danna '+(meIdx+1)+'º':'')+' <span class="tv-caret">▸</span></span></button><div class="tv-acc-body"><div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadadora</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Final</th>':'')+(minT?'<th class="time">vs Mín</th>':'')+'</tr></thead><tbody>';
+    timed.forEach((r,i)=>{ const place=i+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place; const mine=club&&r.club===club, her=mine&&r.name&&r.name.toLowerCase().includes(who);
+      let minC=''; if(minT){ const ft=hasF?(r.finals||r.seed):r.seed, fs=tvSecs(ft); minC='<td class="time">'+((ft&&isFinite(fs))?(fs<=minT+0.005?'<span style="color:#1f8a5b;font-weight:800">✓</span>':'<span style="color:var(--text3)">+'+(fs-minT).toFixed(2)+'</span>'):'—')+'</td>'; }
+      h+='<tr class="'+(her?'her':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+(her?' ▸':'')+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+(hasF?'<td class="time">'+tvEsc(r.finals||'—')+'</td>':'')+minC+'</tr>'; });
+    grp.filter(r=>r.status).forEach(r=>{ h+='<tr class="flagged"><td class="rank">—</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time" colspan="'+(1+(hasF?1:0)+(minT?1:0))+'"><span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span></td></tr>'; });
+    h+='</tbody></table></div></div></div>';
+  });
+  return any? h : '<div class="tv-banner">Aún no hay resultados de sus pruebas. Cuando pegues el link de la Liga (o publiquen), aquí verás su ranking por categoría con mínima y podio.</div>';
+}
 function renderTorneo(data){
   const box=document.getElementById('tv-results'); if(!box) return;
   const club=tvVal('tv-club','NARV').toUpperCase();
@@ -1802,25 +1871,11 @@ function renderTorneo(data){
   const events=(data.events||[]).filter(e=>e.rows&&e.rows.length);
   let h='';
 
-  // Cronograma del nadador (recuadros compactos) — con delta y estado (DQ/NS)
-  if(who){
-    const mine=[];
-    events.forEach(e=>e.rows.forEach(r=>{ if(r.name.toLowerCase().includes(who)&&(!club||r.club===club)) mine.push({e,r}); }));
-    if(mine.length){
-      h+='<div class="section-title">🗓️ Cronograma — '+tvEsc(whoRaw)+'</div><div class="tv-sched">';
-      mine.sort((a,b)=>a.e.num-b.e.num).forEach(({e,r})=>{
-        const dl=tvDelta(r.seed,r.finals);
-        let chip = r.status ? '<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
-                 : (r.finals ? '<span class="lane">🏁 '+tvEsc(r.finals)+'</span>' : '');
-        const pill = r.status ? r.status : (r.pos ? r.pos+'º' : (r.finals?'—':'estreno'));
-        h+='<div class="tv-sc"><div class="top"><span>'+tvCap(e.dow||'')+' '+((e.date||'').slice(0,5))+'</span><span class="t">Ev '+e.num+'</span></div>'+
-           '<div class="pr">'+tvEsc(e.label)+'</div>'+
-           '<div class="meta"><span>Seed: <b style="color:var(--text2)">'+tvEsc(r.seed||'—')+'</b></span>'+chip+(dl?' <span class="'+dl.cls+'" style="font-weight:700">'+dl.txt+'</span>':'')+'</div>'+
-           '<div class="foot"><span class="seed">'+tvEsc(e.age||'')+' · '+e.gender+'</span><span class="pill '+(r.status?'nm':'')+'">'+pill+'</span></div></div>';
-      });
-      h+='</div>';
-    }
-  }
+  // Tarjetas FIJAS (cronograma precargado de Danna) + sub-pestañas
+  h+='<div class="section-title">🗓️ Sus pruebas <span style="font-weight:400;color:var(--text3);font-size:11px">— Bogotano II · se actualizan en vivo</span></div>';
+  h+=tvCronoCardsHtml(events, club, who);
+  h+='<div class="tvsub-tabs"><button class="tvsub-btn'+(tvSubSel==='vivo'?' active':'')+'" data-k="vivo" onclick="tvSubShow(\'vivo\')">📡 En vivo</button><button class="tvsub-btn'+(tvSubSel==='rank'?' active':'')+'" data-k="rank" onclick="tvSubShow(\'rank\')">🏅 Ranking de Danna</button></div>';
+  h+='<div class="tvsub" data-k="vivo" style="display:'+(tvSubSel==='vivo'?'':'none')+'">';
 
   // Resultados AGRUPADOS POR DÍA; dentro, acordeón por prueba; medallas por edad.
   let evs=events;
@@ -1849,7 +1904,9 @@ function renderTorneo(data){
     });
     h+='</div></div>';
   });
-  if(!evs.length) h+='<div class="empty-state"><div class="empty-icon">🏊</div><p>No se encontraron pruebas'+(club?' de '+tvEsc(club):'')+'.</p></div>';
+  if(!evs.length) h+='<div class="tv-banner">Aún sin resultados. Pega el link de la <b>Liga de Bogotá</b> arriba y toca <b>Conectar / Actualizar</b>.</div>';
+  h+='</div>'; // cierra sub-pestaña En vivo
+  h+='<div class="tvsub" data-k="rank" style="display:'+(tvSubSel==='rank'?'':'none')+'">'+tvRankingHtml(events, club, who)+'</div>';
   box.innerHTML=h;
 }
 function renderEventBody(e,club,who,hasF){
