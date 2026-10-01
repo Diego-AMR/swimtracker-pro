@@ -827,7 +827,6 @@ tr:last-child td { border-bottom:none; }
 
     <!-- SECCIÓN: METAS -->
     <div class="asec" id="asec-metas" style="display:none">
-      <div id="oblig-metas-an"></div>
       <div class="card" id="goals-dashboard" style="display:none">
         <div class="section-title">🎯 Comparación con Metas — Resumen General</div>
         <div id="goals-dashboard-content"></div>
@@ -3322,12 +3321,24 @@ function renderAnalysis(data) {
   const currentGoals = goals;
   if (currentGoals.length && styles.length) {
     goalDash.style.display = '';
+    // columnas obligadas FECNA + Liga (mínimas oficiales, 13 y 14 años)
+    const _yr=new Date().getFullYear(), _by=(swimmer.birthdate?new Date(swimmer.birthdate).getFullYear():(_yr-13));
+    const _aN=_yr-_by, _aX=_aN+1;
+    const _cN=(typeof nacCatForAge==='function')?nacCatForAge(_aN):String(_aN), _cX=(typeof nacCatForAge==='function')?nacCatForAge(_aX):String(_aX);
+    const _FE=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F)||{}), _LI=((typeof LIGA_BOG!=='undefined'&&LIGA_BOG.F)||{});
+    const _miniCell=(mn,best)=>{ if(mn==null) return '<span style="color:var(--text3)">—</span>'; const d=best-mn, ok=d<=0.005; return `<div style="font-family:var(--font-head);font-size:13px;line-height:1.15;color:${ok?'var(--green)':'var(--red)'}">${ok?'✅':'⏳'} ${formatTime(mn)}</div><div style="font-size:10px;font-weight:700;color:${ok?'var(--green)':'var(--red)'}">${ok?'+'+formatTime(Math.abs(d))+'s':'faltan '+formatTime(Math.abs(d))+'s'}</div>`; };
+    const _oblCell=(tbl,s,best)=>`<div style="display:flex;flex-direction:column;gap:5px;align-items:center">`
+      +`<div><div style="font-size:9px;color:var(--text3);text-transform:uppercase">${_aN} a</div>${_miniCell((tbl[_cN]||{})[s],best)}</div>`
+      +`<div style="border-top:1px dashed var(--border);padding-top:4px;width:100%"><div style="font-size:9px;color:var(--text3);text-transform:uppercase">${_aX} a</div>${_miniCell((tbl[_cX]||{})[s],best)}</div>`
+      +`</div>`;
     goalContent.innerHTML = `<div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr>
           <th style="padding:10px 14px;text-align:left;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase">Estilo</th>
           <th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);color:var(--text3);font-size:11px;text-transform:uppercase;text-align:center">Tu Mejor Marca</th>
           ${currentGoals.map((g,i) => `<th style="padding:10px 14px;background:var(--bg3);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase"><span style="color:${GOAL_PALETTE[i%GOAL_PALETTE.length]};font-weight:700">🎯 ${g.name}</span></th>`).join('')}
+          <th style="padding:10px 10px;background:rgba(224,168,10,.14);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase;border-left:2px solid rgba(224,168,10,.45)"><span style="color:#b7860b;font-weight:800">🇨🇴 FECNA</span><div style="font-size:9px;color:var(--text3);font-weight:700">obligatoria</div></th>
+          <th style="padding:10px 10px;background:rgba(224,168,10,.14);border-bottom:2px solid var(--border);text-align:center;font-size:11px;text-transform:uppercase"><span style="color:#b7860b;font-weight:800">🏙️ Liga</span><div style="font-size:9px;color:var(--text3);font-weight:700">obligatoria</div></th>
         </tr></thead>
         <tbody>
           ${styles.map((s,idx) => {
@@ -3345,6 +3356,8 @@ function renderAnalysis(data) {
                   <div style="font-size:11px;color:${ok?'var(--green)':'var(--red)'};font-weight:700;margin-top:2px">${ok ? `+${formatTime(Math.abs(diff))}s por debajo` : `Faltan ${formatTime(Math.abs(diff))}s`}</div>
                 </td>`;
               }).join('')}
+              <td style="padding:8px 10px;text-align:center;background:rgba(224,168,10,.06);border-left:2px solid rgba(224,168,10,.45)">${_oblCell(_FE,s,a.best)}</td>
+              <td style="padding:8px 10px;text-align:center;background:rgba(224,168,10,.06)">${_oblCell(_LI,s,a.best)}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -3355,7 +3368,8 @@ function renderAnalysis(data) {
       Cada columna es una <strong>meta</strong> (con su tiempo objetivo por estilo). Se compara contra tu <strong>mejor marca</strong> de cada estilo.<br>
       <span style="color:var(--green);font-weight:600">✅ Verde</span> = ya superaste esa meta (muestra cuántos segundos vas por debajo). &nbsp;
       <span style="color:var(--red);font-weight:600">⏳ Naranja</span> = aún no la alcanzas (muestra cuántos segundos te faltan).<br>
-      <span style="color:var(--text3)">Así ves de un vistazo qué metas ya lograste y cuánto te falta para las demás.</span>
+      <span style="color:var(--text3)">Así ves de un vistazo qué metas ya lograste y cuánto te falta para las demás.</span><br>
+      <span style="color:#b7860b;font-weight:700">🇨🇴 FECNA / 🏙️ Liga</span> = las mínimas <strong>obligadas</strong> del año (en <strong>${_aN} y ${_aX} años</strong>), para apuntar más fuerte.
     </div>`;
   } else { goalDash.style.display = 'none'; }
   // Improvements chart
