@@ -808,6 +808,7 @@ tr:last-child td { border-bottom:none; }
       <div class="asub-tab" data-asec="metas" onclick="switchAnalysisSection('metas')">🎯 Metas</div>
       <div class="asub-tab" data-asec="estilo" onclick="switchAnalysisSection('estilo')">🏊 Por Estilo</div>
       <div class="asub-tab" data-asec="ritmo" onclick="switchAnalysisSection('ritmo')">🚀 Ritmo Objetivo</div>
+      <div class="asub-tab" data-asec="potencial" onclick="switchAnalysisSection('potencial')">✨ Potencial</div>
     </div>
 
     <!-- SECCIÓN: RESUMEN -->
@@ -868,6 +869,7 @@ tr:last-child td { border-bottom:none; }
         <div id="ritmo-content"></div>
       </div>
     </div>
+    <div class="asec" id="asec-potencial" style="display:none"><div id="potencial-content"></div></div>
   </div>
   <div id="analysis-empty" class="empty-state">
     <div class="empty-icon">📊</div>
@@ -3264,6 +3266,38 @@ function chartOptions(label) {
     }
   };
 }
+// ✨ B · Proyección corto ↔ largo (ritmo puro, por estilo) — usa las mejores marcas
+function renderPotencial(){
+  const host=document.getElementById('potencial-content'); if(!host) return;
+  const sa=(currentAnalysis&&currentAnalysis.style_analysis)||{};
+  const best=st=>(sa[st]&&sa[st].best!=null)?sa[st].best:null;
+  const STR=[
+    {name:'Libre',steps:[['Libre 50m',50],['Libre 100m',100],['Libre 200m',200],['Libre 400m',400],['Libre 800m',800],['Libre 1500m',1500]]},
+    {name:'Espalda',steps:[['Espalda 50m',50],['Espalda 100m',100],['Espalda 200m',200]]},
+    {name:'Pecho',steps:[['Pecho 50m',50],['Pecho 100m',100],['Pecho 200m',200]]},
+    {name:'Mariposa',steps:[['Mariposa 50m',50],['Mariposa 100m',100],['Mariposa 200m',200]]},
+    {name:'Combinado',steps:[['Combinado 200m',200],['Combinado 400m',400]]}
+  ];
+  const UP={50:[2,5],100:[2,10],200:[2,12.5],400:[2,15],800:[1.875,20]}, DN={1500:[8/15,10.67],800:[.5,7.5],400:[.5,6.25],200:[.5,5],100:[.5,2.5]};
+  function proj(steps){ const real={}; steps.forEach(([k,d])=>{const b=best(k); if(b!=null) real[d]=b;});
+    const dists=steps.map(s=>s[1]), have=dists.filter(d=>real[d]!=null); if(!have.length) return null;
+    const lo=Math.min(...have),hi=Math.max(...have),up={},dn={};
+    up[lo]=real[lo]; for(let i=dists.indexOf(lo)+1;i<dists.length;i++){ const pd=dists[i-1],[m,ad]=UP[pd]; up[dists[i]]=up[pd]*m+ad; }
+    dn[hi]=real[hi]; for(let i=dists.indexOf(hi)-1;i>=0;i--){ const nd=dists[i+1],[m,s]=DN[nd]; dn[dists[i]]=dn[nd]*m-s; }
+    return {up,dn};
+  }
+  const heat=p=>{ const r=Math.min(p/0.20,1); return 'background:hsl('+(120*(1-r)).toFixed(0)+',68%,86%);color:#1f3322'; };
+  let any=false, h='<div class="card"><div class="section-title">✨ Proyección corto ↔ largo</div>'
+    +'<div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Compara el ritmo que implica tu marca <b>más corta</b> (proyectada ↑) con el de tu <b>más larga</b> (proyectada ↓), por estilo. La <b>Diferencia</b> se pinta <b>verde</b> cuando van parejos y tiende al <b>rojo</b> cuando hay desajuste entre tu velocidad y tu fondo. Es ritmo puro (sin récords ni puntos FINA).</div>';
+  STR.forEach(({name,steps})=>{ const P=proj(steps); if(!P) return; any=true;
+    h+='<div style="font-weight:800;color:var(--cyan);margin:14px 0 6px">'+name+'</div><div class="table-wrap"><table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Prueba</th><th style="text-align:center">Desde corta ↑</th><th style="text-align:center">Desde larga ↓</th><th style="text-align:center">Diferencia</th></tr></thead><tbody>';
+    steps.forEach(([k,d])=>{ const u=P.up[d],dn=P.dn[d]; let diff='<td style="text-align:center;color:var(--text3)">—</td>';
+      if(u!=null&&dn!=null){ const gap=Math.abs(u-dn); diff='<td style="text-align:center;font-weight:700;'+heat(gap/Math.max(u,dn))+'">±'+formatTime(gap)+'</td>'; }
+      h+='<tr><td style="font-weight:600">'+k+'</td><td style="text-align:center">'+(u!=null?formatTime(u):'—')+'</td><td style="text-align:center">'+(dn!=null?formatTime(dn):'—')+'</td>'+diff+'</tr>'; });
+    h+='</tbody></table></div>';
+  });
+  host.innerHTML = any ? h+'</div>' : '<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo para proyectar.</p></div>';
+}
 function renderAnalysis(data) {
   document.getElementById('analysis-content').style.display = '';
   document.getElementById('analysis-empty').style.display = 'none';
@@ -3427,6 +3461,7 @@ function renderAnalysis(data) {
   }
   const _gEmpty = document.getElementById('goals-dashboard-empty');
   if (_gEmpty) _gEmpty.style.display = (goals.length && styles.length) ? 'none' : '';
+  try{ renderPotencial(); }catch(e){ console.warn('potencial',e); }
   switchAnalysisSection(currentAnalysisSection || 'resumen');
 }
 
