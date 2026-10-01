@@ -3296,7 +3296,28 @@ function renderPotencial(){
       h+='<tr><td style="font-weight:600">'+k+'</td><td style="text-align:center">'+(u!=null?formatTime(u):'—')+'</td><td style="text-align:center">'+(dn!=null?formatTime(dn):'—')+'</td>'+diff+'</tr>'; });
     h+='</tbody></table></div>';
   });
-  host.innerHTML = any ? h+'</div>' : '<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo para proyectar.</p></div>';
+  h+='</div>'; // cierra card B
+  // ✨ A · Potencialidades por distancia (puntos World Aquatics / FINA, base oficial 1000 pts)
+  const FINA_REF={ 'Libre 50m':23.67,'Libre 100m':51.71,'Libre 200m':112.98,'Libre 400m':236.40,'Libre 800m':484.79,'Libre 1500m':920.48,
+    'Espalda 50m':26.98,'Espalda 100m':57.45,'Espalda 200m':123.35,'Pecho 50m':29.30,'Pecho 100m':64.13,'Pecho 200m':138.95,
+    'Mariposa 50m':24.43,'Mariposa 100m':55.48,'Mariposa 200m':121.81,'Combinado 200m':126.12,'Combinado 400m':266.36 };
+  const finaPts=(t,ref)=>1000*Math.pow(ref/t,3);
+  const _swP=(currentAnalysis&&currentAnalysis.swimmer), _byP=(_swP&&_swP.birthdate)?new Date(_swP.birthdate).getFullYear():(new Date().getFullYear()-13);
+  const _catP=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byP):null;
+  const FEC=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F&&_catP)?NAC_DEFAULT.F[_catP]:null)||{};
+  let anyA=false, hA='<div class="card"><div class="section-title">🎯 Potencialidades por distancia</div><div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">Qué tiempo <b>deberías</b> hacer en cada distancia si nadaras a tu <b>nivel promedio de puntos</b> (World Aquatics) en ese estilo. <b>Mín FECNA</b> = la mínima de tu categoría (✅ ya cumples / cuánto falta).</div>';
+  STR.forEach(({name,steps})=>{
+    const have=steps.filter(([k])=>best(k)!=null && FINA_REF[k]); if(!have.length) return; anyA=true;
+    const gAvg=have.reduce((s,[k])=>s+finaPts(best(k),FINA_REF[k]),0)/have.length;
+    hA+='<div style="font-weight:800;color:var(--cyan);margin:14px 0 6px">'+name+' · nivel '+Math.round(gAvg)+' pts</div><div class="table-wrap"><table style="width:100%;font-size:13px"><thead><tr><th style="text-align:left">Prueba</th><th style="text-align:center">Tu tiempo</th><th style="text-align:center">Potencial</th><th style="text-align:center">Diferencia</th><th style="text-align:center">Mín FECNA</th></tr></thead><tbody>';
+    steps.forEach(([k,d])=>{ const ref=FINA_REF[k]; if(!ref) return; const pot=ref*Math.pow(1000/gAvg,1/3), b=best(k);
+      let dif='<td style="text-align:center;color:var(--text3)">—</td>'; if(b!=null){ const x=b-pot, col=x<-0.05?'var(--green)':(x>0.05?'var(--red)':'var(--text3)'); dif='<td style="text-align:center;color:'+col+';font-weight:700">'+(x<0?'−':'+')+formatTime(Math.abs(x))+'</td>'; }
+      const mn=FEC[k]; let mc='<td style="text-align:center;color:var(--text3)">—</td>'; if(mn!=null){ if(b!=null){ const ok=b<=mn+0.005; mc='<td style="text-align:center;color:'+(ok?'var(--green)':'var(--red)')+';font-weight:700">'+(ok?'✅':'+'+formatTime(b-mn))+'</td>'; } else mc='<td style="text-align:center;color:var(--text3)">'+formatTime(mn)+'</td>'; }
+      hA+='<tr><td style="font-weight:600">'+k+'</td><td style="text-align:center">'+(b!=null?formatTime(b):'—')+'</td><td style="text-align:center;font-weight:700">'+formatTime(pot)+'</td>'+dif+mc+'</tr>'; });
+    hA+='</tbody></table></div>';
+  });
+  hA+='</div>';
+  host.innerHTML = (any||anyA) ? ((any?h:'')+(anyA?hA:'')) : '<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo para proyectar.</p></div>';
 }
 function renderAnalysis(data) {
   document.getElementById('analysis-content').style.display = '';
