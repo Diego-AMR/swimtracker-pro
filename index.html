@@ -280,6 +280,25 @@ tr:last-child td { border-bottom:none; }
 .pot-pct{ font-weight:800; }
 .pot-ctx{ color:var(--text3); }
 @media(max-width:560px){ .pot-row{ flex-direction:column;align-items:stretch;gap:8px; } }
+.pot-group{ margin-bottom:18px; }
+.pot-grid{ display:grid;grid-template-columns:repeat(3,1fr);gap:12px; }
+@media(max-width:620px){ .pot-grid{ grid-template-columns:repeat(2,1fr);} }
+@media(max-width:380px){ .pot-grid{ grid-template-columns:1fr;} }
+.pot-tile{ background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;padding:12px 13px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s; }
+.pot-tile:hover{ transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--cyan); }
+.pot-tile-top{ display:flex;justify-content:space-between;align-items:baseline;gap:6px; }
+.pot-tile-d{ font-family:var(--font-head);font-size:17px;color:var(--text);letter-spacing:.3px; }
+.pot-tile-pct{ font-weight:800;font-size:14px; }
+.pot-tile-m{ font-size:12.5px;color:var(--text2);margin-top:6px; }
+.pot-tile-m b{ color:var(--text);font-family:var(--font-head);font-size:15px; }
+.pot-tile-s{ font-size:11px;color:var(--text3);margin-top:2px; }
+.pot-tile-tap{ font-size:10px;color:var(--cyan);margin-top:7px;font-weight:600; }
+.pot-detail-panel{ background:var(--bg2);border:1px solid var(--cyan);border-radius:12px;padding:14px 16px;margin-bottom:16px; }
+.pot-dtl-head{ display:flex;justify-content:space-between;align-items:center;font-family:var(--font-head);font-size:17px;color:var(--cyan);margin-bottom:8px; }
+.pot-dtl-x{ background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:28px;height:28px;font-size:16px;color:var(--text2);cursor:pointer; }
+.pot-dtl-top{ font-size:13px;color:var(--text2);margin-bottom:10px; } .pot-dtl-top b{ color:var(--text);font-family:var(--font-head); }
+.pot-dtl-sec{ font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin:6px 0; }
+.pot-dtl-ctx{ font-size:11.5px;color:var(--text3);margin-top:10px; }
 /* CALENDAR */
 .tournament-upcoming { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; transition:all 0.2s; }
 .tournament-upcoming:hover { border-color:var(--cyan); }
@@ -3286,10 +3305,24 @@ function chartOptions(label) {
   };
 }
 // ✨ "Mi Potencial" — interactivo (pills por estilo + tarjetas por distancia)
-let _potSel=null;
-function setPotStroke(n){ _potSel=n;
-  document.querySelectorAll('.pot-pill').forEach(p=>p.classList.toggle('active',p.dataset.str===n));
-  document.querySelectorAll('.pot-detail').forEach(d=>d.style.display=d.dataset.str===n?'':'none');
+let _potData={};
+function closePotDetail(){ const p=document.getElementById('pot-detail-panel'); if(p){ p.style.display='none'; p.innerHTML=''; } }
+function openPotDetail(sk){
+  const r=_potData[sk], panel=document.getElementById('pot-detail-panel'); if(!r||!panel) return;
+  const nSeg=r.dist?Math.max(1,Math.round(r.dist/50)):1;
+  const ideaP=(r.pot!=null && typeof idealSplits50==='function')?idealSplits50(sk,r.pot,nSeg):null;
+  const ideaM=(r.min!=null && typeof idealSplits50==='function')?idealSplits50(sk,r.min,nSeg):null;
+  let pctTxt=''; if(r.marca!=null&&r.pot!=null){ const d=(r.marca-r.pot)/r.pot*100; pctTxt= d<=0.05?('✨ '+Math.abs(d).toFixed(1)+'% por debajo'):('+'+d.toFixed(1)+'% · faltan '+formatTime(r.marca-r.pot)); }
+  let h='<div class="pot-dtl-head"><span>'+r.stroke+' '+r.label+'</span><button class="pot-dtl-x" onclick="closePotDetail()">×</button></div>'
+    +'<div class="pot-dtl-top">Tu marca <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b> · Potencial <b>'+(r.pot!=null?formatTime(r.pot):'—')+'</b>'+(pctTxt?' · '+pctTxt:'')+'</div>';
+  if(ideaP||ideaM||r.splits){
+    h+='<div class="pot-dtl-sec">Parciales (cada 50 m)</div><div class="table-wrap"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Tramo</th>'+(r.splits?'<th style="text-align:center">Tu último</th>':'')+(ideaP?'<th style="text-align:center">Ideal · potencial</th>':'')+(ideaM?'<th style="text-align:center">Ideal · mínima</th>':'')+'</tr></thead><tbody>';
+    for(let i=0;i<nSeg;i++){ h+='<tr><td>'+((i+1)*50)+' m</td>'+(r.splits?'<td style="text-align:center">'+(r.splits[i]!=null?r.splits[i].toFixed(2):'—')+'</td>':'')+(ideaP?'<td style="text-align:center">'+ideaP[i].toFixed(2)+'</td>':'')+(ideaM?'<td style="text-align:center">'+ideaM[i].toFixed(2)+'</td>':'')+'</tr>'; }
+    h+='</tbody></table></div>';
+  } else h+='<div style="color:var(--text3);font-size:12.5px;margin-top:6px">Esta prueba no tiene parciales para mostrar.</div>';
+  const ctx=[]; if(r.up!=null)ctx.push('desde velocidad ↑ '+formatTime(r.up)); if(r.dn!=null)ctx.push('desde fondo ↓ '+formatTime(r.dn)); if(r.min!=null)ctx.push('mín FECNA '+formatTime(r.min));
+  if(ctx.length) h+='<div class="pot-dtl-ctx">'+ctx.join(' · ')+'</div>';
+  panel.innerHTML=h; panel.style.display=''; panel.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function renderPotencial(){
   const host=document.getElementById('potencial-content'); if(!host) return;
@@ -3318,44 +3351,38 @@ function renderPotencial(){
   const _swP=(currentAnalysis&&currentAnalysis.swimmer), _byP=(_swP&&_swP.birthdate)?new Date(_swP.birthdate).getFullYear():(new Date().getFullYear()-13);
   const _catP=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byP):null;
   const FEC=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F&&_catP)?NAC_DEFAULT.F[_catP]:null)||{};
-  const blocks=[];
+  const splitRec=(st)=>{ const rs=(timesRaw||[]).filter(r=>r.style===st && r.splits && r.splits.length); return rs.length? rs.reduce((a,b)=>a.time_seconds<b.time_seconds?a:b) : null; };
+  _potData={}; const blocks=[];
   STR.forEach(({name,steps})=>{
     const P=proj(steps), fh=steps.filter(([k])=>best(k)!=null&&FINA_REF[k]);
     if(!fh.length && !P) return;
     const gAvg=fh.length?fh.reduce((s,[k])=>s+finaPts(best(k),FINA_REF[k]),0)/fh.length:null;
-    const rows=steps.map(([k,d])=>({ label:k.replace(name+' ',''), marca:best(k),
-      pot:(gAvg&&FINA_REF[k])?FINA_REF[k]*Math.pow(1000/gAvg,1/3):null,
-      up:P?P.up[d]:null, dn:P?P.dn[d]:null, min:(FEC[k]!=null?FEC[k]:null) }));
+    const rows=steps.map(([k,d])=>{ const sr=splitRec(k);
+      const o={ sk:k, stroke:name, label:k.replace(name+' ',''), dist:d, marca:best(k),
+        pot:(gAvg&&FINA_REF[k])?FINA_REF[k]*Math.pow(1000/gAvg,1/3):null,
+        up:P?P.up[d]:null, dn:P?P.dn[d]:null, min:(FEC[k]!=null?FEC[k]:null),
+        splits: sr? sr.splits.map(s=>s.split_time):null };
+      _potData[k]=o; return o; });
     blocks.push({name, gAvg, rows});
   });
   if(!blocks.length){ host.innerHTML='<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo.</p></div>'; return; }
-  if(!_potSel || !blocks.some(b=>b.name===_potSel)) _potSel=blocks[0].name;
-  function rowHtml(r){
-    if(r.marca==null && r.pot==null) return '';
-    let bar='', pct='';
-    if(r.marca!=null && r.pot!=null){
-      const d=(r.marca-r.pot)/r.pot*100, hue=120*(1-Math.min(Math.max(0,d)/3,1)), fill=Math.max(8,Math.min(100,(r.pot/r.marca)*100));
-      bar='<div class="pot-track"><div class="pot-fill" style="width:'+fill.toFixed(0)+'%;background:hsl('+hue.toFixed(0)+',55%,62%)"></div></div>';
-      pct= d<=0.05 ? '<span style="color:hsl(120,55%,34%)">−'+Math.abs(d).toFixed(1)+'% ✨ ¡vas por debajo!</span>'
-                   : '<span style="color:hsl('+hue.toFixed(0)+',55%,34%)">+'+d.toFixed(1)+'% · te faltan '+formatTime(r.marca-r.pot)+'</span>';
-    } else if(r.marca!=null){ bar='<div class="pot-track"><div class="pot-fill" style="width:100%;background:var(--bg2)"></div></div>'; pct='<span style="color:var(--text3)">sin referencia</span>'; }
-    else { bar='<div class="pot-track"></div>'; pct='<span style="color:var(--text3)">aún sin marca · objetivo '+(r.pot!=null?formatTime(r.pot):'—')+'</span>'; }
-    const ctx=[];
-    if(r.up!=null) ctx.push('↑ veloc. '+formatTime(r.up));
-    if(r.dn!=null) ctx.push('↓ fondo '+formatTime(r.dn));
-    if(r.min!=null) ctx.push('mín '+formatTime(r.min)+(r.marca!=null?(r.marca<=r.min+0.005?' ✅':' (+'+formatTime(r.marca-r.min)+')'):''));
-    return '<div class="pot-row"><div class="pot-dist">'+r.label+'</div><div class="pot-body">'
-      +'<div class="pot-times"><span>Tu marca <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b></span><span>Deberías <b>'+(r.pot!=null?formatTime(r.pot):'—')+'</b></span></div>'
-      +bar+'<div class="pot-foot"><span class="pot-pct">'+pct+'</span><span class="pot-ctx">'+ctx.join(' · ')+'</span></div></div></div>';
+  function tileHtml(r){
+    let pctTxt='sin marca', hue=null, sub='objetivo '+(r.pot!=null?formatTime(r.pot):'—');
+    if(r.marca!=null && r.pot!=null){ const d=(r.marca-r.pot)/r.pot*100; hue=120*(1-Math.min(Math.max(0,d)/3,1)); pctTxt=(d<=0.05?'−'+Math.abs(d).toFixed(1):'+'+d.toFixed(1))+'%'; sub='ideal '+formatTime(r.pot); }
+    else if(r.marca!=null){ pctTxt='—'; sub='sin referencia'; }
+    const bc=hue!=null?'hsl('+hue.toFixed(0)+',55%,55%)':'var(--border)', tc=hue!=null?'hsl('+hue.toFixed(0)+',55%,36%)':'var(--text3)';
+    return '<div class="pot-tile" style="border-left-color:'+bc+'" onclick="openPotDetail(\''+r.sk+'\')">'
+      +'<div class="pot-tile-top"><span class="pot-tile-d">'+r.label+'</span><span class="pot-tile-pct" style="color:'+tc+'">'+pctTxt+'</span></div>'
+      +'<div class="pot-tile-m">Tu <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b></div><div class="pot-tile-s">'+sub+'</div>'
+      +'<div class="pot-tile-tap">toca para parciales ›</div></div>';
   }
   let h='<div class="card"><div class="section-title">✨ Mi Potencial</div>'
-    +'<div class="pot-desc">Elige un estilo y mira, en cada distancia, qué tan cerca estás de tu <b>potencial</b> (lo que te corresponde según tu nivel de puntos en ese estilo). El <b>%</b> te dice cuánto te falta — o si ya vas <b>por debajo</b> ✨. De contexto, abajo: lo que implican tu <b>velocidad ↑</b> y tu <b>fondo ↓</b>, y la <b>mínima FECNA</b>.</div>';
-  h+='<div class="pot-pills">'+blocks.map(b=>'<button class="pot-pill'+(b.name===_potSel?' active':'')+'" data-str="'+b.name+'" onclick="setPotStroke(\''+b.name+'\')">'+b.name+'</button>').join('')+'</div>';
+    +'<div class="pot-desc">En cada distancia, qué tan cerca estás de tu <b>potencial</b> (lo que te corresponde según tu nivel de puntos). El <b>%</b> dice cuánto te falta — o si ya vas <b>por debajo</b> ✨. <b>Toca una tarjeta</b> para ver sus <b>parciales</b>.</div>'
+    +'<div id="pot-detail-panel" class="pot-detail-panel" style="display:none"></div>';
   blocks.forEach(b=>{
-    h+='<div class="pot-detail" data-str="'+b.name+'" style="display:'+(b.name===_potSel?'':'none')+'">'
-      +'<div class="pot-level">Tu nivel en <b>'+b.name+'</b>: '+(b.gAvg?('<b>'+Math.round(b.gAvg)+' pts</b> (World Aquatics)'):'—')+'</div>';
-    const rr=b.rows.map(rowHtml).join('');
-    h+=(rr||'<div style="color:var(--text3);font-size:13px">Sin marcas en este estilo.</div>')+'</div>';
+    const tiles=b.rows.filter(r=>r.marca!=null||r.pot!=null).map(tileHtml).join('');
+    if(!tiles) return;
+    h+='<div class="pot-group"><div class="pot-level">'+b.name+' · nivel '+(b.gAvg?('<b>'+Math.round(b.gAvg)+' pts</b>'):'—')+'</div><div class="pot-grid">'+tiles+'</div></div>';
   });
   h+='</div>';
   host.innerHTML=h;
