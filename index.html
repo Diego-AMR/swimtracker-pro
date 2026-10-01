@@ -194,6 +194,19 @@ details.tgroup summary > span:first-of-type { flex:1; }
 /* Meta oficial FECNA "Nacional 2026" — se ve distinta a las demás metas */
 .gcard-nacional{ border:2px solid #e0a80a; box-shadow:0 0 0 3px rgba(224,168,10,.14); background:linear-gradient(180deg,rgba(224,168,10,.07),transparent 55%); order:-1; }
 .gcard-nacional .section-title{ color:#b7860b; }
+/* Metas obligadas (oficiales, inmodificables) */
+#oblig-metas{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:start; margin-bottom:14px; }
+@media (max-width:700px){ #oblig-metas{ grid-template-columns:1fr; } }
+.om-tbl{ width:100%; border-collapse:collapse; font-size:12px; }
+.om-tbl th,.om-tbl td{ padding:5px 6px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+.om-tbl th{ color:var(--text3); font-weight:700; font-size:10.5px; text-transform:uppercase; letter-spacing:.3px; }
+.om-tbl td.om-style{ text-align:left; font-weight:600; color:var(--text2); }
+.om-tbl td.om-best{ font-family:var(--font-head); color:var(--text); }
+.om-cell .om-min{ font-family:var(--font-head); color:var(--text2); }
+.om-cell .om-badge{ display:block; font-size:10px; font-weight:800; margin-top:1px; }
+.om-cell.om-ok{ background:rgba(22,163,74,.10); } .om-cell.om-ok .om-badge.ok{ color:#16a34a; }
+.om-cell.om-no .om-badge.no{ color:#dc2626; }
+.om-cell.om-na{ color:var(--text3); }
 .gnat-badge{ display:inline-block; margin-left:8px; font-size:10px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#0b3b8c; background:#eaf1ff; border:1px solid #c9d9ff; border-radius:999px; padding:2px 8px; vertical-align:middle; }
 @media (prefers-color-scheme:dark){ .gnat-badge{ color:#bcd3ff; background:rgba(59,110,220,.18); border-color:rgba(120,160,240,.35); } }
 /* Tabla Nacional editable */
@@ -707,6 +720,7 @@ tr:last-child td { border-bottom:none; }
       <button class="btn btn-secondary btn-sm" onclick="resetNacTable()">↺ Restablecer oficial</button>
     </div>
   </div>
+  <div id="oblig-metas"></div>
   <div id="goals-container"></div>
   <div id="goals-empty" class="empty-state" style="display:none">
     <div class="empty-icon">🎯</div><p>No hay metas definidas.</p>
@@ -1347,26 +1361,42 @@ const ALL_STYLES = [
 // Valores por defecto (en segundos). Editable en la app (pestaña Metas) y guardada en Firebase (nacional_2026).
 const NAC_DEFAULT = {
   F: {
-    '10': { 'Libre 50m':38.76, 'Libre 100m':87.16, 'Libre 200m':190.51, 'Libre 400m':400.3, 'Espalda 50m':47, 'Pecho 50m':53.95, 'Mariposa 50m':48.46, 'Combinado 200m':218.35 },
-    '11': { 'Libre 50m':34.73, 'Libre 100m':76.22, 'Libre 200m':170.33, 'Libre 400m':363.91, 'Libre 800m':775.05, 'Espalda 50m':42.3, 'Espalda 100m':91.78, 'Pecho 50m':48.12, 'Pecho 100m':106.47, 'Mariposa 50m':39.85, 'Mariposa 100m':100.54, 'Combinado 200m':193.92 },
-    '12': { 'Libre 50m':32.87, 'Libre 100m':71.58, 'Libre 200m':156.94, 'Libre 400m':335.95, 'Libre 800m':704.59, 'Espalda 100m':86.19, 'Espalda 200m':184.29, 'Pecho 100m':96.83, 'Pecho 200m':210.14, 'Mariposa 100m':87.33, 'Mariposa 200m':214.78, 'Combinado 200m':181.59, 'Combinado 400m':402.5 },
-    '13': { 'Libre 50m':31.69, 'Libre 100m':69.23, 'Libre 200m':150.55, 'Libre 400m':323.4, 'Libre 800m':675.76, 'Libre 1500m':1315.19, 'Espalda 100m':81.39, 'Espalda 200m':176.75, 'Pecho 100m':92.92, 'Pecho 200m':204.85, 'Mariposa 100m':81.84, 'Mariposa 200m':197.57, 'Combinado 200m':174.51, 'Combinado 400m':373.41 },
-    '14': { 'Libre 50m':30.47, 'Libre 100m':66.24, 'Libre 200m':148.25, 'Libre 400m':311.79, 'Libre 800m':654.82, 'Libre 1500m':1259.87, 'Espalda 50m':36.37, 'Espalda 100m':80.14, 'Espalda 200m':171.95, 'Pecho 50m':41.02, 'Pecho 100m':91.71, 'Pecho 200m':201.46, 'Mariposa 50m':33.25, 'Mariposa 100m':79.1, 'Mariposa 200m':188.18, 'Combinado 200m':170.37, 'Combinado 400m':364.57 },
-    '15': { 'Libre 50m':30.47, 'Libre 100m':66.24, 'Libre 200m':147.36, 'Libre 400m':316.25, 'Libre 800m':637.38, 'Libre 1500m':1210.21, 'Espalda 50m':35.96, 'Espalda 100m':79.05, 'Espalda 200m':172.22, 'Pecho 50m':41.01, 'Pecho 100m':90.8, 'Pecho 200m':199.19, 'Mariposa 50m':33.05, 'Mariposa 100m':77.44, 'Mariposa 200m':183.92, 'Combinado 200m':173.36, 'Combinado 400m':350.2 },
-    '16-17': { 'Libre 50m':29.56, 'Libre 100m':64.47, 'Libre 200m':142.08, 'Libre 400m':304.21, 'Libre 800m':614.92, 'Libre 1500m':1167.56, 'Espalda 50m':34.6, 'Espalda 100m':75.98, 'Espalda 200m':165.53, 'Pecho 50m':39.34, 'Pecho 100m':87.07, 'Pecho 200m':190.19, 'Mariposa 50m':31.69, 'Mariposa 100m':72.94, 'Mariposa 200m':177.86, 'Combinado 200m':162.72, 'Combinado 400m':337.86 },
-    '18-20': { 'Libre 50m':29.17, 'Libre 100m':63.12, 'Libre 200m':139.1, 'Libre 400m':301.36, 'Libre 800m':610.85, 'Libre 1500m':1159.83, 'Espalda 50m':34.07, 'Espalda 100m':75.98, 'Espalda 200m':165.2, 'Pecho 50m':38.83, 'Pecho 100m':86.2, 'Pecho 200m':189.39, 'Mariposa 50m':31.34, 'Mariposa 100m':71.73, 'Mariposa 200m':176.98, 'Combinado 200m':162.23, 'Combinado 400m':335.62 },
-    'mayores': { 'Libre 50m':28.79, 'Libre 100m':61.77, 'Libre 200m':136.12, 'Libre 400m':298.51, 'Libre 800m':606.77, 'Libre 1500m':1152.1, 'Espalda 50m':33.55, 'Espalda 100m':74.38, 'Espalda 200m':164.88, 'Pecho 50m':38.32, 'Pecho 100m':85.33, 'Pecho 200m':188.59, 'Mariposa 50m':30.99, 'Mariposa 100m':70.51, 'Mariposa 200m':176.1, 'Combinado 200m':161.75, 'Combinado 400m':333.38 },
+    "10": {"Libre 50m":38.76,"Libre 100m":87.16,"Libre 200m":190.51,"Libre 400m":400.3,"Espalda 50m":47,"Pecho 50m":53.95,"Mariposa 50m":48.46,"Combinado 200m":218.35},
+    "11": {"Libre 50m":34.73,"Libre 100m":76.22,"Libre 200m":170.33,"Libre 400m":363.91,"Libre 800m":775.05,"Espalda 50m":42.3,"Espalda 100m":91.78,"Pecho 50m":48.12,"Pecho 100m":106.47,"Mariposa 50m":39.85,"Mariposa 100m":100.54,"Combinado 200m":193.92},
+    "12": {"Libre 50m":32.87,"Libre 100m":71.58,"Libre 200m":156.94,"Libre 400m":335.95,"Libre 800m":704.59,"Espalda 100m":86.19,"Espalda 200m":184.29,"Pecho 100m":96.83,"Pecho 200m":210.14,"Mariposa 100m":87.33,"Mariposa 200m":214.78,"Combinado 200m":181.59,"Combinado 400m":402.5},
+    "13": {"Libre 50m":31.69,"Libre 100m":69.23,"Libre 200m":150.55,"Libre 400m":323.4,"Libre 800m":675.76,"Libre 1500m":1315.19,"Espalda 100m":81.39,"Espalda 200m":176.75,"Pecho 100m":92.92,"Pecho 200m":204.85,"Mariposa 100m":81.84,"Mariposa 200m":197.57,"Combinado 200m":174.51,"Combinado 400m":373.41},
+    "14": {"Libre 50m":30.79,"Libre 100m":67.68,"Libre 200m":149.57,"Libre 400m":318.79,"Libre 800m":677.47,"Libre 1500m":1345.75,"Espalda 50m":37.42,"Espalda 100m":81.4,"Espalda 200m":175.11,"Pecho 50m":42.37,"Pecho 100m":92.89,"Pecho 200m":205.97,"Mariposa 50m":33.83,"Mariposa 100m":81.51,"Mariposa 200m":199.27,"Combinado 200m":172.66,"Combinado 400m":385.08},
+    "15": {"Libre 50m":30.79,"Libre 100m":67.68,"Libre 200m":149.57,"Libre 400m":318.79,"Libre 800m":677.47,"Libre 1500m":1306.14,"Espalda 50m":36.79,"Espalda 100m":80.85,"Espalda 200m":175.11,"Pecho 50m":42.11,"Pecho 100m":92.89,"Pecho 200m":205.97,"Mariposa 50m":33.83,"Mariposa 100m":80.99,"Mariposa 200m":174.27,"Combinado 200m":172.66,"Combinado 400m":376.45},
+    "16-17": {"Libre 50m":29.94,"Libre 100m":65.32,"Libre 200m":143.92,"Libre 400m":310.59,"Libre 800m":662.82,"Libre 1500m":1259.87,"Espalda 50m":35.73,"Espalda 100m":77.43,"Espalda 200m":170.44,"Pecho 50m":39.16,"Pecho 100m":87.55,"Pecho 200m":193.82,"Mariposa 50m":32.33,"Mariposa 100m":76.3,"Mariposa 200m":174.27,"Combinado 200m":166.11,"Combinado 400m":364.57},
+    "18-20": {"Libre 50m":29.63,"Libre 100m":64.28,"Libre 200m":141.91,"Libre 400m":307.8,"Libre 800m":647.33,"Libre 1500m":1235.04,"Espalda 50m":35.4,"Espalda 100m":77.09,"Espalda 200m":170.1,"Pecho 50m":39.03,"Pecho 100m":86.77,"Pecho 200m":192.11,"Mariposa 50m":32.16,"Mariposa 100m":74.82,"Mariposa 200m":174.27,"Combinado 200m":165.5,"Combinado 400m":357.39},
+    "mayores": {"Libre 50m":29,"Libre 100m":63.24,"Libre 200m":139.91,"Libre 400m":305.01,"Libre 800m":632.04,"Libre 1500m":1210.21,"Espalda 50m":35.07,"Espalda 100m":76.75,"Espalda 200m":169.77,"Pecho 50m":38.9,"Pecho 100m":86,"Pecho 200m":190.41,"Mariposa 50m":32,"Mariposa 100m":73.34,"Mariposa 200m":174.27,"Combinado 200m":164.9,"Combinado 400m":350.2},
   },
   M: {
-    '10': { 'Libre 50m':38.03, 'Libre 100m':84.79, 'Libre 200m':188.71, 'Libre 400m':393.15, 'Espalda 50m':48.51, 'Pecho 50m':53.87, 'Mariposa 50m':45.08, 'Combinado 200m':220.99 },
-    '11': { 'Libre 50m':34.71, 'Libre 100m':77.4, 'Libre 200m':169.45, 'Libre 400m':357.41, 'Libre 800m':766.57, 'Espalda 50m':42.11, 'Espalda 100m':91.55, 'Pecho 50m':48.95, 'Pecho 100m':108.11, 'Mariposa 50m':40.14, 'Mariposa 100m':97.95, 'Combinado 200m':191.61 },
-    '12': { 'Libre 50m':31.57, 'Libre 100m':69.72, 'Libre 200m':152.19, 'Libre 400m':327.88, 'Libre 800m':696.88, 'Espalda 100m':86.26, 'Espalda 200m':185.84, 'Pecho 100m':96.89, 'Pecho 200m':209.93, 'Mariposa 100m':83.83, 'Mariposa 200m':204.49, 'Combinado 200m':178.35, 'Combinado 400m':414.1 },
-    '13': { 'Libre 50m':29.51, 'Libre 100m':65.79, 'Libre 200m':143.66, 'Libre 400m':305.12, 'Libre 800m':640.42, 'Libre 1500m':1253.49, 'Espalda 100m':79.28, 'Espalda 200m':168.88, 'Pecho 100m':88.42, 'Pecho 200m':191.68, 'Mariposa 100m':76.09, 'Mariposa 200m':188.57, 'Combinado 200m':164.89, 'Combinado 400m':376.88 },
-    '14': { 'Libre 50m':27.23, 'Libre 100m':59.13, 'Libre 200m':131.28, 'Libre 400m':288.11, 'Libre 800m':602.46, 'Libre 1500m':1166.75, 'Espalda 50m':33.04, 'Espalda 100m':71.94, 'Espalda 200m':158.81, 'Pecho 50m':35.94, 'Pecho 100m':81.42, 'Pecho 200m':181.44, 'Mariposa 50m':29.29, 'Mariposa 100m':67, 'Mariposa 200m':164.5, 'Combinado 200m':152.49, 'Combinado 400m':347.67 },
-    '15': { 'Libre 50m':26.52, 'Libre 100m':58.38, 'Libre 200m':129.55, 'Libre 400m':278.87, 'Libre 800m':581.01, 'Libre 1500m':1127.07, 'Espalda 50m':31.61, 'Espalda 100m':69.25, 'Espalda 200m':154.56, 'Pecho 50m':34.3, 'Pecho 100m':79.15, 'Pecho 200m':172.18, 'Mariposa 50m':28.23, 'Mariposa 100m':63.85, 'Mariposa 200m':156.87, 'Combinado 200m':149.21, 'Combinado 400m':332.62 },
-    '16-17': { 'Libre 50m':25.55, 'Libre 100m':55.6, 'Libre 200m':123.71, 'Libre 400m':268.39, 'Libre 800m':570.71, 'Libre 1500m':1104.83, 'Espalda 50m':29.78, 'Espalda 100m':65.29, 'Espalda 200m':143.82, 'Pecho 50m':32.72, 'Pecho 100m':73.95, 'Pecho 200m':164.23, 'Mariposa 50m':27.13, 'Mariposa 100m':60.31, 'Mariposa 200m':142.42, 'Combinado 200m':143.11, 'Combinado 400m':309.29 },
-    '18-20': { 'Libre 50m':25.21, 'Libre 100m':54.73, 'Libre 200m':121.28, 'Libre 400m':266.13, 'Libre 800m':568.3, 'Libre 1500m':1097.51, 'Espalda 50m':29.45, 'Espalda 100m':65.11, 'Espalda 200m':143.82, 'Pecho 50m':32.21, 'Pecho 100m':72.78, 'Pecho 200m':161.68, 'Mariposa 50m':26.76, 'Mariposa 100m':60, 'Mariposa 200m':142.42, 'Combinado 200m':142.07, 'Combinado 400m':307.24 },
-    'mayores': { 'Libre 50m':24.71, 'Libre 100m':54.59, 'Libre 200m':118.85, 'Libre 400m':263.21, 'Libre 800m':565.88, 'Libre 1500m':1090.19, 'Espalda 50m':29.44, 'Espalda 100m':65.1, 'Espalda 200m':143.82, 'Pecho 50m':31.7, 'Pecho 100m':71.11, 'Pecho 200m':159.14, 'Mariposa 50m':26.39, 'Mariposa 100m':58.95, 'Mariposa 200m':142.42, 'Combinado 200m':141.02, 'Combinado 400m':305.19 },
+    "10": {"Libre 50m":38.03,"Libre 100m":84.79,"Libre 200m":188.71,"Libre 400m":393.15,"Espalda 50m":48.51,"Pecho 50m":53.87,"Mariposa 50m":45.08,"Combinado 200m":220.99},
+    "11": {"Libre 50m":34.71,"Libre 100m":77.4,"Libre 200m":169.45,"Libre 400m":357.41,"Libre 800m":766.57,"Espalda 50m":42.11,"Espalda 100m":91.55,"Pecho 50m":48.95,"Pecho 100m":108.11,"Mariposa 50m":40.14,"Mariposa 100m":97.95,"Combinado 200m":191.61},
+    "12": {"Libre 50m":31.57,"Libre 100m":69.72,"Libre 200m":152.19,"Libre 400m":327.88,"Libre 800m":696.88,"Espalda 100m":86.26,"Espalda 200m":185.84,"Pecho 100m":96.89,"Pecho 200m":209.93,"Mariposa 100m":83.83,"Mariposa 200m":204.49,"Combinado 200m":178.35,"Combinado 400m":414.1},
+    "13": {"Libre 50m":29.51,"Libre 100m":65.79,"Libre 200m":143.66,"Libre 400m":305.12,"Libre 800m":640.42,"Libre 1500m":1253.49,"Espalda 100m":79.28,"Espalda 200m":168.88,"Pecho 100m":88.42,"Pecho 200m":191.68,"Mariposa 100m":76.09,"Mariposa 200m":188.57,"Combinado 200m":164.89,"Combinado 400m":376.88},
+    "14": {"Libre 50m":27.42,"Libre 100m":60.27,"Libre 200m":134.36,"Libre 400m":292.66,"Libre 800m":610.06,"Libre 1500m":1212.61,"Espalda 50m":33.92,"Espalda 100m":73.49,"Espalda 200m":160.95,"Pecho 50m":36.57,"Pecho 100m":83.12,"Pecho 200m":184.95,"Mariposa 50m":29.81,"Mariposa 100m":68.69,"Mariposa 200m":173.51,"Combinado 200m":155.05,"Combinado 400m":349.33},
+    "15": {"Libre 50m":26.82,"Libre 100m":58.79,"Libre 200m":131.58,"Libre 400m":285.32,"Libre 800m":598.73,"Libre 1500m":1166.58,"Espalda 50m":32.27,"Espalda 100m":71.18,"Espalda 200m":158.52,"Pecho 50m":34.84,"Pecho 100m":80,"Pecho 200m":177.25,"Mariposa 50m":28.87,"Mariposa 100m":65.59,"Mariposa 200m":162.46,"Combinado 200m":151.39,"Combinado 400m":340.36},
+    "16-17": {"Libre 50m":25.7,"Libre 100m":56.16,"Libre 200m":125.29,"Libre 400m":274.26,"Libre 800m":581.81,"Libre 1500m":1119.29,"Espalda 50m":30.14,"Espalda 100m":65.84,"Espalda 200m":146.14,"Pecho 50m":33.41,"Pecho 100m":75.36,"Pecho 200m":167.2,"Mariposa 50m":27.55,"Mariposa 100m":61.68,"Mariposa 200m":150.68,"Combinado 200m":144.98,"Combinado 400m":320.59},
+    "18-20": {"Libre 50m":25.44,"Libre 100m":55.58,"Libre 200m":123.2,"Libre 400m":271.75,"Libre 800m":580.78,"Libre 1500m":1119.29,"Espalda 50m":29.96,"Espalda 100m":65.84,"Espalda 200m":146.14,"Pecho 50m":32.9,"Pecho 100m":73.88,"Pecho 200m":167.2,"Mariposa 50m":27.17,"Mariposa 100m":61.23,"Mariposa 200m":150.68,"Combinado 200m":144.98,"Combinado 400m":316.01},
+    "mayores": {"Libre 50m":25.57,"Libre 100m":55.58,"Libre 200m":121.11,"Libre 400m":271,"Libre 800m":577.44,"Libre 1500m":1112.45,"Espalda 50m":29.96,"Espalda 100m":65.84,"Espalda 200m":146.14,"Pecho 50m":32.4,"Pecho 100m":73.55,"Pecho 200m":167.2,"Mariposa 50m":26.79,"Mariposa 100m":60.56,"Mariposa 200m":149.02,"Combinado 200m":144.98,"Combinado 400m":311.42},
+  },
+};
+const LIGA_BOG = {
+  F: {
+    "14": {"Libre 50m":29.53,"Libre 100m":64.48,"Libre 200m":142.75,"Libre 400m":297.61,"Libre 800m":622.38,"Libre 1500m":1201.4,"Espalda 50m":34.61,"Espalda 100m":75.85,"Espalda 200m":164.77,"Pecho 50m":39.08,"Pecho 100m":86.86,"Pecho 200m":190,"Mariposa 50m":31.58,"Mariposa 100m":71.29,"Mariposa 200m":168.97,"Combinado 200m":164.04,"Combinado 400m":356.59},
+    "15": {"Libre 50m":28.83,"Libre 100m":63.05,"Libre 200m":139.21,"Libre 400m":294.97,"Libre 800m":607.1,"Libre 1500m":1198.11,"Espalda 50m":34.12,"Espalda 100m":74.76,"Espalda 200m":159.9,"Pecho 50m":37.43,"Pecho 100m":84.18,"Pecho 200m":183.62,"Mariposa 50m":31.17,"Mariposa 100m":70.33,"Mariposa 200m":168.77,"Combinado 200m":161.99,"Combinado 400m":346.7},
+    "16-17": {"Libre 50m":28.39,"Libre 100m":61.75,"Libre 200m":135.38,"Libre 400m":286.16,"Libre 800m":595.55,"Libre 1500m":1148.23,"Espalda 50m":32.83,"Espalda 100m":72.74,"Espalda 200m":158.71,"Pecho 50m":36.24,"Pecho 100m":81.01,"Pecho 200m":174.16,"Mariposa 50m":30.39,"Mariposa 100m":67.19,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":332.26},
+    "18-20": {"Libre 50m":28.39,"Libre 100m":61.75,"Libre 200m":134.42,"Libre 400m":286.16,"Libre 800m":595.55,"Libre 1500m":1148.23,"Espalda 50m":32.83,"Espalda 100m":72.74,"Espalda 200m":157.44,"Pecho 50m":36.24,"Pecho 100m":81.01,"Pecho 200m":174.16,"Mariposa 50m":30.39,"Mariposa 100m":67.19,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":328.94},
+    "mayores": {"Libre 50m":28.17,"Libre 100m":60.33,"Libre 200m":133.1,"Libre 400m":286.16,"Libre 800m":592.7,"Libre 1500m":1125.38,"Espalda 50m":32.14,"Espalda 100m":72.74,"Espalda 200m":155.87,"Pecho 50m":36.24,"Pecho 100m":80.93,"Pecho 200m":174.16,"Mariposa 50m":30.01,"Mariposa 100m":65.03,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":325.65},
+  },
+  M: {
+    "14": {"Libre 50m":26.85,"Libre 100m":58.96,"Libre 200m":129.17,"Libre 400m":278.01,"Libre 800m":570.05,"Libre 1500m":1111.3,"Espalda 50m":31.91,"Espalda 100m":70.13,"Espalda 200m":152.36,"Pecho 50m":34.26,"Pecho 100m":78.94,"Pecho 200m":171,"Mariposa 50m":28.93,"Mariposa 100m":64.59,"Mariposa 200m":150.58,"Combinado 200m":150.5,"Combinado 400m":325.36},
+    "15": {"Libre 50m":25.87,"Libre 100m":56.97,"Libre 200m":125.67,"Libre 400m":268.94,"Libre 800m":559.68,"Libre 1500m":1072.39,"Espalda 50m":30.58,"Espalda 100m":66.7,"Espalda 200m":143.24,"Pecho 50m":32.84,"Pecho 100m":74.59,"Pecho 200m":163.67,"Mariposa 50m":27.65,"Mariposa 100m":61.69,"Mariposa 200m":145.94,"Combinado 200m":141.87,"Combinado 400m":312.89},
+    "16-17": {"Libre 50m":24.87,"Libre 100m":54.75,"Libre 200m":119.76,"Libre 400m":256.33,"Libre 800m":536.53,"Libre 1500m":1041.66,"Espalda 50m":28.96,"Espalda 100m":62.89,"Espalda 200m":138.94,"Pecho 50m":31.31,"Pecho 100m":68.99,"Pecho 200m":152.14,"Mariposa 50m":26.6,"Mariposa 100m":58.94,"Mariposa 200m":135.03,"Combinado 200m":140.51,"Combinado 400m":300.03},
+    "18-20": {"Libre 50m":24.35,"Libre 100m":53.83,"Libre 200m":118.56,"Libre 400m":255.39,"Libre 800m":533.87,"Libre 1500m":1041.63,"Espalda 50m":28,"Espalda 100m":61.66,"Espalda 200m":136.22,"Pecho 50m":31.31,"Pecho 100m":68.99,"Pecho 200m":152.14,"Mariposa 50m":25.99,"Mariposa 100m":58.07,"Mariposa 200m":131.99,"Combinado 200m":136.11,"Combinado 400m":294.82},
+    "mayores": {"Libre 50m":24.62,"Libre 100m":52.69,"Libre 200m":114.72,"Libre 400m":250.98,"Libre 800m":533.87,"Libre 1500m":1041.63,"Espalda 50m":27.95,"Espalda 100m":61.66,"Espalda 200m":136.22,"Pecho 50m":30.34,"Pecho 100m":67.01,"Pecho 200m":152.14,"Mariposa 50m":25.99,"Mariposa 100m":57.59,"Mariposa 200m":131.99,"Combinado 200m":136.11,"Combinado 400m":294.82},
   },
 };
 const NAC_CATS = ['10','11','12','13','14','15','16-17','18-20','mayores'];
@@ -1532,6 +1562,7 @@ function setupListeners() {
     refreshAllSelects();
     times = getTimesJoined(); renderTimes();
     maybeShowLastMark();
+    try{ renderObligMetas(); }catch(e){}
   });
 
   // Tournaments
@@ -2172,7 +2203,43 @@ async function deleteTournament() {
 // GOALS
 // ════════════════════════════════════════════════════════════
 function loadGoals() { /* handled by Firebase listener */ }
+// ── Metas OBLIGATORIAS (oficiales, inmodificables): FECNA + Liga Bogotá ──
+// Se calculan de las tablas oficiales del CÓDIGO (siempre al día), no se guardan
+// como metas → no se pueden editar ni borrar. Femenino, categoría de la nadadora
+// (edad actual) y la del año siguiente, para apuntar más fuerte.
+function obligSwimmer(){ return (swimmers||[]).find(s=>s.birthdate) || (swimmers||[])[0] || null; }
+function renderObligMetas(){
+  const host=document.getElementById('oblig-metas'); if(!host) return;
+  const sw=obligSwimmer(), yr=new Date().getFullYear();
+  const by = (sw&&sw.birthdate)?new Date(sw.birthdate).getFullYear():(yr-13);
+  const ageNow=yr-by, ageNext=ageNow+1, sex='F';            // app personal (femenino)
+  const catNow=(typeof nacCatForAge==='function')?nacCatForAge(ageNow):String(ageNow);
+  const catNext=(typeof nacCatForAge==='function')?nacCatForAge(ageNext):String(ageNext);
+  const best = style => { const rs=(timesRaw||[]).filter(r=>r.style===style && r.time_seconds>0); return rs.length?Math.min(...rs.map(r=>r.time_seconds)):null; };
+  function cell(b,mn){
+    if(mn==null) return '<td class="om-cell om-na">—</td>';
+    if(b==null)  return '<td class="om-cell"><span class="om-min">'+formatTime(mn)+'</span></td>';
+    if(b<=mn+0.005) return '<td class="om-cell om-ok"><span class="om-min">'+formatTime(mn)+'</span><span class="om-badge ok">✅ cumple</span></td>';
+    return '<td class="om-cell om-no"><span class="om-min">'+formatTime(mn)+'</span><span class="om-badge no">+'+(b-mn).toFixed(2)+'s</span></td>';
+  }
+  function card(title,src,note){
+    const T=src[sex]||{}, tn=T[catNow]||null, tx=T[catNext]||null;
+    const styles=(typeof ALL_STYLES!=='undefined'?ALL_STYLES:[]).filter(k=>(tn&&tn[k]!=null)||(tx&&tx[k]!=null));
+    if(!styles.length) return '';
+    const rows=styles.map(k=>{ const b=best(k); return '<tr><td class="om-style">'+k+'</td><td class="om-best">'+(b!=null?formatTime(b):'—')+'</td>'+cell(b,tn?tn[k]:null)+cell(b,tx?tx[k]:null)+'</tr>'; }).join('');
+    return '<div class="card gcard gcard-nacional">'
+      +'<div class="gcard-h"><div class="section-title" style="margin-bottom:0">'+title+' <span class="gnat-badge">oficial · no editable</span></div>'
+      +'<span class="tag" style="background:rgba(217,48,37,0.12);color:var(--red);border-color:rgba(217,48,37,0.3)">⚠️ Obligatorio</span></div>'
+      +(note?'<div style="font-size:11.5px;color:var(--text3);margin-bottom:8px">'+note+'</div>':'')
+      +'<div class="table-wrap"><table class="om-tbl"><thead><tr><th>Prueba</th><th>Tu mejor</th><th>'+ageNow+' años</th><th>'+ageNext+' años</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }
+  const ligaNote=(LIGA_BOG[sex] && !LIGA_BOG[sex][catNow]) ? ('Liga Bogotá aplica desde los 14 años (a los '+ageNow+' no hay mínima de Liga).') : '';
+  host.innerHTML =
+      card('🇨🇴 Mínima FECNA (Nacional)', NAC_DEFAULT, 'Femenino · la marca que hay que cumplir en el año. Se muestran '+ageNow+' y '+ageNext+' años para apuntar más fuerte.')
+    + card('🏙️ Mínima Liga Bogotá', LIGA_BOG, ligaNote);
+}
 function renderGoals() {
+  try{ renderObligMetas(); }catch(e){ console.warn('obligMetas',e); }
   const container = document.getElementById('goals-container');
   const empty = document.getElementById('goals-empty');
   if (!goals.length) { container.innerHTML = ''; empty.style.display = ''; return; }
