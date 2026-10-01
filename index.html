@@ -974,6 +974,15 @@ tr:last-child td { border-bottom:none; }
     .tv-sc .pill{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(26,111,196,.12);color:var(--cyan);white-space:nowrap}
     .tv-sc .pill.best{background:rgba(214,150,26,.16);color:#a9740a}
     .tv-sc .pill.nm{background:var(--bg3);color:var(--text3)}
+    /* tarjetas más grandes + estado/extras */
+    .tv-sched{grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
+    .tv-sc{padding:15px 17px}
+    .tv-sc .top{font-size:11px}
+    .tv-sc .pr{font-size:23px;margin:7px 0 9px}
+    .tv-sc .meta{font-size:12px}
+    .tv-state{font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:5px;letter-spacing:.04em;background:var(--bg3);color:var(--text3);white-space:nowrap}
+    .tv-state.ok{background:#1f8a5b;color:#fff}
+    .tv-sc .xtra{margin-top:9px;padding-top:7px;border-top:1px dashed var(--border);font-size:12px;display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap}
     /* Acordeón de rankings */
     .tv-acc{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
     .tv-acc-h{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg3);border:none;padding:12px 16px;cursor:pointer;font-family:var(--font-head);font-size:15px;letter-spacing:.5px;color:var(--text);text-align:left}
@@ -1018,33 +1027,45 @@ tr:last-child td { border-bottom:none; }
     </div>
   </div>
 
-  <div class="card" style="margin-bottom:20px">
-    <div class="section-title">🔗 Torneo</div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
-      <div style="flex:2;min-width:230px">
-        <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Enlace del torneo (Liga de Bogotá o aquaticsports.co)</label>
-        <input class="form-input" id="tv-url" value="https://aquaticsports.co/results/2026/0003/">
+  <div id="tv-cards" class="tv"></div>
+
+  <div class="tvsub-tabs">
+    <button class="tvsub-btn active" data-k="vivo" onclick="tvSubShow('vivo')">📡 En vivo</button>
+    <button class="tvsub-btn" data-k="rank" onclick="tvSubShow('rank')">🏅 Ranking de Danna</button>
+  </div>
+
+  <div class="tvsub" data-k="vivo">
+    <div class="card" style="margin-bottom:20px">
+      <div class="section-title">🔗 Torneo</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:2;min-width:230px">
+          <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Enlace del torneo (Liga de Bogotá)</label>
+          <input class="form-input" id="tv-url" value="" placeholder="Pega aquí el link de la Liga de Bogotá">
+        </div>
+        <div style="flex:1;min-width:100px">
+          <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Mi club</label>
+          <input class="form-input" id="tv-club" value="NARV">
+        </div>
+        <div style="flex:1;min-width:150px">
+          <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Nadador/a (opcional)</label>
+          <input class="form-input" id="tv-swimmer" value="Mora Bueno" placeholder="apellido">
+        </div>
+        <button class="btn btn-primary" onclick="loadTorneo(true)">Conectar / Actualizar</button>
       </div>
-      <div style="flex:1;min-width:100px">
-        <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Mi club</label>
-        <input class="form-input" id="tv-club" value="NARV">
+      <div style="display:flex;gap:18px;align-items:center;margin-top:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text3)">
+        <span id="tv-status" class="tv-live"><span class="dot"></span>Sin conectar</span>
+        <span>Última actualización: <b id="tv-updated" style="color:var(--text2)">—</b></span>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-auto" checked> Auto-actualizar cada 5 min</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-all"> Ver todos los clubes</label>
       </div>
-      <div style="flex:1;min-width:150px">
-        <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Nadador/a (opcional)</label>
-        <input class="form-input" id="tv-swimmer" value="Mora Bueno" placeholder="apellido">
-      </div>
-      <button class="btn btn-primary" onclick="loadTorneo(true)">Conectar / Actualizar</button>
     </div>
-    <div style="display:flex;gap:18px;align-items:center;margin-top:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text3)">
-      <span id="tv-status" class="tv-live"><span class="dot"></span>Sin conectar</span>
-      <span>Última actualización: <b id="tv-updated" style="color:var(--text2)">—</b></span>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-auto" checked> Auto-actualizar cada 5 min</label>
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-all"> Ver todos los clubes</label>
+    <div class="tv" id="tv-results">
+      <div class="empty-state"><div class="empty-icon">📡</div><p>Pega el link de la Liga y toca <b>Conectar</b>.</p></div>
     </div>
   </div>
 
-  <div class="tv" id="tv-results">
-    <div class="empty-state"><div class="empty-icon">📡</div><p>Toca <b>Conectar / Actualizar</b> para ver la vista previa.</p></div>
+  <div class="tvsub" data-k="rank" style="display:none">
+    <div class="tv" id="tv-ranking"><div class="tv-banner">Conéctate al torneo (pestaña En vivo) para ver el ranking de su categoría.</div></div>
   </div>
 </div>
 <!-- 8. COMPETENCIA -->
@@ -1759,7 +1780,8 @@ function tvRestoreOpen(set){ if(!set) return;
 async function loadTorneo(manual){
   const box=document.getElementById('tv-results');
   const st=document.getElementById('tv-status');
-  const url=tvVal('tv-url','https://aquaticsports.co/results/2026/0003/');
+  const url=tvVal('tv-url','');
+  if(!url){ if(st) st.innerHTML='<span class="dot"></span>Sin conectar'; try{ renderTorneo({events:[]}); }catch(e){} return; }
   if(st) st.innerHTML='<span class="dot"></span>'+(manual?'Cargando…':'Actualizando…');
   try{
     const r=await fetch('/api/torneo?url='+encodeURIComponent(url),{cache:'no-store'});
@@ -1817,51 +1839,59 @@ function tvSubShow(k){ tvSubSel=k; document.querySelectorAll('.tvsub-btn').forEa
 function tvMyBest(sk){ const rs=(timesRaw||[]).filter(r=>r.style===sk&&r.time_seconds>0); return rs.length?Math.min(...rs.map(r=>r.time_seconds)):null; }
 function tvAgeNow(){ const s=(currentAnalysis&&currentAnalysis.swimmer)||(typeof obligSwimmer==='function'?obligSwimmer():null); const by=(s&&s.birthdate)?new Date(s.birthdate).getFullYear():(new Date().getFullYear()-13); return new Date().getFullYear()-by; }
 function tvFindLive(events,ev,who){ const e=(events||[]).find(x=>String(x.num)===String(ev)); if(!e||!who) return {e:e||null,r:null}; const r=(e.rows||[]).find(x=>x.name&&x.name.toLowerCase().includes(who)); return {e:e||null, r:r||null}; }
+// sus pruebas detectadas EN EL LINK (por nombre + club)
+function tvMyEvents(events, club, who){ const out=[]; if(!who) return out; (events||[]).forEach(e=>{ const r=(e.rows||[]).find(x=>x.name&&x.name.toLowerCase().includes(who)&&(!club||x.club===club)); if(r) out.push({e,r}); }); out.sort((a,b)=>(+a.e.num||0)-(+b.e.num||0)); return out; }
+function tvStyleKey(label){ const m=(label||'').match(/(\d+)\s*m?\s+(.+)/i); if(!m) return null; const dist=m[1]; let st=m[2].trim(); const map=[['Libre','Libre'],['Free','Libre'],['Espalda','Espalda'],['Back','Espalda'],['Pecho','Pecho'],['Breast','Pecho'],['Mariposa','Mariposa'],['Butter','Mariposa'],['Combinado','Combinado'],['Medley','Combinado']]; for(const [k,v] of map){ if(new RegExp(k,'i').test(st)){ st=v; break; } } return st+' '+dist+'m'; }
+const TV_CAT=[12,13]; // Infantil B (mujeres)
 function tvCronoCardsHtml(events, club, who){
-  const age=tvAgeNow();
+  const age=tvAgeNow(), my=tvMyEvents(events,club,who);
+  const items = my.length
+    ? my.map(({e,r})=>({ev:e.num, pr:e.label, sk:tvStyleKey(e.label), day:tvCap(e.dow||''), hora:'', heat:'', lane:'', seed:r.seed||'', e, r}))
+    : TV_CRONO.map(c=>({...c, e:null, r:null}));
   let h='<div class="tv-sched">';
-  TV_CRONO.forEach(c=>{
-    const {e,r}=tvFindLive(events,c.ev,who);
-    const done = r && r.finals && !r.status;
+  items.forEach(c=>{
+    const e=c.e, r=c.r, done=r&&r.finals&&!r.status;
     let pos=null;
-    if(done && e){ const grp=(e.rows||[]).filter(x=>String(x.age)===String(age)&&!x.status&&x.finals).sort((a,b)=>tvSecs(a.finals)-tvSecs(b.finals)); pos=grp.indexOf(r)+1; }
-    const dl = done? tvDelta(r.seed||c.seed, r.finals):null;
-    const best=tvMyBest(c.sk), pb = done && best!=null && tvSecs(r.finals)<best-0.005;
-    const minT = (typeof nacTarget==='function')? nacTarget('F',age,c.sk):null;
-    const hitMin = done && minT!=null && tvSecs(r.finals)<=minT+0.005;
-    const stBadge = (r&&r.status)? '<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
-                   : done? '<span style="background:#1f8a5b;color:#fff;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;letter-spacing:.04em">✔ NADADA</span>'
-                   : '<span style="background:var(--bg3);color:var(--text3);font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:5px">POR NADAR</span>';
-    const timeLine = done? ('<span class="seed" style="color:#1f8a5b;font-size:15px">'+tvEsc(r.finals)+' <span style="color:var(--text3);font-weight:500;font-size:10.5px">(seed '+tvEsc(r.seed||c.seed)+')</span></span>')
-                   : ('<span class="seed">'+tvEsc(c.seed)+' <span style="color:var(--text3);font-size:10.5px">· seed</span></span>');
-    const pill = (r&&r.status)? '<span class="pill nm">'+r.status+'</span>' : (pos? '<span class="pill">'+pos+'º · '+age+'a</span>' : '<span class="pill nm">por nadar</span>');
+    if(done&&e){ const grp=(e.rows||[]).filter(x=>TV_CAT.includes(+x.age)&&!x.status&&x.finals).sort((a,b)=>tvSecs(a.finals)-tvSecs(b.finals)); pos=grp.indexOf(r)+1; }
+    const dl=done?tvDelta(r.seed||c.seed,r.finals):null;
+    const best=tvMyBest(c.sk), pb=done&&best!=null&&tvSecs(r.finals)<best-0.005;
+    const minT=(typeof nacTarget==='function')?nacTarget('F',age,c.sk):null, hitMin=done&&minT!=null&&tvSecs(r.finals)<=minT+0.005;
+    const stBadge=(r&&r.status)?'<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
+      :done?'<span class="tv-state ok">✔ NADADA</span>':'<span class="tv-state">POR NADAR</span>';
+    const timeLine=done?('<span class="seed" style="color:#1f8a5b;font-size:19px">'+tvEsc(r.finals)+' <span style="color:var(--text3);font-weight:500;font-size:11px">(seed '+tvEsc(r.seed||c.seed)+')</span></span>')
+      :('<span class="seed" style="font-size:17px">'+tvEsc(c.seed||(r&&r.seed)||'—')+' <span style="color:var(--text3);font-size:11px">· seed</span></span>');
+    const pill=(r&&r.status)?'<span class="pill nm">'+r.status+'</span>':(pos?'<span class="pill">'+pos+'º de IB</span>':'<span class="pill nm">por nadar</span>');
+    const topMeta=[]; if(c.heat) topMeta.push('Heat <b style="color:var(--text2)">'+c.heat+'</b>'); if(c.lane!==''&&c.lane!=null) topMeta.push('<span class="lane">Carril '+c.lane+'</span>');
     const extras=[]; if(dl) extras.push('<span class="'+dl.cls+'" style="font-weight:700">'+dl.txt+'</span>'); if(pb) extras.push('<span style="color:#a9740a;font-weight:800">⭐ ¡PB!</span>'); if(hitMin) extras.push('<span style="color:#1f8a5b;font-weight:800">✓ mínima</span>');
-    h+='<div class="tv-sc"><div class="top"><span>'+c.day+' '+c.hora+' '+stBadge+'</span><span class="t">Ev '+c.ev+'</span></div>'
-      +'<div class="pr">'+c.pr+'</div>'
-      +'<div class="meta"><span>Heat <b style="color:var(--text2)">'+c.heat+'</b></span><span class="lane">Carril '+c.lane+'</span></div>'
+    h+='<div class="tv-sc"><div class="top"><span>'+(c.day||'')+' '+(c.hora||'')+' '+stBadge+'</span><span class="t">Ev '+(c.ev||'')+'</span></div>'
+      +'<div class="pr">'+tvEsc(c.pr)+'</div>'
+      +(topMeta.length?'<div class="meta">'+topMeta.join('')+'</div>':'')
       +'<div class="foot">'+timeLine+pill+'</div>'
-      +(extras.length? '<div style="margin-top:7px;padding-top:6px;border-top:1px dashed var(--border);font-size:11.5px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">'+extras.join('')+'</div>':'')
+      +(extras.length?'<div class="xtra">'+extras.join('')+'</div>':'')
       +'</div>';
   });
   return h+'</div>';
 }
 function tvRankingHtml(events, club, who){
-  const age=tvAgeNow(); let h='', any=false;
-  TV_CRONO.forEach(c=>{
-    const e=(events||[]).find(x=>String(x.num)===String(c.ev)); if(!e) return;
-    const grp=(e.rows||[]).filter(r=>String(r.age)===String(age)); if(!grp.length) return; any=true;
-    const hasF=grp.filter(r=>r.finals).length>=1;
-    const timed=grp.filter(r=>!r.status).sort((a,b)=>tvSecs(hasF?(a.finals||a.seed):a.seed)-tvSecs(hasF?(b.finals||b.seed):b.seed));
-    const minT=(typeof nacTarget==='function')?nacTarget('F',age,c.sk):null;
-    const meIdx=timed.findIndex(r=>r.name&&r.name.toLowerCase().includes(who));
-    h+='<div class="tv-acc open her"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+c.pr+' · '+age+' años '+(hasF?'<span style="color:#1f8a5b">· RESULTADOS</span>':'<span style="color:var(--text3)">· seed</span>')+'</span><span class="tv-acc-meta">'+(meIdx>=0?'Danna '+(meIdx+1)+'º':'')+' <span class="tv-caret">▸</span></span></button><div class="tv-acc-body"><div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadadora</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Final</th>':'')+(minT?'<th class="time">vs Mín</th>':'')+'</tr></thead><tbody>';
-    timed.forEach((r,i)=>{ const place=i+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place; const mine=club&&r.club===club, her=mine&&r.name&&r.name.toLowerCase().includes(who);
-      let minC=''; if(minT){ const ft=hasF?(r.finals||r.seed):r.seed, fs=tvSecs(ft); minC='<td class="time">'+((ft&&isFinite(fs))?(fs<=minT+0.005?'<span style="color:#1f8a5b;font-weight:800">✓</span>':'<span style="color:var(--text3)">+'+(fs-minT).toFixed(2)+'</span>'):'—')+'</td>'; }
-      h+='<tr class="'+(her?'her':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+(her?' ▸':'')+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+(hasF?'<td class="time">'+tvEsc(r.finals||'—')+'</td>':'')+minC+'</tr>'; });
-    grp.filter(r=>r.status).forEach(r=>{ h+='<tr class="flagged"><td class="rank">—</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time" colspan="'+(1+(hasF?1:0)+(minT?1:0))+'"><span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span></td></tr>'; });
+  const my=tvMyEvents(events,club,who);
+  if(!my.length) return '<div class="tv-banner">Aún no hay resultados de sus pruebas. Pega el link de la Liga en <b>En vivo</b> y conéctate; aquí verás su ranking <b>Infantil B (12–13, mujeres)</b> con mínima y podio.</div>';
+  let h='<div class="section-title" style="margin-bottom:10px">🏅 Ranking Infantil B <span style="font-weight:400;color:var(--text3);font-size:11px">— 12 y 13 años (mujeres) · Danna en dorado</span></div>';
+  my.forEach(({e,r})=>{
+    const sk=tvStyleKey(e.label);
+    const grp=(e.rows||[]).filter(x=>TV_CAT.includes(+x.age)); if(!grp.length) return;
+    const hasF=grp.filter(x=>x.finals).length>=1;
+    const timed=grp.filter(x=>!x.status).sort((a,b)=>tvSecs(hasF?(a.finals||a.seed):a.seed)-tvSecs(hasF?(b.finals||b.seed):b.seed));
+    const meIdx=timed.indexOf(r);
+    h+='<div class="tv-acc open her"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+tvEsc(e.label)+' · Infantil B '+(hasF?'<span style="color:#1f8a5b">· RESULTADOS</span>':'<span style="color:var(--text3)">· seed</span>')+'</span><span class="tv-acc-meta">'+(meIdx>=0?'Danna '+(meIdx+1)+'º':'')+' <span class="tv-caret">▸</span></span></button><div class="tv-acc-body"><div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadadora</th><th>Club</th><th>Edad</th><th class="time">Seed</th>'+(hasF?'<th class="time">Final</th>':'')+'<th class="time">vs Mín</th></tr></thead><tbody>';
+    timed.forEach((x,i)=>{ const place=i+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place; const mine=club&&x.club===club, her=(x===r);
+      const minT=(typeof nacTarget==='function')?nacTarget('F',+x.age,sk):null;
+      const ft=hasF?(x.finals||x.seed):x.seed, fs=tvSecs(ft);
+      const minC=minT?((ft&&isFinite(fs))?(fs<=minT+0.005?'<span style="color:#1f8a5b;font-weight:800">✓</span>':'<span style="color:var(--text3)">+'+(fs-minT).toFixed(2)+'</span>'):'—'):'—';
+      h+='<tr class="'+(her?'her':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(x.name)+(her?' ▸':'')+'</td><td class="club">'+tvEsc(x.club)+'</td><td>'+tvEsc(x.age||'')+'</td><td class="time">'+tvEsc(x.seed||'—')+'</td>'+(hasF?'<td class="time">'+tvEsc(x.finals||'—')+'</td>':'')+'<td class="time">'+minC+'</td></tr>'; });
+    grp.filter(x=>x.status).forEach(x=>{ h+='<tr class="flagged"><td class="rank">—</td><td class="name">'+tvEsc(x.name)+'</td><td class="club">'+tvEsc(x.club)+'</td><td>'+tvEsc(x.age||'')+'</td><td class="time" colspan="'+(2+(hasF?1:0))+'"><span class="tv-badge '+(x.status==='DQ'?'dq':'ns')+'">'+x.status+'</span></td></tr>'; });
     h+='</tbody></table></div></div></div>';
   });
-  return any? h : '<div class="tv-banner">Aún no hay resultados de sus pruebas. Cuando pegues el link de la Liga (o publiquen), aquí verás su ranking por categoría con mínima y podio.</div>';
+  return h;
 }
 function renderTorneo(data){
   const box=document.getElementById('tv-results'); if(!box) return;
@@ -1871,11 +1901,9 @@ function renderTorneo(data){
   const events=(data.events||[]).filter(e=>e.rows&&e.rows.length);
   let h='';
 
-  // Tarjetas FIJAS (cronograma precargado de Danna) + sub-pestañas
-  h+='<div class="section-title">🗓️ Sus pruebas <span style="font-weight:400;color:var(--text3);font-size:11px">— Bogotano II · se actualizan en vivo</span></div>';
-  h+=tvCronoCardsHtml(events, club, who);
-  h+='<div class="tvsub-tabs"><button class="tvsub-btn'+(tvSubSel==='vivo'?' active':'')+'" data-k="vivo" onclick="tvSubShow(\'vivo\')">📡 En vivo</button><button class="tvsub-btn'+(tvSubSel==='rank'?' active':'')+'" data-k="rank" onclick="tvSubShow(\'rank\')">🏅 Ranking de Danna</button></div>';
-  h+='<div class="tvsub" data-k="vivo" style="display:'+(tvSubSel==='vivo'?'':'none')+'">';
+  // Tarjetas (cronograma) y Ranking se pintan en SUS contenedores propios (no se borra el link)
+  const _cb=document.getElementById('tv-cards'); if(_cb) _cb.innerHTML='<div class="section-title" style="margin-bottom:10px">🗓️ Sus pruebas <span style="font-weight:400;color:var(--text3);font-size:11px">— se llenan con el link del torneo</span></div>'+tvCronoCardsHtml(events, club, who);
+  const _rb=document.getElementById('tv-ranking'); if(_rb) _rb.innerHTML=tvRankingHtml(events, club, who);
 
   // Resultados AGRUPADOS POR DÍA; dentro, acordeón por prueba; medallas por edad.
   let evs=events;
@@ -1904,9 +1932,7 @@ function renderTorneo(data){
     });
     h+='</div></div>';
   });
-  if(!evs.length) h+='<div class="tv-banner">Aún sin resultados. Pega el link de la <b>Liga de Bogotá</b> arriba y toca <b>Conectar / Actualizar</b>.</div>';
-  h+='</div>'; // cierra sub-pestaña En vivo
-  h+='<div class="tvsub" data-k="rank" style="display:'+(tvSubSel==='rank'?'':'none')+'">'+tvRankingHtml(events, club, who)+'</div>';
+  if(!evs.length) h+='<div class="tv-banner">Aún sin resultados. Pega el link de la <b>Liga de Bogotá</b> y toca <b>Conectar / Actualizar</b>.</div>';
   box.innerHTML=h;
 }
 function renderEventBody(e,club,who,hasF){
