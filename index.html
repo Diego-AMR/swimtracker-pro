@@ -1768,6 +1768,18 @@ let tvTimer = null, tvSig = null;
 function tvSecs(t){ if(!t||/NT|DQ|SCR/i.test(t)) return Infinity; const p=String(t).split(':'); return p.length>1?(+p[0])*60+parseFloat(p[1]):parseFloat(t); }
 function tvEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function tvVal(id,def){ const el=document.getElementById(id); return ((el&&el.value)||def||'').trim(); }
+// Guarda/restaura el link del torneo (y club/nadadora) para que no se pierdan al refrescar
+function tvSaveFields(){ try{
+  localStorage.setItem('stp_tvUrl', tvVal('tv-url',''));
+  localStorage.setItem('stp_tvClub', tvVal('tv-club',''));
+  localStorage.setItem('stp_tvSwimmer', tvVal('tv-swimmer',''));
+}catch(e){} }
+function tvRestoreFields(){ try{
+  const u=localStorage.getItem('stp_tvUrl'); const eu=document.getElementById('tv-url'); if(u!=null&&eu) eu.value=u;
+  const c=localStorage.getItem('stp_tvClub'); const ec=document.getElementById('tv-club'); if(c!=null&&ec) ec.value=c;
+  const s=localStorage.getItem('stp_tvSwimmer'); const es=document.getElementById('tv-swimmer'); if(s&&es) es.value=s;
+  ['tv-url','tv-club','tv-swimmer'].forEach(id=>{ const el=document.getElementById(id); if(el&&!el._tvSaveBound){ el._tvSaveBound=1; el.addEventListener('change',tvSaveFields); } });
+}catch(e){} }
 
 function tvOpenSet(){ const s=new Set();
   document.querySelectorAll('#tv-results .tv-acc.open .tv-acc-h span:first-child').forEach(b=>s.add('a|'+b.textContent));
@@ -1781,6 +1793,7 @@ async function loadTorneo(manual){
   const box=document.getElementById('tv-results');
   const st=document.getElementById('tv-status');
   const url=tvVal('tv-url','');
+  tvSaveFields();
   if(!url){ if(st) st.innerHTML='<span class="dot"></span>Sin conectar'; try{ renderTorneo({events:[]}); }catch(e){} return; }
   if(st) st.innerHTML='<span class="dot"></span>'+(manual?'Cargando…':'Actualizando…');
   try{
@@ -1814,7 +1827,7 @@ function tvOnShow(){ const t=document.getElementById('tab-torneovivo'); if(t&&t.
 document.addEventListener('visibilitychange',tvOnShow);
 window.addEventListener('focus',tvOnShow);
 // Muestra las tarjetas fijas (cronograma precargado) aunque aún no se conecte
-window.addEventListener('load',()=>{ try{ if(document.getElementById('tv-results')) renderTorneo({events:[]}); }catch(e){} });
+window.addEventListener('load',()=>{ try{ tvRestoreFields(); if(document.getElementById('tv-results')) renderTorneo({events:[]}); if(tvVal('tv-url','')) loadTorneo(false); }catch(e){} });
 
 function tvCap(s){ s=s||''; return s.charAt(0).toUpperCase()+s.slice(1); }
 function tvDayKey(d){ const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(d||''); return m? +(m[3]+m[2].padStart(2,'0')+m[1].padStart(2,'0')) : 99999999; }
