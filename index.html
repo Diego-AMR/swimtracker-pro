@@ -1654,19 +1654,6 @@ function setupListeners() {
   fbDB.ref('routine').on('value', snap => {
     routine = Object.assign({}, DEFAULT_ROUTINE, snap.val() || {});
   });
-
-  // Torneo en Vivo: link compartido entre dispositivos (PC ↔ celular)
-  fbDB.ref('tv_config').on('value', snap => {
-    const cfg = snap.val() || {};
-    const eu=document.getElementById('tv-url'), ec=document.getElementById('tv-club'), es=document.getElementById('tv-swimmer');
-    if(!eu) return;
-    const changed = (cfg.url||'')!==(eu.value||'') || (cfg.club||'')!==(ec?ec.value:'') || (cfg.swimmer&&cfg.swimmer!==(es?es.value:''));
-    if(cfg.url!=null) eu.value=cfg.url;
-    if(ec&&cfg.club!=null) ec.value=cfg.club;
-    if(es&&cfg.swimmer) es.value=cfg.swimmer;
-    try{ localStorage.setItem('stp_tvUrl',eu.value); localStorage.setItem('stp_tvClub',ec?ec.value:''); localStorage.setItem('stp_tvSwimmer',es?es.value:''); }catch(e){}
-    if(changed && eu.value){ try{ loadTorneo(false); }catch(e){} }
-  });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -1782,12 +1769,11 @@ function tvSecs(t){ if(!t||/NT|DQ|SCR/i.test(t)) return Infinity; const p=String
 function tvEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function tvVal(id,def){ const el=document.getElementById(id); return ((el&&el.value)||def||'').trim(); }
 // Guarda/restaura el link del torneo (y club/nadadora) para que no se pierdan al refrescar
-function tvSaveFields(){
-  const url=tvVal('tv-url',''), club=tvVal('tv-club',''), sw=tvVal('tv-swimmer','');
-  try{ localStorage.setItem('stp_tvUrl',url); localStorage.setItem('stp_tvClub',club); localStorage.setItem('stp_tvSwimmer',sw); }catch(e){}
-  // Sincroniza entre dispositivos (PC ↔ celular), igual que las marcas
-  try{ if(typeof fbDB!=='undefined'&&fbDB) fbDB.ref('tv_config').set({url,club,swimmer:sw,updatedAt:Date.now()}); }catch(e){}
-}
+function tvSaveFields(){ try{
+  localStorage.setItem('stp_tvUrl', tvVal('tv-url',''));
+  localStorage.setItem('stp_tvClub', tvVal('tv-club',''));
+  localStorage.setItem('stp_tvSwimmer', tvVal('tv-swimmer',''));
+}catch(e){} }
 function tvRestoreFields(){ try{
   const u=localStorage.getItem('stp_tvUrl'); const eu=document.getElementById('tv-url'); if(u!=null&&eu) eu.value=u;
   const c=localStorage.getItem('stp_tvClub'); const ec=document.getElementById('tv-club'); if(c!=null&&ec) ec.value=c;
@@ -1807,7 +1793,7 @@ async function loadTorneo(manual){
   const box=document.getElementById('tv-results');
   const st=document.getElementById('tv-status');
   const url=tvVal('tv-url','');
-  if(manual) tvSaveFields();
+  tvSaveFields();
   if(!url){ if(st) st.innerHTML='<span class="dot"></span>Sin conectar'; try{ renderTorneo({events:[]}); }catch(e){} return; }
   if(st) st.innerHTML='<span class="dot"></span>'+(manual?'Cargando…':'Actualizando…');
   try{
@@ -4489,19 +4475,8 @@ function init() {
 init();
 // Service worker (PWA) — solo en http/https, no con file://
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  // Si ya había una versión corriendo y llega una nueva, recarga sola (una vez)
-  const hadController = !!navigator.serviceWorker.controller;
-  let swReloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (swReloading || !hadController) return;   // no recargar en la primera instalación
-    swReloading = true;
-    location.reload();
-  });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      reg.update();                                  // revisa al abrir
-      setInterval(() => { try{ reg.update(); }catch(e){} }, 30*60*1000); // y cada 30 min
-    }).catch(e => console.warn('SW no registrado:', e));
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW no registrado:', e));
   });
 }
 </script>
