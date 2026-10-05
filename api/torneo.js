@@ -73,6 +73,10 @@ async function scrapeMeet(baseUrl) {
 }
 
 module.exports = async (req, res) => {
+  // CORS: permite que un HTML local (p.ej. el generador de resúmenes) consuma el lector.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') { res.status(204).end(); return; }
   const url = (req.query && req.query.url) || 'https://aquaticsports.co/results/2026/0003/';
   // Lectores Hy-Tek soportados: Liga de Natación de Bogotá y aquaticsports.co (FECNA/ligas).
   if (!/^https?:\/\/[^/]*(liganatacionbogota\.com|aquaticsports\.co)\//i.test(url)) {
