@@ -45,6 +45,32 @@ function parseRows(pre) {
   }
   return rows;
 }
+function parseRelayRows(pre) {
+  // Relevos: fila del equipo = "pos  CLUB  'A'  seed  finals  puntos" + líneas "1) Nombre 2) Nombre…"
+  const rows = []; const clean = pre.replace(/<[^>]+>/g, '');
+  let cur = null; const push = () => { if (cur) rows.push(cur); cur = null; };
+  for (const raw of clean.split('\n')) {
+    const line = raw.replace(/\r/, '');
+    const m = line.match(/^\s*(\d+|-{2,})\s+(\S.*?)\s+'([A-Za-z])'\s+(.*)$/);
+    if (m) {
+      push();
+      const toks = m[4].match(/[xX]?\d{0,2}:?\d{1,2}\.\d{2}|NT|DQ|DNS|DFS|DNF|SCR|NS/g) || [];
+      let seed = toks[0] || null, finals = toks[1] || null, status = null, exhibition = false;
+      if (finals && /^[xX]/.test(finals)) { exhibition = true; finals = finals.replace(/^[xX]/, ''); }
+      if (finals && STAT.test(finals)) { status = finals; finals = null; }
+      if (seed && STAT.test(seed)) { status = status || seed; seed = null; }
+      cur = { pos: /^\d+$/.test(m[1]) ? +m[1] : null, name: m[2].trim(), club: m[2].trim(), team: m[3], seed, finals, status, exhibition, relay: true, swimmers: [] };
+      continue;
+    }
+    if (cur && /^\s*\d\)/.test(line)) {
+      for (let s of line.split(/\s*\d\)\s*/).map(x => x.trim()).filter(Boolean)) {
+        s = s.replace(/\s+\d{1,2}$/, '').trim(); if (s) cur.swimmers.push(s);
+      }
+    }
+  }
+  push();
+  return rows.filter(r => r.finals || r.status);
+}
 function parseMeta(pre) {
   const meetM = pre.match(/\n\s*(\d{4}[^\n]*?)\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/);
   const genM = pre.match(/(\d{1,2}\/\d{1,2}\/\d{4}\s*-\s*\d{1,2}:\d{2}\s*[AP]M)/i);
@@ -67,7 +93,7 @@ async function scrapeMeet(baseUrl) {
     if (!meta.generated) { const mt = parseMeta(pre); if (mt.generated) meta = mt; }
     const p = parseTitle(e.title);
     return { num:e.num, gender:p.gender, age:p.age, label:p.label, relay:p.relay, title:e.title,
-             session:e.session, dow:e.dow, date:e.date, rows: parseRows(pre) };
+             session:e.session, dow:e.dow, date:e.date, rows: p.relay ? parseRelayRows(pre) : parseRows(pre) };
   });
   return { ...meta, updatedAt: new Date().toISOString(), base, events: events.filter(Boolean) };
 }
