@@ -1040,7 +1040,7 @@ tr:last-child td { border-bottom:none; }
       <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
         <div style="flex:2;min-width:230px">
           <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Enlace del torneo (Liga de Bogotá)</label>
-          <input class="form-input" id="tv-url" value="" placeholder="Pega aquí el link de la Liga de Bogotá">
+          <input class="form-input" id="tv-url" value="" placeholder="Link del torneo: Liga de Bogotá, aquaticsports o colombiaacuatica">
         </div>
         <div style="flex:1;min-width:100px">
           <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px">Mi club <span style="color:var(--text3)">(auto)</span></label>
@@ -1933,7 +1933,7 @@ function renderTorneo(data){
   dayKeys.forEach(k=>{
     const day=byDay[k], dayHer=day.list.some(e=>isHers(e));
     h+='<div class="tv-dayblock'+(k===openKey?' open':'')+'">'+
-       '<button class="tv-day" data-day="'+tvEsc(k)+'" onclick="tvToggle(this)"><span>'+(day.date? tvCap(day.dow||'')+' '+tvEsc(day.date.slice(0,5)) : 'Sin fecha')+'</span>'+
+       '<button class="tv-day" data-day="'+tvEsc(k)+'" onclick="tvToggle(this)"><span>'+(day.date? tvCap(day.dow||'')+' '+tvEsc(day.date.slice(0,5)) : 'Pruebas publicadas')+'</span>'+
        '<span class="tv-day-meta">'+(dayHer?'⭐ ':'')+day.list.length+' pruebas <span class="tv-caret">▸</span></span></button>'+
        '<div class="tv-day-body">';
     day.list.forEach(e=>{
@@ -1946,13 +1946,14 @@ function renderTorneo(data){
     });
     h+='</div></div>';
   });
-  if(!evs.length) h+='<div class="tv-banner">Aún sin resultados. Pega el link de la <b>Liga de Bogotá</b> y toca <b>Conectar / Actualizar</b>.</div>';
+  if(!evs.length) h+='<div class="tv-banner">Aún sin resultados. Pega el link del torneo (<b>Liga de Bogotá</b>, aquaticsports o colombiaacuatica) y toca <b>Conectar / Actualizar</b>.</div>';
   box.innerHTML=h;
 }
 function renderEventBody(e,club,who,hasF){
+  // Por edad (Hy-Tek y categorías de un año); colombiaacuatica a veces trae categorías de varios años ("Junior 18-20", "21+")
   const byAge={};
-  e.rows.forEach(r=>{ (byAge[r.age]=byAge[r.age]||[]).push(r); });
-  const ages=Object.keys(byAge).map(Number).sort((a,b)=>a-b);
+  e.rows.forEach(r=>{ const k=r.cat||r.age; (byAge[k]=byAge[k]||[]).push(r); });
+  const ages=Object.keys(byAge).sort((a,b)=>(parseInt(a.replace(/^\D+/,''))||0)-(parseInt(b.replace(/^\D+/,''))||0));
   // Mínima nacional FECNA por categoría (se evalúa por sexo + edad de cada nadador).
   const lm=(e.label||'').match(/^(\d+)\s*m\s+(.+)$/);            // "100 m Espalda" -> ["100","Espalda"]
   const styleKey=lm?(lm[2].trim()+' '+lm[1]+'m'):null;          // "Espalda 100m"
@@ -1963,7 +1964,7 @@ function renderEventBody(e,club,who,hasF){
     const timed=all.filter(r=>!r.status);                       // con tiempo → puesto/medalla
     const flagged=all.filter(r=>r.status);                      // DQ / NS → al final
     timed.sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
-    b+='<div class="tv-agehdr">'+age+' años <span>'+all.length+'</span></div>';
+    b+='<div class="tv-agehdr">'+(/^\d+$/.test(age)?age+' años':tvEsc(age))+' <span>'+all.length+'</span></div>';
     b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+(showNat?'<th class="time" title="Mínima nacional FECNA por categoría">🎯 Nacional</th>':'')+'</tr></thead><tbody>';
     timed.forEach((r,idx)=>{
       const place=idx+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place;
