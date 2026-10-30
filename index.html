@@ -1055,7 +1055,7 @@ tr:last-child td { border-bottom:none; }
       <div style="display:flex;gap:18px;align-items:center;margin-top:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text3)">
         <span id="tv-status" class="tv-live"><span class="dot"></span>Sin conectar</span>
         <span>Última actualización: <b id="tv-updated" style="color:var(--text2)">—</b></span>
-        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-auto" checked> Auto-actualizar cada 5 min</label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-auto" checked> Auto-actualizar cada minuto</label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="tv-all"> Ver todos los clubes</label>
       </div>
     </div>
@@ -1854,6 +1854,9 @@ function tvAgeNow(){ const s=(currentAnalysis&&currentAnalysis.swimmer)||(typeof
 function tvFindLive(events,ev,who){ const e=(events||[]).find(x=>String(x.num)===String(ev)); if(!e||!who) return {e:e||null,r:null}; const r=(e.rows||[]).find(x=>x.name&&x.name.toLowerCase().includes(who)); return {e:e||null, r:r||null}; }
 // sus pruebas detectadas EN EL LINK (por nombre + club)
 function tvMyEvents(events, who){ const out=[]; if(!who) return out; (events||[]).forEach(e=>{ if(e.relay) return; const r=(e.rows||[]).find(x=>{ const n=(x.name||'').toLowerCase(); return n && (n.includes(who)||who.includes(n)); }); if(r) out.push({e,r}); }); out.sort((a,b)=>(+a.e.num||0)-(+b.e.num||0)); return out; }
+// La prueba ya tiene resultados pero esta fila todavía no: la página no ha cargado su tiempo (pasa en colombiaacuatica).
+// No es "por nadar" ni "no se presentó" → "sin tiempo publicado", y se sigue leyendo.
+function tvSinTiempo(e,r){ return !!(e&&r&&!r.finals&&!r.status&&(e.rows||[]).some(x=>x.finals||x.status)); }
 function tvStyleKey(label){ const m=(label||'').match(/(\d+)\s*m?\s+(.+)/i); if(!m) return null; const dist=m[1]; let st=m[2].trim(); const map=[['Libre','Libre'],['Free','Libre'],['Espalda','Espalda'],['Back','Espalda'],['Pecho','Pecho'],['Breast','Pecho'],['Mariposa','Mariposa'],['Butter','Mariposa'],['Combinado','Combinado'],['Medley','Combinado']]; for(const [k,v] of map){ if(new RegExp(k,'i').test(st)){ st=v; break; } } return st+' '+dist+'m'; }
 const TV_CAT=[12,13]; // Infantil B (mujeres)
 function tvCronoCardsHtml(events, club, who){
@@ -1869,11 +1872,12 @@ function tvCronoCardsHtml(events, club, who){
     const dl=done?tvDelta(r.seed||c.seed,r.finals):null;
     const best=tvMyBest(c.sk), pb=done&&best!=null&&tvSecs(r.finals)<best-0.005;
     const minT=(typeof nacTarget==='function')?nacTarget('F',age,c.sk):null, hitMin=done&&minT!=null&&tvSecs(r.finals)<=minT+0.005;
+    const sinT=tvSinTiempo(e,r);
     const stBadge=(r&&r.status)?'<span class="tv-badge '+(r.status==='DQ'?'dq':'ns')+'">'+r.status+'</span>'
-      :done?'<span class="tv-state ok">✔ NADADA</span>':'<span class="tv-state">POR NADAR</span>';
+      :done?'<span class="tv-state ok">✔ NADADA</span>':sinT?'<span class="tv-state">⏳ SIN TIEMPO PUBLICADO</span>':'<span class="tv-state">POR NADAR</span>';
     const timeLine=done?('<span class="seed" style="color:#1f8a5b;font-size:19px">'+tvEsc(r.finals)+' <span style="color:var(--text3);font-weight:500;font-size:11px">(seed '+tvEsc(r.seed||c.seed)+')</span></span>')
       :('<span class="seed" style="font-size:17px">'+tvEsc(c.seed||(r&&r.seed)||'—')+' <span style="color:var(--text3);font-size:11px">· seed</span></span>');
-    const pill=(r&&r.status)?'<span class="pill nm">'+r.status+'</span>':(pos?'<span class="pill">'+pos+'º de IB</span>':'<span class="pill nm">por nadar</span>');
+    const pill=(r&&r.status)?'<span class="pill nm">'+r.status+'</span>':(pos?'<span class="pill">'+pos+'º de IB</span>':'<span class="pill nm">'+(sinT?'sin tiempo publicado':'por nadar')+'</span>');
     const topMeta=[]; if(c.heat) topMeta.push('Heat <b style="color:var(--text2)">'+c.heat+'</b>'); if(c.lane!==''&&c.lane!=null) topMeta.push('<span class="lane">Carril '+c.lane+'</span>');
     const extras=[]; if(dl) extras.push('<span class="'+dl.cls+'" style="font-weight:700">'+dl.txt+'</span>'); if(pb) extras.push('<span style="color:#a9740a;font-weight:800">⭐ ¡PB!</span>'); if(hitMin) extras.push('<span style="color:#1f8a5b;font-weight:800">✓ mínima</span>');
     h+='<div class="tv-sc"><div class="top"><span>'+(c.day||'')+' '+(c.hora||'')+' '+stBadge+'</span><span class="t">Ev '+(c.ev||'')+'</span></div>'
@@ -1893,7 +1897,9 @@ function tvRankingHtml(events, club, who){
     const sk=tvStyleKey(e.label);
     const grp=(e.rows||[]).filter(x=>TV_CAT.includes(+x.age)); if(!grp.length) return;
     const hasF=grp.filter(x=>x.finals).length>=1;
-    const timed=grp.filter(x=>!x.status).sort((a,b)=>tvSecs(hasF?(a.finals||a.seed):a.seed)-tvSecs(hasF?(b.finals||b.seed):b.seed));
+    // con resultados: solo quien ya tiene tiempo lleva puesto; los que aún no lo tienen publicado van aparte
+    const timed=grp.filter(x=>!x.status&&(!hasF||x.finals)).sort((a,b)=>tvSecs(hasF?a.finals:a.seed)-tvSecs(hasF?b.finals:b.seed));
+    const pend=hasF?grp.filter(x=>!x.status&&!x.finals):[];
     const meIdx=timed.indexOf(r);
     h+='<div class="tv-acc open her"><button class="tv-acc-h" onclick="tvToggle(this)"><span>'+tvEsc(e.label)+' · Infantil B '+(hasF?'<span style="color:#1f8a5b">· RESULTADOS</span>':'<span style="color:var(--text3)">· seed</span>')+'</span><span class="tv-acc-meta">'+(meIdx>=0?'Danna '+(meIdx+1)+'º':'')+' <span class="tv-caret">▸</span></span></button><div class="tv-acc-body"><div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadadora</th><th>Club</th><th>Edad</th><th class="time">Seed</th>'+(hasF?'<th class="time">Final</th>':'')+'<th class="time">vs Mín</th></tr></thead><tbody>';
     timed.forEach((x,i)=>{ const place=i+1, medal=place<=3?['🥇','🥈','🥉'][place-1]:place; const mine=club&&x.club===club, her=(x===r);
@@ -1901,6 +1907,7 @@ function tvRankingHtml(events, club, who){
       const ft=hasF?(x.finals||x.seed):x.seed, fs=tvSecs(ft);
       const minC=minT?((ft&&isFinite(fs))?(fs<=minT+0.005?'<span style="color:#1f8a5b;font-weight:800">✓</span>':'<span style="color:var(--text3)">+'+(fs-minT).toFixed(2)+'</span>'):'—'):'—';
       h+='<tr class="'+(her?'her':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(x.name)+(her?' ▸':'')+'</td><td class="club">'+tvEsc(x.club)+'</td><td>'+tvEsc(x.age||'')+'</td><td class="time">'+tvEsc(x.seed||'—')+'</td>'+(hasF?'<td class="time">'+tvEsc(x.finals||'—')+'</td>':'')+'<td class="time">'+minC+'</td></tr>'; });
+    pend.forEach(x=>{ const her=(x===r); h+='<tr class="'+(her?'her':'')+'"><td class="rank">⏳</td><td class="name">'+tvEsc(x.name)+(her?' ▸':'')+'</td><td class="club">'+tvEsc(x.club)+'</td><td>'+tvEsc(x.age||'')+'</td><td class="time">'+tvEsc(x.seed||'—')+'</td><td class="time" colspan="2" style="color:var(--text3);font-size:11px">sin tiempo publicado</td></tr>'; });
     grp.filter(x=>x.status).forEach(x=>{ h+='<tr class="flagged"><td class="rank">—</td><td class="name">'+tvEsc(x.name)+'</td><td class="club">'+tvEsc(x.club)+'</td><td>'+tvEsc(x.age||'')+'</td><td class="time" colspan="'+(2+(hasF?1:0))+'"><span class="tv-badge '+(x.status==='DQ'?'dq':'ns')+'">'+x.status+'</span></td></tr>'; });
     h+='</tbody></table></div></div></div>';
   });
@@ -1961,9 +1968,10 @@ function renderEventBody(e,club,who,hasF){
   let b='';
   ages.forEach(age=>{
     const all=byAge[age].slice();
-    const timed=all.filter(r=>!r.status);                       // con tiempo → puesto/medalla
+    const timed=all.filter(r=>!r.status&&(!hasF||r.finals));   // con tiempo → puesto/medalla
+    const pend=hasF?all.filter(r=>!r.status&&!r.finals):[];     // la página aún no publica su tiempo → aparte, sin puesto
     const flagged=all.filter(r=>r.status);                      // DQ / NS → al final
-    timed.sort((x,y)=>tvSecs(hasF?(x.finals||x.seed):x.seed)-tvSecs(hasF?(y.finals||y.seed):y.seed));
+    timed.sort((x,y)=>tvSecs(hasF?x.finals:x.seed)-tvSecs(hasF?y.finals:y.seed));
     b+='<div class="tv-agehdr">'+(/^\d+$/.test(age)?age+' años':tvEsc(age))+' <span>'+all.length+'</span></div>';
     b+='<div class="table-wrap"><table><thead><tr><th class="rank">#</th><th>Nadador</th><th>Club</th><th class="time">Seed</th>'+(hasF?'<th class="time">Result.</th><th class="time">Δ</th>':'')+(showNat?'<th class="time" title="Mínima nacional FECNA por categoría">🎯 Nacional</th>':'')+'</tr></thead><tbody>';
     timed.forEach((r,idx)=>{
@@ -1981,6 +1989,10 @@ function renderEventBody(e,club,who,hasF){
         else cells+='<td class="time" style="color:#dc2626;font-weight:700;white-space:nowrap" title="mínima '+formatTime(tgt)+'">✗ +'+(fs-tgt).toFixed(2)+'s</td>';
       }
       b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">'+medal+'</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td>'+cells+'</tr>';
+    });
+    pend.forEach(r=>{
+      const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);
+      b+='<tr class="'+(focus?'focus':(mine?'mine':''))+'"><td class="rank">⏳</td><td class="name">'+tvEsc(r.name)+'</td><td class="club">'+tvEsc(r.club)+'</td><td class="time">'+tvEsc(r.seed||'—')+'</td><td class="time" colspan="'+(2+(showNat?1:0))+'" style="color:var(--text3);font-size:11px">sin tiempo publicado</td></tr>';
     });
     flagged.forEach(r=>{
       const mine=club&&r.club===club, focus=who&&mine&&r.name.toLowerCase().includes(who);

@@ -175,10 +175,12 @@ function caEvento(html) {
     }
   }
   if (!ev) return null;
-  // prueba en curso: aún no hay puestos y "N.S" = todavía no ha nadado → se deja pendiente (sin tiempo ni estado)
+  // colombiaacuatica pone "N.S" también a quien aún no tiene el tiempo cargado. Mientras la prueba no tenga puestos,
+  // N.S no significa nada → queda sin tiempo ni estado ("sin tiempo publicado" en pantalla). Con puestos, N.S = No Show
+  // (lo dice la página). Nunca se inventa un NS: una fila vacía queda vacía y se vuelve a leer en la próxima consulta.
+  // Siglas: Aplicaciones Rodrigo/Suite Estrategia FECNA/siglas-resultados-natacion.md
   const cerrada = ev.rows.some(r => r.pos);
-  if (!cerrada) { for (const r of ev.rows) if (r.status === 'NS') r.status = null; }
-  else { for (const r of ev.rows) if (!r.finals && !r.status) r.status = 'NS'; }   // cerrada y sin tiempo = no nadó
+  if (!cerrada) for (const r of ev.rows) if (r.status === 'NS') r.status = null;
   ev.age = [...new Set(ev.cats)].length > 4 ? 'Varias categorías' : [...new Set(ev.cats)].join(', ');
   ev.enCurso = !cerrada && ev.rows.some(r => r.finals || r.status);
   delete ev.cats;
@@ -215,8 +217,10 @@ module.exports = async (req, res) => {
     const data = esCA ? await scrapeColombiaAcuatica(url) : await scrapeMeet(url);
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-    res.setHeader('CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
-    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120');
+    // Copia en el servidor máximo 20 s y SIN copias viejas: con la app pidiendo cada minuto, un tiempo recién
+    // publicado aparece en ≤ 1 min (antes: 60 s + 120 s de copia vieja = hasta 3–4 min).
+    res.setHeader('CDN-Cache-Control', 'public, s-maxage=20');
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=20');
     res.status(200).send(JSON.stringify(data));
   } catch (e) {
     res.status(502).json({ error: e.message });
