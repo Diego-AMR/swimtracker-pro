@@ -1408,14 +1408,16 @@ const ALL_STYLES = [
   'Mariposa 50m','Mariposa 100m','Mariposa 200m',
   'Combinado 200m','Combinado 400m'
 ];
-// ── Tabla oficial de MÍNIMAS NACIONALES FECNA 2026 — TODAS las categorías y sexos.
-// Valores por defecto (en segundos). Editable en la app (pestaña Metas) y guardada en Firebase (nacional_2026).
+// ── Tabla oficial de MÍNIMAS NACIONALES FECNA 2026 — TODAS las categorías y sexos (en segundos).
+// 10-13 años = "Marcas mínimas Infantiles 2026" (convocatoria Nacional Infantil, Cali nov-2026, pág. 8).
+// 14+ = "Marcas mínimas Nacional Interclubes 2026" (convocatoria Interclubes Cali dic-2026, pág. 4).
+// Verificadas celda por celda contra esas imágenes el 31-oct-2026 (264/264). Se cambian cuando FECNA publique otra tabla.
 const NAC_DEFAULT = {
   F: {
     "10": {"Libre 50m":38.76,"Libre 100m":87.16,"Libre 200m":190.51,"Libre 400m":400.3,"Espalda 50m":47,"Pecho 50m":53.95,"Mariposa 50m":48.46,"Combinado 200m":218.35},
     "11": {"Libre 50m":34.73,"Libre 100m":76.22,"Libre 200m":170.33,"Libre 400m":363.91,"Libre 800m":775.05,"Espalda 50m":42.3,"Espalda 100m":91.78,"Pecho 50m":48.12,"Pecho 100m":106.47,"Mariposa 50m":39.85,"Mariposa 100m":100.54,"Combinado 200m":193.92},
-    "12": {"Libre 50m":32.87,"Libre 100m":71.58,"Libre 200m":156.94,"Libre 400m":335.95,"Libre 800m":704.59,"Espalda 100m":86.19,"Espalda 200m":184.29,"Pecho 100m":96.83,"Pecho 200m":210.14,"Mariposa 100m":87.33,"Mariposa 200m":214.78,"Combinado 200m":181.59,"Combinado 400m":402.5},
-    "13": {"Libre 50m":31.69,"Libre 100m":69.23,"Libre 200m":150.55,"Libre 400m":323.4,"Libre 800m":675.76,"Libre 1500m":1315.19,"Espalda 100m":81.39,"Espalda 200m":176.75,"Pecho 100m":92.92,"Pecho 200m":204.85,"Mariposa 100m":81.84,"Mariposa 200m":197.57,"Combinado 200m":174.51,"Combinado 400m":373.41},
+    "12": {"Libre 50m":32.87,"Libre 100m":71.58,"Libre 200m":156.94,"Libre 400m":335.95,"Libre 800m":704.59,"Espalda 50m":42.3,"Espalda 100m":86.19,"Espalda 200m":184.29,"Pecho 50m":48.12,"Pecho 100m":96.83,"Pecho 200m":210.14,"Mariposa 50m":39.85,"Mariposa 100m":87.33,"Mariposa 200m":214.78,"Combinado 200m":181.59,"Combinado 400m":402.5},
+    "13": {"Libre 50m":31.69,"Libre 100m":69.23,"Libre 200m":150.55,"Libre 400m":323.4,"Libre 800m":675.76,"Libre 1500m":1315.19,"Espalda 50m":40.01,"Espalda 100m":81.39,"Espalda 200m":176.75,"Pecho 50m":45.12,"Pecho 100m":92.92,"Pecho 200m":204.85,"Mariposa 50m":36.57,"Mariposa 100m":81.84,"Mariposa 200m":197.57,"Combinado 200m":174.51,"Combinado 400m":373.41},
     "14": {"Libre 50m":30.79,"Libre 100m":67.68,"Libre 200m":149.57,"Libre 400m":318.79,"Libre 800m":677.47,"Libre 1500m":1345.75,"Espalda 50m":37.42,"Espalda 100m":81.4,"Espalda 200m":175.11,"Pecho 50m":42.37,"Pecho 100m":92.89,"Pecho 200m":205.97,"Mariposa 50m":33.83,"Mariposa 100m":81.51,"Mariposa 200m":199.27,"Combinado 200m":172.66,"Combinado 400m":385.08},
     "15": {"Libre 50m":30.79,"Libre 100m":67.68,"Libre 200m":149.57,"Libre 400m":318.79,"Libre 800m":677.47,"Libre 1500m":1306.14,"Espalda 50m":36.79,"Espalda 100m":80.85,"Espalda 200m":175.11,"Pecho 50m":42.11,"Pecho 100m":92.89,"Pecho 200m":205.97,"Mariposa 50m":33.83,"Mariposa 100m":80.99,"Mariposa 200m":174.27,"Combinado 200m":172.66,"Combinado 400m":376.45},
     "16-17": {"Libre 50m":29.94,"Libre 100m":65.32,"Libre 200m":143.92,"Libre 400m":310.59,"Libre 800m":662.82,"Libre 1500m":1259.87,"Espalda 50m":35.73,"Espalda 100m":77.43,"Espalda 200m":170.44,"Pecho 50m":39.16,"Pecho 100m":87.55,"Pecho 200m":193.82,"Mariposa 50m":32.33,"Mariposa 100m":76.3,"Mariposa 200m":174.27,"Combinado 200m":166.11,"Combinado 400m":364.57},
@@ -1425,8 +1427,8 @@ const NAC_DEFAULT = {
   M: {
     "10": {"Libre 50m":38.03,"Libre 100m":84.79,"Libre 200m":188.71,"Libre 400m":393.15,"Espalda 50m":48.51,"Pecho 50m":53.87,"Mariposa 50m":45.08,"Combinado 200m":220.99},
     "11": {"Libre 50m":34.71,"Libre 100m":77.4,"Libre 200m":169.45,"Libre 400m":357.41,"Libre 800m":766.57,"Espalda 50m":42.11,"Espalda 100m":91.55,"Pecho 50m":48.95,"Pecho 100m":108.11,"Mariposa 50m":40.14,"Mariposa 100m":97.95,"Combinado 200m":191.61},
-    "12": {"Libre 50m":31.57,"Libre 100m":69.72,"Libre 200m":152.19,"Libre 400m":327.88,"Libre 800m":696.88,"Espalda 100m":86.26,"Espalda 200m":185.84,"Pecho 100m":96.89,"Pecho 200m":209.93,"Mariposa 100m":83.83,"Mariposa 200m":204.49,"Combinado 200m":178.35,"Combinado 400m":414.1},
-    "13": {"Libre 50m":29.51,"Libre 100m":65.79,"Libre 200m":143.66,"Libre 400m":305.12,"Libre 800m":640.42,"Libre 1500m":1253.49,"Espalda 100m":79.28,"Espalda 200m":168.88,"Pecho 100m":88.42,"Pecho 200m":191.68,"Mariposa 100m":76.09,"Mariposa 200m":188.57,"Combinado 200m":164.89,"Combinado 400m":376.88},
+    "12": {"Libre 50m":31.57,"Libre 100m":69.72,"Libre 200m":152.19,"Libre 400m":327.88,"Libre 800m":696.88,"Espalda 50m":39.97,"Espalda 100m":86.26,"Espalda 200m":185.84,"Pecho 50m":39.53,"Pecho 100m":96.89,"Pecho 200m":209.93,"Mariposa 50m":35.44,"Mariposa 100m":83.83,"Mariposa 200m":204.49,"Combinado 200m":178.35,"Combinado 400m":414.1},
+    "13": {"Libre 50m":29.51,"Libre 100m":65.79,"Libre 200m":143.66,"Libre 400m":305.12,"Libre 800m":640.42,"Libre 1500m":1253.49,"Espalda 50m":36.34,"Espalda 100m":79.28,"Espalda 200m":168.88,"Pecho 50m":35.94,"Pecho 100m":88.42,"Pecho 200m":191.68,"Mariposa 50m":32.22,"Mariposa 100m":76.09,"Mariposa 200m":188.57,"Combinado 200m":164.89,"Combinado 400m":376.88},
     "14": {"Libre 50m":27.42,"Libre 100m":60.27,"Libre 200m":134.36,"Libre 400m":292.66,"Libre 800m":610.06,"Libre 1500m":1212.61,"Espalda 50m":33.92,"Espalda 100m":73.49,"Espalda 200m":160.95,"Pecho 50m":36.57,"Pecho 100m":83.12,"Pecho 200m":184.95,"Mariposa 50m":29.81,"Mariposa 100m":68.69,"Mariposa 200m":173.51,"Combinado 200m":155.05,"Combinado 400m":349.33},
     "15": {"Libre 50m":26.82,"Libre 100m":58.79,"Libre 200m":131.58,"Libre 400m":285.32,"Libre 800m":598.73,"Libre 1500m":1166.58,"Espalda 50m":32.27,"Espalda 100m":71.18,"Espalda 200m":158.52,"Pecho 50m":34.84,"Pecho 100m":80,"Pecho 200m":177.25,"Mariposa 50m":28.87,"Mariposa 100m":65.59,"Mariposa 200m":162.46,"Combinado 200m":151.39,"Combinado 400m":340.36},
     "16-17": {"Libre 50m":25.7,"Libre 100m":56.16,"Libre 200m":125.29,"Libre 400m":274.26,"Libre 800m":581.81,"Libre 1500m":1119.29,"Espalda 50m":30.14,"Espalda 100m":65.84,"Espalda 200m":146.14,"Pecho 50m":33.41,"Pecho 100m":75.36,"Pecho 200m":167.2,"Mariposa 50m":27.55,"Mariposa 100m":61.68,"Mariposa 200m":150.68,"Combinado 200m":144.98,"Combinado 400m":320.59},
@@ -1434,20 +1436,23 @@ const NAC_DEFAULT = {
     "mayores": {"Libre 50m":25.57,"Libre 100m":55.58,"Libre 200m":121.11,"Libre 400m":271,"Libre 800m":577.44,"Libre 1500m":1112.45,"Espalda 50m":29.96,"Espalda 100m":65.84,"Espalda 200m":146.14,"Pecho 50m":32.4,"Pecho 100m":73.55,"Pecho 200m":167.2,"Mariposa 50m":26.79,"Mariposa 100m":60.56,"Mariposa 200m":149.02,"Combinado 200m":144.98,"Combinado 400m":311.42},
   },
 };
+// ── Mínimas de la LIGA DE BOGOTÁ VIGENTES = 2026, Anexo de la Circular 04-2026 (LNB, 20-mar-2026), Selección Bogotá.
+// Verificadas celda por celda contra la imagen del anexo el 31-oct-2026 (170/170). Aplican desde los 14 años.
+// (Antes había aquí la tabla "Bogotá 2027": borrador de Rodrigo, NO oficial.)
 const LIGA_BOG = {
   F: {
-    "14": {"Libre 50m":29.53,"Libre 100m":64.48,"Libre 200m":142.75,"Libre 400m":297.61,"Libre 800m":622.38,"Libre 1500m":1201.4,"Espalda 50m":34.61,"Espalda 100m":75.85,"Espalda 200m":164.77,"Pecho 50m":39.08,"Pecho 100m":86.86,"Pecho 200m":190,"Mariposa 50m":31.58,"Mariposa 100m":71.29,"Mariposa 200m":168.97,"Combinado 200m":164.04,"Combinado 400m":356.59},
-    "15": {"Libre 50m":28.83,"Libre 100m":63.05,"Libre 200m":139.21,"Libre 400m":294.97,"Libre 800m":607.1,"Libre 1500m":1198.11,"Espalda 50m":34.12,"Espalda 100m":74.76,"Espalda 200m":159.9,"Pecho 50m":37.43,"Pecho 100m":84.18,"Pecho 200m":183.62,"Mariposa 50m":31.17,"Mariposa 100m":70.33,"Mariposa 200m":168.77,"Combinado 200m":161.99,"Combinado 400m":346.7},
-    "16-17": {"Libre 50m":28.39,"Libre 100m":61.75,"Libre 200m":135.38,"Libre 400m":286.16,"Libre 800m":595.55,"Libre 1500m":1148.23,"Espalda 50m":32.83,"Espalda 100m":72.74,"Espalda 200m":158.71,"Pecho 50m":36.24,"Pecho 100m":81.01,"Pecho 200m":174.16,"Mariposa 50m":30.39,"Mariposa 100m":67.19,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":332.26},
-    "18-20": {"Libre 50m":28.39,"Libre 100m":61.75,"Libre 200m":134.42,"Libre 400m":286.16,"Libre 800m":595.55,"Libre 1500m":1148.23,"Espalda 50m":32.83,"Espalda 100m":72.74,"Espalda 200m":157.44,"Pecho 50m":36.24,"Pecho 100m":81.01,"Pecho 200m":174.16,"Mariposa 50m":30.39,"Mariposa 100m":67.19,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":328.94},
-    "mayores": {"Libre 50m":28.17,"Libre 100m":60.33,"Libre 200m":133.1,"Libre 400m":286.16,"Libre 800m":592.7,"Libre 1500m":1125.38,"Espalda 50m":32.14,"Espalda 100m":72.74,"Espalda 200m":155.87,"Pecho 50m":36.24,"Pecho 100m":80.93,"Pecho 200m":174.16,"Mariposa 50m":30.01,"Mariposa 100m":65.03,"Mariposa 200m":153.27,"Combinado 200m":154.23,"Combinado 400m":325.65},
+    "14": {"Libre 50m":29.57,"Libre 100m":65.43,"Libre 200m":144.25,"Libre 400m":306.92,"Libre 800m":638.42,"Libre 1500m":1240.47,"Espalda 50m":35.25,"Espalda 100m":77.25,"Espalda 200m":167.68,"Pecho 50m":39.08,"Pecho 100m":86.93,"Pecho 200m":190.96,"Mariposa 50m":31.85,"Mariposa 100m":74.05,"Mariposa 200m":177.46,"Combinado 200m":164.65,"Combinado 400m":362.59},
+    "15": {"Libre 50m":29.27,"Libre 100m":64.78,"Libre 200m":143.98,"Libre 400m":305.76,"Libre 800m":633.54,"Libre 1500m":1198.11,"Espalda 50m":35.12,"Espalda 100m":76.43,"Espalda 200m":165.32,"Pecho 50m":38.39,"Pecho 100m":86.49,"Pecho 200m":189.17,"Mariposa 50m":31.53,"Mariposa 100m":73.31,"Mariposa 200m":175.69,"Combinado 200m":162.9,"Combinado 400m":346.7},
+    "16-17": {"Libre 50m":28.74,"Libre 100m":62.49,"Libre 200m":138.48,"Libre 400m":299.69,"Libre 800m":604.74,"Libre 1500m":1148.23,"Espalda 50m":33.73,"Espalda 100m":74.49,"Espalda 200m":159.03,"Pecho 50m":37.72,"Pecho 100m":83.53,"Pecho 200m":184.25,"Mariposa 50m":31.21,"Mariposa 100m":71.27,"Mariposa 200m":171.97,"Combinado 200m":159.58,"Combinado 400m":332.26},
+    "18-20": {"Libre 50m":28.45,"Libre 100m":61.86,"Libre 200m":137.71,"Libre 400m":298.35,"Libre 800m":598.69,"Libre 1500m":1136.75,"Espalda 50m":33.37,"Espalda 100m":73.75,"Espalda 200m":157.44,"Pecho 50m":37.19,"Pecho 100m":82.69,"Pecho 200m":182.41,"Mariposa 50m":30.9,"Mariposa 100m":69.69,"Mariposa 200m":170.25,"Combinado 200m":157.98,"Combinado 400m":328.94},
+    "mayores": {"Libre 50m":28.17,"Libre 100m":61.15,"Libre 200m":134.76,"Libre 400m":295.52,"Libre 800m":592.7,"Libre 1500m":1125.38,"Espalda 50m":33.21,"Espalda 100m":73.64,"Espalda 200m":155.87,"Pecho 50m":36.82,"Pecho 100m":81.86,"Pecho 200m":180.59,"Mariposa 50m":30.59,"Mariposa 100m":68.99,"Mariposa 200m":168.55,"Combinado 200m":156.4,"Combinado 400m":325.65},
   },
   M: {
-    "14": {"Libre 50m":26.85,"Libre 100m":58.96,"Libre 200m":129.17,"Libre 400m":278.01,"Libre 800m":570.05,"Libre 1500m":1111.3,"Espalda 50m":31.91,"Espalda 100m":70.13,"Espalda 200m":152.36,"Pecho 50m":34.26,"Pecho 100m":78.94,"Pecho 200m":171,"Mariposa 50m":28.93,"Mariposa 100m":64.59,"Mariposa 200m":150.58,"Combinado 200m":150.5,"Combinado 400m":325.36},
-    "15": {"Libre 50m":25.87,"Libre 100m":56.97,"Libre 200m":125.67,"Libre 400m":268.94,"Libre 800m":559.68,"Libre 1500m":1072.39,"Espalda 50m":30.58,"Espalda 100m":66.7,"Espalda 200m":143.24,"Pecho 50m":32.84,"Pecho 100m":74.59,"Pecho 200m":163.67,"Mariposa 50m":27.65,"Mariposa 100m":61.69,"Mariposa 200m":145.94,"Combinado 200m":141.87,"Combinado 400m":312.89},
-    "16-17": {"Libre 50m":24.87,"Libre 100m":54.75,"Libre 200m":119.76,"Libre 400m":256.33,"Libre 800m":536.53,"Libre 1500m":1041.66,"Espalda 50m":28.96,"Espalda 100m":62.89,"Espalda 200m":138.94,"Pecho 50m":31.31,"Pecho 100m":68.99,"Pecho 200m":152.14,"Mariposa 50m":26.6,"Mariposa 100m":58.94,"Mariposa 200m":135.03,"Combinado 200m":140.51,"Combinado 400m":300.03},
-    "18-20": {"Libre 50m":24.35,"Libre 100m":53.83,"Libre 200m":118.56,"Libre 400m":255.39,"Libre 800m":533.87,"Libre 1500m":1041.63,"Espalda 50m":28,"Espalda 100m":61.66,"Espalda 200m":136.22,"Pecho 50m":31.31,"Pecho 100m":68.99,"Pecho 200m":152.14,"Mariposa 50m":25.99,"Mariposa 100m":58.07,"Mariposa 200m":131.99,"Combinado 200m":136.11,"Combinado 400m":294.82},
-    "mayores": {"Libre 50m":24.62,"Libre 100m":52.69,"Libre 200m":114.72,"Libre 400m":250.98,"Libre 800m":533.87,"Libre 1500m":1041.63,"Espalda 50m":27.95,"Espalda 100m":61.66,"Espalda 200m":136.22,"Pecho 50m":30.34,"Pecho 100m":67.01,"Pecho 200m":152.14,"Mariposa 50m":25.99,"Mariposa 100m":57.59,"Mariposa 200m":131.99,"Combinado 200m":136.11,"Combinado 400m":294.82},
+    "14": {"Libre 50m":26.89,"Libre 100m":59.06,"Libre 200m":131.1,"Libre 400m":281.8,"Libre 800m":584.91,"Libre 1500m":1130.81,"Espalda 50m":32.13,"Espalda 100m":70.13,"Espalda 200m":152.37,"Pecho 50m":34.26,"Pecho 100m":78.94,"Pecho 200m":174.11,"Mariposa 50m":28.93,"Mariposa 100m":65.08,"Mariposa 200m":155.85,"Combinado 200m":150.61,"Combinado 400m":332.74},
+    "15": {"Libre 50m":26.13,"Libre 100m":57.21,"Libre 200m":126.08,"Libre 400m":269.84,"Libre 800m":576.07,"Libre 1500m":1095.5,"Espalda 50m":30.58,"Espalda 100m":68.02,"Espalda 200m":149.21,"Pecho 50m":33.32,"Pecho 100m":75.68,"Pecho 200m":164.38,"Mariposa 50m":27.65,"Mariposa 100m":62.47,"Mariposa 200m":146.47,"Combinado 200m":146.49,"Combinado 400m":316.9},
+    "16-17": {"Libre 50m":25.15,"Libre 100m":55.35,"Libre 200m":121.63,"Libre 400m":262.99,"Libre 800m":556.72,"Libre 1500m":1066.91,"Espalda 50m":29.19,"Espalda 100m":64.18,"Espalda 200m":141.93,"Pecho 50m":31.95,"Pecho 100m":71.64,"Pecho 200m":161.92,"Mariposa 50m":26.89,"Mariposa 100m":59.53,"Mariposa 200m":138.11,"Combinado 200m":142.23,"Combinado 400m":306.2},
+    "18-20": {"Libre 50m":24.85,"Libre 100m":54.2,"Libre 200m":120.32,"Libre 400m":261.44,"Libre 800m":553.77,"Libre 1500m":1056.24,"Espalda 50m":28.23,"Espalda 100m":62.68,"Espalda 200m":140.51,"Pecho 50m":31.86,"Pecho 100m":70.16,"Pecho 200m":156.6,"Mariposa 50m":26.5,"Mariposa 100m":59.07,"Mariposa 200m":136.73,"Combinado 200m":137.74,"Combinado 400m":304.17},
+    "mayores": {"Libre 50m":24.46,"Libre 100m":54.04,"Libre 200m":117.66,"Libre 400m":260.58,"Libre 800m":548.23,"Libre 1500m":1045.68,"Espalda 50m":27.95,"Espalda 100m":62.05,"Espalda 200m":139.1,"Pecho 50m":31.38,"Pecho 100m":69.46,"Pecho 200m":155.03,"Mariposa 50m":26.13,"Mariposa 100m":58.36,"Mariposa 200m":135.39,"Combinado 200m":136.36,"Combinado 400m":302.14},
   },
 };
 const NAC_CATS = ['10','11','12','13','14','15','16-17','18-20','mayores'];
@@ -1857,6 +1862,9 @@ function tvMyEvents(events, who){ const out=[]; if(!who) return out; (events||[]
 // La prueba ya tiene resultados pero esta fila todavía no: la página no ha cargado su tiempo (pasa en colombiaacuatica).
 // No es "por nadar" ni "no se presentó" → "sin tiempo publicado", y se sigue leyendo.
 function tvSinTiempo(e,r){ return !!(e&&r&&!r.finals&&!r.status&&(e.rows||[]).some(x=>x.finals||x.status)); }
+// Categoría de varios años sin edad exacta (colombiaacuatica): "Junior 18-20" → 18, "21+" → 21, "Juvenil B 16-17" → 16.
+// Solo desde 14 años (ahí la mínima es la misma para todo el rango); "10+" o "12-13" no se adivinan.
+function tvCatAge(c){ const m=String(c||'').match(/(\d+)\s*-\s*\d+$|(\d+)\+$/); if(!m) return null; const a=+(m[1]||m[2]); return a>=14?a:null; }
 function tvStyleKey(label){ const m=(label||'').match(/(\d+)\s*m?\s+(.+)/i); if(!m) return null; const dist=m[1]; let st=m[2].trim(); const map=[['Libre','Libre'],['Free','Libre'],['Espalda','Espalda'],['Back','Espalda'],['Pecho','Pecho'],['Breast','Pecho'],['Mariposa','Mariposa'],['Butter','Mariposa'],['Combinado','Combinado'],['Medley','Combinado']]; for(const [k,v] of map){ if(new RegExp(k,'i').test(st)){ st=v; break; } } return st+' '+dist+'m'; }
 const TV_CAT=[12,13]; // Infantil B (mujeres)
 function tvCronoCardsHtml(events, club, who){
@@ -1983,7 +1991,7 @@ function renderEventBody(e,club,who,hasF){
         cells='<td class="time '+c+'">'+tvEsc(r.finals||'—')+'</td><td class="time '+c+'" style="font-size:11px;font-weight:700">'+(dl?dl.txt:'')+'</td>';
       }
       if(showNat){
-        const tgt=nacTarget(e.gender,r.age,styleKey), fs=tvSecs(r.finals);
+        const tgt=nacTarget(e.gender,r.age!=null?r.age:tvCatAge(r.cat),styleKey), fs=tvSecs(r.finals);
         if(tgt==null||!r.finals||!isFinite(fs)) cells+='<td class="time" style="color:var(--text3)">—</td>';
         else if(fs<=tgt+0.005) cells+='<td class="time" style="color:#16a34a;font-weight:800;white-space:nowrap" title="mínima '+formatTime(tgt)+'">✓ Logró</td>';
         else cells+='<td class="time" style="color:#dc2626;font-weight:700;white-space:nowrap" title="mínima '+formatTime(tgt)+'">✗ +'+(fs-tgt).toFixed(2)+'s</td>';
@@ -2366,10 +2374,10 @@ function renderObligMetas(){
       +(note?'<div style="font-size:11.5px;color:var(--text3);margin-bottom:8px">'+note+'</div>':'')
       +'<div class="table-wrap"><table class="om-tbl"><thead><tr><th>Prueba</th><th>Tu mejor</th><th>'+ageNow+' años</th><th>'+ageNext+' años</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
   }
-  const ligaNote=(LIGA_BOG[sex] && !LIGA_BOG[sex][catNow]) ? ('Liga Bogotá aplica desde los 14 años (a los '+ageNow+' no hay mínima de Liga).') : '';
+  const ligaNote='Tabla vigente: Selección Bogotá 2026 (Circular 04-2026 de la Liga).'+((LIGA_BOG[sex] && !LIGA_BOG[sex][catNow]) ? (' Aplica desde los 14 años (a los '+ageNow+' no hay mínima de Liga).') : '');
   const html =
-      card('🇨🇴 Mínima FECNA (Nacional)', NAC_DEFAULT, 'Femenino · la marca que hay que cumplir en el año. Se muestran '+ageNow+' y '+ageNext+' años para apuntar más fuerte.')
-    + card('🏙️ Mínima Liga Bogotá', LIGA_BOG, ligaNote);
+      card('🇨🇴 Mínima FECNA 2026 (Nacional)', NAC_DEFAULT, 'Femenino · la marca que hay que cumplir en el año. Tabla vigente: Infantiles 2026 (10-13 años) e Interclubes 2026 (14+), de las convocatorias FECNA. Se muestran '+ageNow+' y '+ageNext+' años para apuntar más fuerte.')
+    + card('🏙️ Mínima Liga Bogotá 2026', LIGA_BOG, ligaNote);
   hosts.forEach(h=>{ h.innerHTML=html; });
 }
 function renderGoals() {
