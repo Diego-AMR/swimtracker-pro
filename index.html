@@ -3301,10 +3301,13 @@ function idealSplits50(styleKey,totalSec,nSeg){
 }
 // Recuadro del perfil (también lo usa el conteo por estilo)
 function anKpi(ic, v, lb, sub) { return `<div class="an-kpi"><span class="an-kpi-ic">${ic}</span><div><div class="an-kpi-v">${v}</div><div class="an-kpi-l">${lb}</div>${sub ? `<div class="an-kpi-s">${sub}</div>` : ''}</div></div>`; }
-// Conteo del perfil para un estilo: competencias y registros de ESE estilo en todos los años (el filtro de año no lo toca)
-function anCuenta(style) { const el = document.getElementById('an-cuenta'); if (!el || !currentAnalysis) return;
+// Conteo del perfil para un estilo: COMPETENCIAS = de ese estilo en todos los años (el año no las cambia);
+// REGISTROS = de ese estilo en el año elegido (o en todos los años)
+function anCuenta(style, year) { const el = document.getElementById('an-cuenta'); if (!el || !currentAnalysis) return;
   const recs = (currentAnalysis.style_analysis[style] || {}).records || [];
-  el.innerHTML = anKpi('🏆', new Set(recs.map(r => r.tournament_id)).size, 'Competencias', style) + anKpi('⏱️', recs.length, 'Registros', style); }
+  const delAnio = year && year !== 'all' ? recs.filter(r => (r.tournament_date || '').startsWith(year)) : recs;
+  el.innerHTML = anKpi('🏆', new Set(recs.map(r => r.tournament_id)).size, 'Competencias', style + ' · todos los años')
+    + anKpi('⏱️', delAnio.length, 'Registros', style + ' · ' + (year && year !== 'all' ? year : 'todos los años')); }
 // Mínimas obligadas de la nadadora (FECNA + Liga) para la edad de este año y la del siguiente; solo las que EXISTEN
 // (la Liga arranca en 14 años: a los 13 no sale, y cuando cumple 14 aparece sola).
 function anMinimas(style) {
@@ -3324,9 +3327,9 @@ function showStyleAnalysis(style, year) {
   const all = currentAnalysis.style_analysis[style];
   if (!all) return;
   _anStyle = style; _anYear = year || 'all';   // al elegir el estilo siempre arranca en "Todos los años"
-  anCuenta(style);
   const years = [...new Set(all.records.map(r => (r.tournament_date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
   if (_anYear !== 'all' && !years.includes(_anYear)) _anYear = 'all';
+  anCuenta(style, _anYear);
   const a = _anYear === 'all' ? all : styleStats(style, all.records.filter(r => (r.tournament_date || '').startsWith(_anYear)));
   const enAnio = _anYear === 'all' ? '' : ' · ' + _anYear;
   const yrBar = `<div class="yr-bar"><span class="yr-lbl">Año:</span>`
