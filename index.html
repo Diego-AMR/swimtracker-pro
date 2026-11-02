@@ -1673,16 +1673,25 @@ function getAge(birthdate) {
   const diff = Date.now() - new Date(birthdate).getTime();
   return Math.floor(diff / (1000*60*60*24*365.25));
 }
+// EDAD FECNA = la que cumple en el año (año actual − año de nacimiento), sin importar el mes: con ella salen la
+// categoría y las mínimas. Si no coincide con la edad exacta de hoy, se aclara ("14 años FECNA · cumple el 15 dic").
+function fecnaEdad(birthdate) { if (!birthdate) return null; return new Date().getFullYear() - +String(birthdate).slice(0, 4); }
+function edadTxt(birthdate) {
+  const fe = fecnaEdad(birthdate), ex = getAge(birthdate); if (fe == null) return '';
+  if (ex === fe) return fe + ' años';
+  const d = new Date(String(birthdate).slice(0, 10) + 'T12:00:00');
+  return fe + ' años FECNA · cumple el ' + d.getDate() + ' ' + ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'][d.getMonth()];
+}
 function getCategory(birthdate) {
-  const age = getAge(birthdate);
-  if (!age) return 'Sin categoría';
+  const age = fecnaEdad(birthdate);
+  if (!age || age < 1) return 'Sin categoría';
   if (age < 10) return 'Menores (- 10)';
   if (age <= 11) return 'Infantil A (10-11)';
   if (age <= 13) return 'Infantil B (12-13)';
   if (age <= 15) return 'Juvenil A (14-15)';
   if (age <= 17) return 'Juvenil B (16-17)';
-  if (age <= 19) return 'Junior (18-19)';
-  return 'Mayores (20+)';
+  if (age <= 20) return 'Junior (18-20)';
+  return 'Mayores (21+)';
 }
 function calcIMC(w, h) {
   if (!w || !h) return null;
@@ -2005,12 +2014,11 @@ function renderSwimmers() {
   if (!swimmers.length) { grid.innerHTML = ''; empty.style.display = ''; return; }
   empty.style.display = 'none';
   grid.innerHTML = swimmers.map(s => {
-    const age = getAge(s.birthdate);
     const cat = getCategory(s.birthdate);
     return `<div class="swimmer-card" onclick="openSwimmerProfile('${s.id}')">
       <div class="swimmer-avatar">${s.photo ? `<img src="${s.photo}">` : '🏊'}</div>
       <div class="swimmer-name">${s.name}</div>
-      <div class="swimmer-meta">${age ? age+' años' : ''}</div>
+      <div class="swimmer-meta">${edadTxt(s.birthdate)}</div>
       <div class="category-badge">${cat}</div>
     </div>`;
   }).join('');
@@ -2022,7 +2030,7 @@ function openSwimmerProfile(id) {
   if (!s) return;
   currentProfileId = id;
   const recs = timesRaw.filter(r => String(r.swimmer_id) === String(id) && r.time_seconds > 0);
-  const age = getAge(s.birthdate), cat = getCategory(s.birthdate);
+  const cat = getCategory(s.birthdate);
 
   const measuresStr = [
     s.weight ? `${s.weight} kg` : null,
@@ -2069,7 +2077,7 @@ function openSwimmerProfile(id) {
       <div class="pf-photo">${s.photo ? `<img src="${s.photo}">` : '🏊'}</div>
       <div>
         <div class="pf-name">${s.name}</div>
-        <div class="pf-sub">${age ? age + ' años · ' : ''}${cat}</div>
+        <div class="pf-sub">${s.birthdate ? edadTxt(s.birthdate) + ' · ' : ''}${cat}</div>
         <div class="pf-measures">${measuresStr || 'Sin medidas registradas'}</div>
         ${remind}
       </div>
@@ -3285,7 +3293,6 @@ function renderAnalysis(data) {
   document.getElementById('analysis-content').style.display = '';
   document.getElementById('analysis-empty').style.display = 'none';
   const { swimmer, style_analysis, total_records, total_competitions } = data;
-  const age = getAge(swimmer.birthdate);
   const cat = getCategory(swimmer.birthdate);
   const imc = calcIMC(swimmer.weight, swimmer.height);
   // PERFIL de lado a lado (antes subpestaña Resumen); la explicación del IMC va en el ⓘ (mouse o toque)
@@ -3296,7 +3303,7 @@ function renderAnalysis(data) {
       <div class="swimmer-avatar" style="width:64px;height:64px;font-size:30px;flex-shrink:0">${swimmer.photo ? `<img src="${swimmer.photo}">` : '🏊'}</div>
       <div style="flex:1;min-width:160px">
         <div style="font-family:var(--font-head);font-size:24px;letter-spacing:1px;line-height:1.1">${swimmer.name}</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${swimmer.fecna ? '<span class="fecna-tag" style="margin-top:0">FECNA · solo lectura</span>' : ''}${age ? `<span style="color:var(--text3);font-size:13px">${age} años</span>` : ''}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${swimmer.fecna ? '<span class="fecna-tag" style="margin-top:0">FECNA · solo lectura</span>' : ''}${swimmer.birthdate ? `<span style="color:var(--text3);font-size:13px">${edadTxt(swimmer.birthdate)}</span>` : ''}</div>
       </div>
       <div class="an-kpis">
         <span id="an-cuenta" style="display:contents">${kpi('🏆', total_competitions, 'Competencias', 'todos los estilos')}${kpi('⏱️', total_records, 'Registros', 'todos los estilos')}</span>
@@ -3356,12 +3363,12 @@ function renderFecnaVistos() {
   const el = document.getElementById('fecna-sec'); if (!el) return;
   if (!fecnaVistos.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="section-title" style="margin-top:22px">🔍 Nadadores FECNA <span style="font-weight:400;color:var(--text3);font-size:11px">— solo lectura, datos de la base FECNA</span></div>
-    <div class="swimmer-grid">${fecnaVistos.map(f => { const age = getAge(f.nac);
+    <div class="swimmer-grid">${fecnaVistos.map(f => {
       return `<div class="swimmer-card" onclick="verFecna('${f.id}')" style="position:relative">
         <button class="fecna-x" title="Quitar de la lista (no borra nada de la FECNA)" onclick="event.stopPropagation();quitarFecna('${f.id}')">✕</button>
         <div class="swimmer-avatar">🏊</div>
         <div class="swimmer-name">${fecnaNombre(f.nombre)}</div>
-        <div class="swimmer-meta">${age ? age + ' años' : '—'} · ${f.genero === 'M' ? 'Masculino' : 'Femenino'}</div>
+        <div class="swimmer-meta">${f.nac ? edadTxt(f.nac) : '—'} · ${f.genero === 'M' ? 'Masculino' : 'Femenino'}</div>
         <div class="category-badge">${getCategory(f.nac)}</div>
         <div><span class="fecna-tag">FECNA</span></div>
       </div>`; }).join('')}</div>`;
@@ -3378,9 +3385,9 @@ async function buscarFecna() {
     if (document.getElementById('fecna-q').value.trim() !== q) return;   // ya escribió otra cosa
     if (!nadadores.length) { out.innerHTML = '<div class="fecna-hint">No hay nadadores de Narvales con ese nombre en la base FECNA.</div>'; return; }
     _fecnaRes = nadadores;
-    out.innerHTML = nadadores.map((n, i) => { const ya = fecnaVistos.some(f => String(f.id) === String(n.id)), age = getAge(n.nac);
+    out.innerHTML = nadadores.map((n, i) => { const ya = fecnaVistos.some(f => String(f.id) === String(n.id));
       return `<div class="fecna-row"><div style="flex:1;min-width:0"><div style="font-weight:700">${fecnaNombre(n.nada)}</div>
-        <div class="fecna-sub">${n.nac ? n.nac.slice(0, 4) : '—'} · ${age ? age + ' años · ' + getCategory(n.nac) : '—'} · ${n.genero === 'M' ? 'M' : 'F'} · ${n.marcas} marcas · última ${n.ultima || '—'}</div></div>
+        <div class="fecna-sub">${n.nac ? n.nac.slice(0, 4) : '—'} · ${n.nac ? edadTxt(n.nac) + ' · ' + getCategory(n.nac) : '—'} · ${n.genero === 'M' ? 'M' : 'F'} · ${n.marcas} marcas · última ${n.ultima || '—'}</div></div>
         ${ya ? '<span class="fecna-sub">✓ ya está</span>' : `<button class="btn btn-primary btn-sm" onclick="agregarFecna(${i})">Agregar</button>`}</div>`; }).join('');
   } catch (e) { out.innerHTML = '<div class="fecna-hint" style="color:var(--red)">⚠️ ' + e.message + '</div>'; }
 }
@@ -3771,7 +3778,7 @@ async function exportPDF() {
     <div style="flex:1">
       <div style="font-size:22px;font-weight:800;color:#1c2d3e">${swimmer.name}</div>
       <span style="background:#1c3050;color:white;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700">${cat}</span>
-      ${getAge(swimmer.birthdate) ? `<span style="color:#4a627a;font-size:12px;margin-left:8px">${getAge(swimmer.birthdate)} años</span>` : ''}
+      ${swimmer.birthdate ? `<span style="color:#4a627a;font-size:12px;margin-left:8px">${edadTxt(swimmer.birthdate)}</span>` : ''}
     </div>
     <div style="display:flex;gap:10px">
       ${[['🏆',total_competitions,'Competencias'],['⏱️',total_records,'Registros']].map(([ic,v,lb])=>`
