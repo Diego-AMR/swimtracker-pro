@@ -275,9 +275,6 @@ tr:last-child td { border-bottom:none; }
 .info-tip .tipbox strong { color:#fff; }
 .info-tip:hover .tipbox, .info-tip:focus .tipbox { display:block; }
 /* Análisis → Por estilo: metas, 5 tarjetas iguales, último vs penúltimo */
-table.an-metas { width:100%; border-collapse:collapse; font-size:13px; }
-table.an-metas th { padding:8px 10px; background:var(--bg3); border-bottom:2px solid var(--border); font-size:11px; text-transform:uppercase; text-align:center; color:var(--text3); white-space:nowrap; }
-td.an-mc { padding:8px 10px; text-align:center; white-space:nowrap; }
 .an-sub { font-size:10px; color:var(--text3); font-weight:600; text-transform:none; }
 .an-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; }
 .an-card { padding:12px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg3); }
@@ -285,50 +282,20 @@ td.an-mc { padding:8px 10px; text-align:center; white-space:nowrap; }
 .an-card .v { font-family:var(--font-head); font-size:20px; letter-spacing:.5px; margin-top:4px; }
 .an-card .s { font-size:11px; color:var(--text3); margin-top:3px; line-height:1.35; }
 @media (max-width:560px){ .an-cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .an-card { padding:10px 11px; } .an-card .v { font-size:18px; } }
-.an-trend { font-size:12px; color:var(--text2); margin:8px 0 12px; }
-.an-lvp { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 14px; border:1px solid var(--border); border-radius:var(--radius); background:var(--bg3); font-size:13px; }
-.an-lvp-t { font-weight:700; color:var(--text); margin-right:4px; }
-.an-lvp-d { font-weight:800; padding:3px 10px; border-radius:20px; }
-/* Sub-pestañas de Análisis */
-.asub-bar { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:22px; border-bottom:2px solid var(--border); }
-.asub-tab { padding:10px 18px; font-size:13.5px; font-weight:600; color:var(--text3); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all 0.2s; white-space:nowrap; }
-.asub-tab:hover { color:var(--cyan); }
-.asub-tab.active { color:var(--cyan); border-bottom-color:var(--cyan); }
-/* ✨ Mi Potencial (interactivo) */
+.an-card.ok { background:rgba(26,138,69,0.08); border-color:rgba(26,138,69,0.35); }
+.an-card.no { background:rgba(217,48,37,0.06); border-color:rgba(217,48,37,0.30); }
+/* barrita de Último vs penúltimo: centro = igual; verde a la derecha = bajó; roja a la izquierda = subió */
+.an-bar { position:relative; height:8px; background:var(--bg2); border:1px solid var(--border); border-radius:5px; margin-top:8px; overflow:hidden; }
+.an-bar::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:1px; background:var(--text3); opacity:.5; }
+.an-bar span { position:absolute; top:0; bottom:0; border-radius:4px; }
+/* Potencial: fila delgada con las distancias de la familia */
+.pot-strip { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:2px 0 12px; font-size:12px; color:var(--text3); }
+.pot-strip b { color:var(--cyan); }
+.pot-chip { border:1px solid var(--border); border-left:4px solid var(--border); border-radius:8px; padding:4px 9px; background:var(--bg3); font-size:12px; cursor:pointer; font-family:inherit; color:var(--text); }
+.pot-chip b { color:var(--text); }
+.pot-chip.on { outline:2px solid var(--cyan); background:rgba(26,111,196,0.08); cursor:default; }
 .pot-desc{ font-size:12.5px;color:var(--text3);line-height:1.65;margin-bottom:14px; }
-.pot-pills{ display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px; }
-.pot-pill{ padding:8px 16px;border-radius:22px;border:2px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s; }
-.pot-pill:hover{ border-color:var(--cyan);color:var(--cyan); }
-.pot-pill.active{ background:var(--cyan);border-color:var(--cyan);color:#fff; }
-.pot-level{ font-size:12.5px;color:var(--text3);margin-bottom:12px; }
-.pot-level b{ color:var(--cyan); }
-.pot-row{ background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;gap:14px;align-items:center; }
-.pot-dist{ font-family:var(--font-head);font-size:19px;color:var(--text);min-width:58px;letter-spacing:.5px; }
-.pot-body{ flex:1;min-width:0; }
-.pot-times{ display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--text3);margin-bottom:6px; }
-.pot-times b{ color:var(--text);font-family:var(--font-head);font-size:15px;letter-spacing:.3px; }
-.pot-track{ height:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden; }
-.pot-fill{ height:100%;border-radius:8px;transition:width .6s cubic-bezier(.22,.61,.36,1); }
-.pot-foot{ display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;flex-wrap:wrap; }
-.pot-pct{ font-weight:800; }
-.pot-ctx{ color:var(--text3); }
-@media(max-width:560px){ .pot-row{ flex-direction:column;align-items:stretch;gap:8px; } }
-.pot-group{ margin-bottom:18px; }
-.pot-grid{ display:grid;grid-template-columns:repeat(3,1fr);gap:12px; }
-@media(max-width:620px){ .pot-grid{ grid-template-columns:repeat(2,1fr);} }
-@media(max-width:380px){ .pot-grid{ grid-template-columns:1fr;} }
-.pot-tile{ background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--border);border-radius:12px;padding:12px 13px;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s; }
-.pot-tile:hover{ transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--cyan); }
-.pot-tile-top{ display:flex;justify-content:space-between;align-items:baseline;gap:6px; }
-.pot-tile-d{ font-family:var(--font-head);font-size:17px;color:var(--text);letter-spacing:.3px; }
-.pot-tile-pct{ font-weight:800;font-size:14px; }
-.pot-tile-m{ font-size:12.5px;color:var(--text2);margin-top:6px; }
-.pot-tile-m b{ color:var(--text);font-family:var(--font-head);font-size:15px; }
-.pot-tile-s{ font-size:11px;color:var(--text3);margin-top:2px; }
-.pot-tile-tap{ font-size:10px;color:var(--cyan);margin-top:7px;font-weight:600; }
 .pot-detail-panel{ background:var(--bg2);border:1px solid var(--cyan);border-radius:12px;padding:14px 16px;margin-bottom:16px; }
-.pot-dtl-head{ display:flex;justify-content:space-between;align-items:center;font-family:var(--font-head);font-size:17px;color:var(--cyan);margin-bottom:8px; }
-.pot-dtl-x{ background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:28px;height:28px;font-size:16px;color:var(--text2);cursor:pointer; }
 .pot-dtl-top{ font-size:13px;color:var(--text2);margin-bottom:10px; } .pot-dtl-top b{ color:var(--text);font-family:var(--font-head); }
 .pot-dtl-sec{ font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin:6px 0; }
 .pot-dtl-ctx{ font-size:11.5px;color:var(--text3);margin-top:10px; }
@@ -876,13 +843,7 @@ td.an-mc { padding:8px 10px; text-align:center; white-space:nowrap; }
   <div id="analysis-content" style="display:none">
     <!-- PERFIL del nadador, siempre arriba (antes subpestaña Resumen) -->
     <div class="card" id="analysis-profile" style="margin-bottom:16px;padding:16px 18px"></div>
-    <div class="asub-bar">
-      <div class="asub-tab active" data-asec="estilo" onclick="switchAnalysisSection('estilo')">🏊 Por Estilo</div>
-      <div class="asub-tab" data-asec="ritmo" onclick="switchAnalysisSection('ritmo')">🚀 Ritmo Objetivo</div>
-      <div class="asub-tab" data-asec="potencial" onclick="switchAnalysisSection('potencial')">✨ Potencial</div>
-    </div>
-
-    <!-- SECCIÓN: POR ESTILO (metas, tarjetas, último vs penúltimo, evolución y parciales del estilo; filtro por año) -->
+    <!-- POR ESTILO: única vista de Análisis (tarjetas, evolución, parciales, ritmo objetivo y potencial del estilo; filtro por año) -->
     <div class="asec" id="asec-estilo">
       <div class="card" style="margin-bottom:24px">
         <div class="section-title">🏊 Análisis por Estilo</div>
@@ -891,20 +852,6 @@ td.an-mc { padding:8px 10px; text-align:center; white-space:nowrap; }
       </div>
     </div>
 
-    <!-- SECCIÓN: RITMO OBJETIVO -->
-    <div class="asec" id="asec-ritmo" style="display:none">
-      <div class="card">
-        <div class="section-title">🚀 Ritmo Objetivo por Parcial (50m)</div>
-        <div style="font-size:12.5px;color:var(--text3);margin-bottom:16px">Elige una meta y un margen de seguridad. Te calculo el <strong>ritmo que debes mantener en cada largo</strong> para llegar a la meta (menos el margen), tanto si entrenas en <strong>piscina de 50&nbsp;m</strong> como de <strong>25&nbsp;m</strong>. La «ventaja de salida» solo aplica a estilos que salen del partidor (Libre, Pecho, Mariposa); en Espalda se ignora. Combinado no se incluye.</div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px">
-          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Meta</div><select class="form-select" id="ritmo-goal" onchange="renderRitmo()" style="max-width:220px"></select></div>
-          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Margen por debajo (%)</div><input class="form-input" id="ritmo-pct" type="number" value="5" min="0" max="30" step="0.5" oninput="renderRitmo()" style="max-width:140px"></div>
-          <div><div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">Ventaja de salida (s)</div><input class="form-input" id="ritmo-dive" type="number" value="0" min="0" step="0.5" oninput="renderRitmo()" style="max-width:140px"></div>
-        </div>
-        <div id="ritmo-content"></div>
-      </div>
-    </div>
-    <div class="asec" id="asec-potencial" style="display:none"><div id="potencial-content"></div></div>
   </div>
   <div id="analysis-empty" class="empty-state">
     <div class="empty-icon">📊</div>
@@ -1666,7 +1613,6 @@ let currentEditId = null, currentPhotoData = null, currentAnalysis = null;
 let chronoRunning = false, chronoInterval = null, chronoStartTime = 0, chronoElapsed = 0;
 let parciales = [], parcialesBase = 0;
 let analysisCharts = {}, activeGoalLines = {};
-let currentAnalysisSection = 'estilo';
 let compPlans = {}, routine = {}, currentCompTid = '';
 const DEFAULT_ROUTINE = { wake:'08:30', sleep:'23:00', breakfast:'08:45', snackam:'10:30', lunch:'12:30', snackpm:'15:45', dinner:'21:45' };
 
@@ -2793,7 +2739,7 @@ function renderTimes() {
       </div>`;
     }).join('');
     const best = Math.min(...rs.map(r => r.time_seconds));
-    return `<details class="tgroup"${_timesOpenStyles.has(st) ? ' open' : ''} ontoggle="tgToggle(this,'${st}')">
+    return `<details class="tgroup"${_timesOpenStyles.has(st) ? ' open' : ''} ontoggle="window.tgToggle && tgToggle(this,'${st}')">
       <summary><span>🏊 ${st}</span><span class="tg-count">${rs.length} reg. · ${unAnio ? 'mejor del año' : 'mejor'} ${formatTime(best)}</span></summary>
       ${rows}
     </details>`;
@@ -3301,89 +3247,6 @@ function chartOptions(label) {
     }
   };
 }
-// ✨ "Mi Potencial" — interactivo (pills por estilo + tarjetas por distancia)
-let _potData={};
-function closePotDetail(){ const p=document.getElementById('pot-detail-panel'); if(p){ p.style.display='none'; p.innerHTML=''; } }
-function openPotDetail(sk){
-  const r=_potData[sk], panel=document.getElementById('pot-detail-panel'); if(!r||!panel) return;
-  const nSeg=r.dist?Math.max(1,Math.round(r.dist/50)):1;
-  const ideaP=(r.pot!=null && typeof idealSplits50==='function')?idealSplits50(sk,r.pot,nSeg):null;
-  const ideaM=(r.min!=null && typeof idealSplits50==='function')?idealSplits50(sk,r.min,nSeg):null;
-  let pctTxt=''; if(r.marca!=null&&r.pot!=null){ const d=(r.marca-r.pot)/r.pot*100; pctTxt= d<=0.05?('✨ '+Math.abs(d).toFixed(1)+'% por debajo'):('+'+d.toFixed(1)+'% · faltan '+formatTime(r.marca-r.pot)); }
-  let h='<div class="pot-dtl-head"><span>'+r.stroke+' '+r.label+'</span><button class="pot-dtl-x" onclick="closePotDetail()">×</button></div>'
-    +'<div class="pot-dtl-top">Tu marca <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b> · Potencial <b>'+(r.pot!=null?formatTime(r.pot):'—')+'</b>'+(pctTxt?' · '+pctTxt:'')+'</div>';
-  if(ideaP||ideaM||r.splits){
-    h+='<div class="pot-dtl-sec">Parciales (cada 50 m)</div><div class="table-wrap"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Tramo</th>'+(r.splits?'<th style="text-align:center">Tu último</th>':'')+(ideaP?'<th style="text-align:center">Ideal · potencial</th>':'')+(ideaM?'<th style="text-align:center">Ideal · mínima</th>':'')+'</tr></thead><tbody>';
-    for(let i=0;i<nSeg;i++){ h+='<tr><td>'+((i+1)*50)+' m</td>'+(r.splits?'<td style="text-align:center">'+(r.splits[i]!=null?r.splits[i].toFixed(2):'—')+'</td>':'')+(ideaP?'<td style="text-align:center">'+ideaP[i].toFixed(2)+'</td>':'')+(ideaM?'<td style="text-align:center">'+ideaM[i].toFixed(2)+'</td>':'')+'</tr>'; }
-    h+='</tbody></table></div>';
-  } else h+='<div style="color:var(--text3);font-size:12.5px;margin-top:6px">Esta prueba no tiene parciales para mostrar.</div>';
-  const ctx=[]; if(r.up!=null)ctx.push('desde velocidad ↑ '+formatTime(r.up)); if(r.dn!=null)ctx.push('desde fondo ↓ '+formatTime(r.dn)); if(r.min!=null)ctx.push('mín FECNA '+formatTime(r.min));
-  if(ctx.length) h+='<div class="pot-dtl-ctx">'+ctx.join(' · ')+'</div>';
-  panel.innerHTML=h; panel.style.display=''; panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-function renderPotencial(){
-  const host=document.getElementById('potencial-content'); if(!host) return;
-  const sa=(currentAnalysis&&currentAnalysis.style_analysis)||{};
-  const best=st=>(sa[st]&&sa[st].best!=null)?sa[st].best:null;
-  const STR=[
-    {name:'Libre',steps:[['Libre 50m',50],['Libre 100m',100],['Libre 200m',200],['Libre 400m',400],['Libre 800m',800],['Libre 1500m',1500]]},
-    {name:'Espalda',steps:[['Espalda 50m',50],['Espalda 100m',100],['Espalda 200m',200]]},
-    {name:'Pecho',steps:[['Pecho 50m',50],['Pecho 100m',100],['Pecho 200m',200]]},
-    {name:'Mariposa',steps:[['Mariposa 50m',50],['Mariposa 100m',100],['Mariposa 200m',200]]},
-    {name:'Combinado',steps:[['Combinado 200m',200],['Combinado 400m',400]]}
-  ];
-  const UP={50:[2,5],100:[2,10],200:[2,12.5],400:[2,15],800:[1.875,20]}, DN={1500:[8/15,10.67],800:[.5,7.5],400:[.5,6.25],200:[.5,5],100:[.5,2.5]};
-  function proj(steps){ const real={}; steps.forEach(([k,d])=>{const b=best(k); if(b!=null) real[d]=b;});
-    const dists=steps.map(s=>s[1]), have=dists.filter(d=>real[d]!=null); if(!have.length) return null;
-    const lo=Math.min(...have),hi=Math.max(...have),up={},dn={};
-    up[lo]=real[lo]; for(let i=dists.indexOf(lo)+1;i<dists.length;i++){ const pd=dists[i-1],[m,ad]=UP[pd]; up[dists[i]]=up[pd]*m+ad; }
-    dn[hi]=real[hi]; for(let i=dists.indexOf(hi)-1;i>=0;i--){ const nd=dists[i+1],[m,s]=DN[nd]; dn[dists[i]]=dn[nd]*m-s; }
-    return {up,dn,real,lo,hi};
-  }
-  // datos: tiempos base FINA (1000 pts, oficiales) + mínima FECNA de su categoría
-  const FINA_REF={ 'Libre 50m':23.67,'Libre 100m':51.71,'Libre 200m':112.98,'Libre 400m':236.40,'Libre 800m':484.79,'Libre 1500m':920.48,
-    'Espalda 50m':26.98,'Espalda 100m':57.45,'Espalda 200m':123.35,'Pecho 50m':29.30,'Pecho 100m':64.13,'Pecho 200m':138.95,
-    'Mariposa 50m':24.43,'Mariposa 100m':55.48,'Mariposa 200m':121.81,'Combinado 200m':126.12,'Combinado 400m':266.36 };
-  const finaPts=(t,ref)=>1000*Math.pow(ref/t,3);
-  const _swP=(currentAnalysis&&currentAnalysis.swimmer), _byP=(_swP&&_swP.birthdate)?new Date(_swP.birthdate).getFullYear():(new Date().getFullYear()-13);
-  const _catP=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byP):null;
-  const FEC=((typeof NAC_DEFAULT!=='undefined'&&NAC_DEFAULT.F&&_catP)?NAC_DEFAULT.F[_catP]:null)||{};
-  const splitRec=(st)=>{ const rs=(timesRaw||[]).filter(r=>r.style===st && r.splits && r.splits.length); return rs.length? rs.reduce((a,b)=>a.time_seconds<b.time_seconds?a:b) : null; };
-  _potData={}; const blocks=[];
-  STR.forEach(({name,steps})=>{
-    const P=proj(steps), fh=steps.filter(([k])=>best(k)!=null&&FINA_REF[k]);
-    if(!fh.length && !P) return;
-    const gAvg=fh.length?fh.reduce((s,[k])=>s+finaPts(best(k),FINA_REF[k]),0)/fh.length:null;
-    const rows=steps.map(([k,d])=>{ const sr=splitRec(k);
-      const o={ sk:k, stroke:name, label:k.replace(name+' ',''), dist:d, marca:best(k),
-        pot:(gAvg&&FINA_REF[k])?FINA_REF[k]*Math.pow(1000/gAvg,1/3):null,
-        up:P?P.up[d]:null, dn:P?P.dn[d]:null, min:(FEC[k]!=null?FEC[k]:null),
-        splits: sr? sr.splits.map(s=>s.split_time):null };
-      _potData[k]=o; return o; });
-    blocks.push({name, gAvg, rows});
-  });
-  if(!blocks.length){ host.innerHTML='<div class="empty-state"><div class="empty-icon">✨</div><p>Aún no hay suficientes marcas por estilo.</p></div>'; return; }
-  function tileHtml(r){
-    let pctTxt='sin marca', hue=null, sub='objetivo '+(r.pot!=null?formatTime(r.pot):'—');
-    if(r.marca!=null && r.pot!=null){ const d=(r.marca-r.pot)/r.pot*100; hue=120*(1-Math.min(Math.max(0,d)/3,1)); pctTxt=(d<=0.05?'−'+Math.abs(d).toFixed(1):'+'+d.toFixed(1))+'%'; sub='ideal '+formatTime(r.pot); }
-    else if(r.marca!=null){ pctTxt='—'; sub='sin referencia'; }
-    const bc=hue!=null?'hsl('+hue.toFixed(0)+',55%,55%)':'var(--border)', tc=hue!=null?'hsl('+hue.toFixed(0)+',55%,36%)':'var(--text3)';
-    return '<div class="pot-tile" style="border-left-color:'+bc+'" onclick="openPotDetail(\''+r.sk+'\')">'
-      +'<div class="pot-tile-top"><span class="pot-tile-d">'+r.label+'</span><span class="pot-tile-pct" style="color:'+tc+'">'+pctTxt+'</span></div>'
-      +'<div class="pot-tile-m">Tu <b>'+(r.marca!=null?formatTime(r.marca):'—')+'</b></div><div class="pot-tile-s">'+sub+'</div>'
-      +'<div class="pot-tile-tap">toca para parciales ›</div></div>';
-  }
-  let h='<div class="card"><div class="section-title">✨ Mi Potencial</div>'
-    +'<div class="pot-desc">En cada distancia, qué tan cerca estás de tu <b>potencial</b> (lo que te corresponde según tu nivel de puntos). El <b>%</b> dice cuánto te falta — o si ya vas <b>por debajo</b> ✨. <b>Toca una tarjeta</b> para ver sus <b>parciales</b>.</div>'
-    +'<div id="pot-detail-panel" class="pot-detail-panel" style="display:none"></div>';
-  blocks.forEach(b=>{
-    const tiles=b.rows.filter(r=>r.marca!=null||r.pot!=null).map(tileHtml).join('');
-    if(!tiles) return;
-    h+='<div class="pot-group"><div class="pot-level">'+b.name+' · nivel '+(b.gAvg?('<b>'+Math.round(b.gAvg)+' pts</b>'):'—')+'</div><div class="pot-grid">'+tiles+'</div></div>';
-  });
-  h+='</div>';
-  host.innerHTML=h;
-}
 function renderAnalysis(data) {
   document.getElementById('analysis-content').style.display = '';
   document.getElementById('analysis-empty').style.display = 'none';
@@ -3415,99 +3278,9 @@ function renderAnalysis(data) {
       <div class="empty-icon" style="font-size:28px">👆</div>
       <p style="font-size:13px">Selecciona un estilo para ver su análisis detallado</p>
     </div>`;
-  // ── Ritmo Objetivo: poblar metas y recalcular ──
-  const _rgsel = document.getElementById('ritmo-goal');
-  if (_rgsel) {
-    const _cur = _rgsel.value;
-    _rgsel.innerHTML = goals.map(g => `<option value="${g.name}">${g.name}</option>`).join('');
-    if (_cur && goals.some(g => g.name === _cur)) _rgsel.value = _cur;
-    renderRitmo();
-  }
-  try{ renderPotencial(); }catch(e){ console.warn('potencial',e); }
-  switchAnalysisSection(['estilo','ritmo','potencial'].includes(currentAnalysisSection) ? currentAnalysisSection : 'estilo');
 }
 
-function switchAnalysisSection(name) {
-  currentAnalysisSection = name;
-  document.querySelectorAll('#tab-analisis .asub-tab').forEach(t => t.classList.toggle('active', t.dataset.asec === name));
-  document.querySelectorAll('#analysis-content .asec').forEach(s => { s.style.display = (s.id === 'asec-' + name) ? '' : 'none'; });
-  Object.values(analysisCharts).forEach(c => { try { c.resize(); } catch(e){} });
-}
 function styleDistance(style) { const m = String(style).match(/(\d+)\s*m/i); return m ? parseInt(m[1], 10) : 0; }
-function renderRitmo() {
-  const content = document.getElementById('ritmo-content');
-  if (!content) return;
-  if (!goals.length) { content.innerHTML = '<p style="color:var(--text3);font-size:13px">No hay metas creadas. Crea una en la pestaña «Metas».</p>'; return; }
-  const gname = document.getElementById('ritmo-goal').value;
-  const g = goals.find(x => x.name === gname) || goals[0];
-  const pct = parseFloat(document.getElementById('ritmo-pct').value) || 0;
-  const dive = parseFloat(document.getElementById('ritmo-dive').value) || 0;
-  const times = g.times || {};
-  const stylesG = Object.keys(times).filter(s => times[s] > 0 && !/^Combinado/i.test(s)).sort((a,b) => ALL_STYLES.indexOf(a) - ALL_STYLES.indexOf(b));
-  if (!stylesG.length) { content.innerHTML = '<p style="color:var(--text3);font-size:13px">Esta meta no tiene tiempos definidos (sin contar Combinado).</p>'; return; }
-  const sa = (currentAnalysis && currentAnalysis.style_analysis) || {};
-  const SEP = 'border-left:2px solid var(--text3)';
-  function poolCell(target, dist, len, effDive) {
-    const seg = Math.max(1, Math.round(dist/len));
-    const avg = target/seg;
-    if (effDive > 0 && seg > 1) {
-      const first = avg - effDive;
-      const rest = (target - first) / (seg - 1);
-      return `<div style="font-family:var(--font-head);font-size:17px;color:var(--teal);letter-spacing:0.5px">${formatTime(rest)}</div>
-        <div style="font-size:10.5px;color:var(--text3);margin-top:2px">1er ${len}: ${formatTime(first)} · resto: ${formatTime(rest)}</div>`;
-    }
-    return `<div style="font-family:var(--font-head);font-size:17px;color:var(--teal);letter-spacing:0.5px">${formatTime(avg)}</div>
-      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${seg} × ${len} m</div>`;
-  }
-  const fmtD = x => (x>0?'+':'−') + Math.abs(x).toFixed(2) + 's';
-  const rows = stylesG.map(style => {
-    const goalT = times[style];
-    const target = goalT * (1 - pct/100);
-    const dist = styleDistance(style) || 50;
-    const isBack = /^Espalda/i.test(style);
-    const effDive = isBack ? 0 : dive;
-    const vel = target > 0 ? (dist / target) : 0;
-    const a = sa[style];
-    const bestCell = (a && a.best != null) ? formatTime(a.best) : '—';
-    const backNote = (isBack && dive > 0) ? ` <span style="font-size:10px;color:var(--text3)">↔ sin salida</span>` : '';
-    // Mejor parcial de 50 m (el más rápido de todas las carreras de ese estilo)
-    let best50 = null;
-    if (a && a.records) a.records.forEach(r => (r.splits||[]).forEach(sp => { if (best50==null || sp.split_time < best50) best50 = sp.split_time; }));
-    const obj50 = target / Math.max(1, Math.round(dist/50));
-    let actualCell, difCell;
-    if (best50 != null) {
-      actualCell = `<div style="font-family:var(--font-head);font-size:17px;letter-spacing:0.5px">${formatTime(best50)}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">25 m: ${formatTime(best50/2)}</div>`;
-      const d50 = best50 - obj50; const d25 = d50/2;
-      const col = d50 > 0.05 ? 'var(--red)' : 'var(--green)';
-      difCell = `<div style="font-family:var(--font-head);font-size:17px;letter-spacing:0.5px;color:${col}">${fmtD(d50)}</div><div style="font-size:10.5px;color:${col};margin-top:2px">25 m: ${fmtD(d25)}</div>`;
-    } else {
-      actualCell = `<span style="color:var(--text3)">—</span><div style="font-size:10px;color:var(--text3)">sin parciales</div>`;
-      difCell = `<span style="color:var(--text3)">—</span>`;
-    }
-    return `<tr>
-      <td style="font-weight:700">${style}${backNote}</td>
-      <td style="text-align:center">${bestCell}</td>
-      <td style="text-align:center">${formatTime(goalT)}</td>
-      <td style="text-align:center;color:var(--cyan);font-weight:700">${formatTime(target)}</td>
-      <td style="text-align:center">${actualCell}</td>
-      <td style="text-align:center">${difCell}</td>
-      <td style="text-align:center;${SEP}">${poolCell(target, dist, 50, effDive)}</td>
-      <td style="text-align:center">${poolCell(target, dist, 25, effDive)}</td>
-      <td style="text-align:center;color:var(--text3)">${vel.toFixed(2)} m/s</td>
-    </tr>`;
-  }).join('');
-  content.innerHTML = `<div class="table-wrap"><table>
-    <thead><tr>
-      <th>Estilo</th><th style="text-align:center">Tu mejor</th><th style="text-align:center">Meta</th>
-      <th style="text-align:center">Objetivo −${pct}%</th>
-      <th style="text-align:center">⏱️ Ritmo actual<br><span style="font-weight:400;font-size:10px;color:var(--text3)">mejor 50 (25 abajo)</span></th>
-      <th style="text-align:center">Δ Diferencia<br><span style="font-weight:400;font-size:10px;color:var(--text3)">para llegar</span></th>
-      <th style="text-align:center;${SEP}">🏊 Piscina 50&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">objetivo por 50</span></th>
-      <th style="text-align:center">🏊 Piscina 25&nbsp;m<br><span style="font-weight:400;font-size:10px;color:var(--text3)">objetivo por 25</span></th>
-      <th style="text-align:center">Velocidad</th>
-    </tr></thead><tbody>${rows}</tbody></table></div>
-    <div style="margin-top:12px;font-size:11.5px;color:var(--text3);line-height:1.6">💡 <strong>Ritmo actual</strong> = tu <strong>mejor parcial de 50&nbsp;m</strong> registrado en ese estilo (el verde en «Por Estilo»). <strong>Diferencia</strong> = cuánto debes bajar por cada 50 para alcanzar el objetivo (<span style="color:var(--red)">rojo</span> = te falta, <span style="color:var(--green)">verde</span> = ya lo superas). A la derecha de la línea están los ritmos <strong>objetivo</strong> a los que debes llegar (piscina 50 y 25) y la velocidad. La <strong>ventaja de salida</strong> solo aplica a Libre/Pecho/Mariposa; en Espalda se ignora. <strong>Combinado</strong> no se incluye.</div>`;
-}
 
 // ── Parciales IDEALES (modelo Mundial Abierto 2019) — % de cada tramo por prueba ──
 const PARC_MODEL = {
@@ -3538,6 +3311,8 @@ function anMinimas(style) {
   return out;
 }
 let _anStyle = null, _anYear = 'all';
+// Análisis → Por estilo (única vista de Análisis desde 2-nov-2026): tarjetas · evolución · parciales · ritmo objetivo · potencial.
+// Todo se calcula con el AÑO elegido (o todos los años).
 function showStyleAnalysis(style, year) {
   document.querySelectorAll('.style-pill').forEach(p => p.classList.toggle('active', p.textContent.trim() === style));
   const all = currentAnalysis.style_analysis[style];
@@ -3546,46 +3321,37 @@ function showStyleAnalysis(style, year) {
   const years = [...new Set(all.records.map(r => (r.tournament_date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
   if (_anYear !== 'all' && !years.includes(_anYear)) _anYear = 'all';
   const a = _anYear === 'all' ? all : styleStats(style, all.records.filter(r => (r.tournament_date || '').startsWith(_anYear)));
-  const enAnio = _anYear === 'all' ? '' : ' de ' + _anYear;
+  const enAnio = _anYear === 'all' ? '' : ' · ' + _anYear;
   const yrBar = `<div class="yr-bar"><span class="yr-lbl">Año:</span>`
     + years.map(y => [y, y]).concat([['all', 'Todos los años']]).map(([k, t]) => `<button class="yr-pill${_anYear === k ? ' on' : ''}" onclick="showStyleAnalysis('${style}','${k}')">${t}</button>`).join('') + `</div>`;
   const mins = anMinimas(style);
-  // ── 🎯 Comparación con metas (antes subpestaña Metas), solo este estilo ──
-  const cell = (mn, col) => { const d = a.best - mn, ok = d <= 0.005;
-    return `<td class="an-mc" style="background:${ok ? 'rgba(26,138,69,0.08)' : 'rgba(217,48,37,0.06)'}"><div style="font-family:var(--font-head);font-size:15px;color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? '✅' : '⏳'} ${formatTime(mn)}</div><div style="font-size:10.5px;font-weight:700;color:${ok ? 'var(--green)' : 'var(--red)'}">${ok ? formatTime(Math.abs(d)) + 's por debajo' : 'faltan ' + formatTime(Math.abs(d)) + 's'}</div></td>`; };
-  const metasCols = mins.map(m => ({ th: `<span style="color:${m.col};font-weight:800">${m.lbl}</span><div class="an-sub">${m.edad} años</div>`, td: cell(m.v) }))
-    .concat(a.goal_comparison.map((g, i) => { const col = GOAL_PALETTE[goals.findIndex(x => x.name === g.goal_name) % GOAL_PALETTE.length] || GOAL_PALETTE[i % GOAL_PALETTE.length];
-      return { th: `<span style="color:${col};font-weight:800">🎯 ${g.goal_name}</span>`, td: cell(g.goal_time) }; }));
-  const metasBox = `<div class="section-title" style="margin-top:4px">🎯 Comparación con metas</div>
-    <div class="table-wrap" style="margin-bottom:14px"><table class="an-metas"><thead><tr><th>Tu mejor${enAnio}</th>${metasCols.map(c => `<th>${c.th}</th>`).join('')}</tr></thead>
-      <tbody><tr><td class="an-mc" style="font-family:var(--font-head);font-size:18px;color:var(--cyan)">${formatTime(a.best)}</td>${metasCols.map(c => c.td).join('')}</tr></tbody></table></div>`;
-  // ── 5 tarjetas del mismo tamaño ──
+  // ── TARJETAS (mismo tamaño; de a dos en el celular) ──
   const n = a.records.length, ult = a.records[n - 1], cv = a.cv != null ? cvLabel(a.cv) : null;
-  const pasado = _anYear !== 'all' && _anYear !== String(new Date().getFullYear());   // con un año ya cerrado no se predice
-  const card = (l, v, col, sub) => `<div class="an-card"><div class="l">${l}</div><div class="v" style="color:${col}">${v}</div><div class="s">${sub || ''}</div></div>`;
+  const card = (l, v, col, sub, cls, extra) => `<div class="an-card${cls ? ' ' + cls : ''}"><div class="l">${l}</div><div class="v" style="color:${col}">${v}</div><div class="s">${sub || ''}</div>${extra || ''}</div>`;
+  let lvpCard;
+  if (n >= 2) { const p = a.records[n - 2], d = p.time_seconds - ult.time_seconds, pct = d / p.time_seconds * 100, ig = Math.abs(d) <= 0.005, w = Math.min(Math.abs(pct) / 3, 1) * 50;
+    lvpCard = card('📊 Último vs penúltimo', ig ? 'igual' : (d > 0 ? '−' : '+') + Math.abs(d).toFixed(2) + ' s', ig ? 'var(--text3)' : d > 0 ? 'var(--green)' : 'var(--red)',
+      `${formatTime(p.time_seconds)} → ${formatTime(ult.time_seconds)}${ig ? '' : ' · ' + (d > 0 ? 'bajó ' : 'subió ') + Math.abs(pct).toFixed(1) + ' %'}`, '',
+      `<div class="an-bar" title="Verde a la derecha = bajó el tiempo · rojo a la izquierda = subió">${ig ? '' : `<span style="${d > 0 ? 'left' : 'right'}:50%;width:${w.toFixed(1)}%;background:${d > 0 ? 'var(--green)' : 'var(--red)'}"></span>`}</div>`); }
+  else lvpCard = card('📊 Último vs penúltimo', '—', 'var(--text3)', 'solo hay un tiempo');
+  const metaCard = (lbl, col, t) => { const d = a.best - t, ok = d <= 0.005;
+    return card(`<span style="color:${col}">${lbl}</span>`, formatTime(t), ok ? 'var(--green)' : 'var(--red)', ok ? `✅ lograda · ${formatTime(Math.abs(d))}s por debajo` : `⏳ faltan ${formatTime(Math.abs(d))}s`, ok ? 'ok' : 'no'); };
   const cards = `<div class="an-cards">
       ${card('🏆 Mejor', formatTime(a.best), 'var(--green)', `${a.best_record.tournament_name}<br>${a.best_record.tournament_date || ''}`)}
-      ${card('📉 Peor', formatTime(a.worst), 'var(--red)', `${a.worst_record.tournament_name}<br>${a.worst_record.tournament_date || ''}`)}
       ${card('📊 Consistencia', cv ? cv.label : '—', 'var(--text)', cv ? `<span class="cv-indicator ${cv.cls}" style="margin-top:2px">CV ${a.cv.toFixed(1)} %</span>` : `pocos registros (${n})`)}
       ${card('⏱️ Último', formatTime(ult.time_seconds), 'var(--text)', `${ult.tournament_name}<br>${ult.tournament_date || ''}`)}
-      ${card('🔮 Predicción', a.prediction && !pasado ? formatTime(a.prediction) : '—', 'var(--teal)', pasado ? 'solo con el año actual' : a.prediction ? 'próximo torneo' : 'necesita 2 tiempos')}
-    </div>
-    <div class="an-trend"><span class="cv-indicator ${a.improvement >= 0 ? 'cv-excellent' : 'cv-poor'}">${a.improvement >= 0 ? '📈 Tendencia mejorando' : '📉 Tendencia por mejorar'}</span> · Mejor racha: <strong>${a.best_streak}</strong> mejoras seguidas</div>`;
-  // ── Último vs penúltimo (antes una barra por estilo; ahora solo este estilo) ──
-  let lvp = '';
-  if (n >= 2) { const p = a.records[n - 2], d = p.time_seconds - ult.time_seconds, pct = d / p.time_seconds * 100, ok = d > 0.005, ig = Math.abs(d) <= 0.005;
-    lvp = `<div class="an-lvp"><span class="an-lvp-t">📊 Último vs penúltimo</span>
-      <span>Penúltimo <b>${formatTime(p.time_seconds)}</b> <span class="an-sub">${p.tournament_name}</span></span><span style="color:var(--text3)">→</span>
-      <span>Último <b>${formatTime(ult.time_seconds)}</b> <span class="an-sub">${ult.tournament_name}</span></span>
-      <span class="an-lvp-d" style="color:${ig ? 'var(--text3)' : ok ? 'var(--green)' : 'var(--red)'};background:${ig ? 'var(--bg3)' : ok ? 'rgba(26,138,69,0.10)' : 'rgba(217,48,37,0.09)'}">${ig ? 'igual' : (ok ? '↓ bajó −' : '↑ subió +') + Math.abs(d).toFixed(2) + ' s (' + Math.abs(pct).toFixed(1) + ' %)'}</span></div>`; }
-  else lvp = `<div class="an-lvp"><span class="an-lvp-t">📊 Último vs penúltimo</span><span style="color:var(--text3)">Solo hay un tiempo${enAnio}.</span></div>`;
+      ${n >= 2 ? card('📈 Tendencia', a.improvement >= 0 ? 'Mejorando' : 'Por mejorar', a.improvement >= 0 ? 'var(--green)' : 'var(--red)', `Mejor racha: <b>${a.best_streak}</b> mejora${a.best_streak === 1 ? '' : 's'} seguida${a.best_streak === 1 ? '' : 's'}`) : card('📈 Tendencia', '—', 'var(--text3)', 'necesita 2 tiempos')}
+      ${lvpCard}
+      ${mins.map(m => metaCard(m.lbl + ' ' + m.edad + ' años', m.col, m.v)).join('')}
+      ${a.goal_comparison.map((g, i) => metaCard('🎯 ' + g.goal_name, GOAL_PALETTE[Math.max(0, goals.findIndex(x => x.name === g.goal_name)) % GOAL_PALETTE.length], g.goal_time)).join('')}
+    </div>`;
   // ── Evolución: mínimas que le aplican HOY siempre visibles (línea finita + rótulo, como la Suite); metas personales con botón ──
   const minsHoy = mins.filter(m => m.actual);
   _anMinLines = minsHoy.map(m => ({ v: m.v, col: m.col, txt: m.lbl + ' ' + formatTime(m.v) }));
   destroyChart('evolution');
   const evolData = a.records.map(r => ({ x: r.tournament_date, y: r.time_seconds, label: r.tournament_name }));
   const styleGoals = goals.map((g,i) => { const t = (g.times||{})[style]; return t ? { name: g.name, time: t, color: GOAL_PALETTE[i%GOAL_PALETTE.length] } : null; }).filter(Boolean);
-  // ── Parciales: solo el año elegido, la tabla con el ÚLTIMO torneo de primero; sin columna de promedio ──
+  // ── Parciales: solo el año elegido, la tabla con el ÚLTIMO torneo de primero ──
   let splitsSection = '';
   const splitRecs = a.records.filter(r => r.splits?.length);
   if (splitRecs.length) {
@@ -3618,9 +3384,22 @@ function showStyleAnalysis(style, year) {
         <thead><tr><th>Competencia</th><th style="text-align:center">Total</th>${headCols}<th style="text-align:center">Estrategia</th></tr></thead>
         <tbody>${_idealRows}${bodyRows}</tbody>
       </table></div>`;
-  } else splitsSection = `<div class="section-title" style="margin-top:20px">⚑ Análisis de Parciales (50&nbsp;m)${enAnio}</div><div style="font-size:12px;color:var(--text3)">No hay parciales registrados${enAnio}.</div>`;
+  } else splitsSection = `<div class="section-title" style="margin-top:20px">⚑ Análisis de Parciales (50&nbsp;m)${enAnio}</div><div style="font-size:12px;color:var(--text3)">No hay parciales registrados${enAnio ? ' en ' + _anYear : ''}.</div>`;
+  // ── Ritmo objetivo (antes subpestaña): metas = FECNA/Liga que le aplican + metas personales de este estilo ──
+  _rtCtx = { style, a, opts: mins.map(m => ({ k: m.lbl + m.edad, n: m.lbl + ' ' + m.edad + ' años', t: m.v }))
+    .concat(styleGoals.map(g => ({ k: 'g:' + g.name, n: '🎯 ' + g.name, t: g.time }))) };
+  if (!_rtCtx.opts.some(o => o.k === _rtMeta)) _rtMeta = _rtCtx.opts.length ? _rtCtx.opts[0].k : null;
+  const rlab = t => `<div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px">${t}</div>`;
+  const ritmoSection = `<div class="section-title" style="margin-top:22px">🚀 Ritmo objetivo${enAnio}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6">El <strong>ritmo que debe mantener en cada largo</strong> para llegar a la meta (menos el margen), en piscina de 50 y de 25&nbsp;m. La ventaja de salida solo aplica a Libre, Pecho y Mariposa.</div>
+    ${_rtCtx.opts.length ? `<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+      <div>${rlab('Meta')}<select class="form-select" onchange="_rtMeta=this.value;renderRitmoStyle()" style="max-width:220px">${_rtCtx.opts.map(o => `<option value="${o.k}"${o.k === _rtMeta ? ' selected' : ''}>${o.n} · ${formatTime(o.t)}</option>`).join('')}</select></div>
+      <div>${rlab('Margen por debajo (%)')}<input class="form-input" type="number" value="${_rtPct}" min="0" max="30" step="0.5" oninput="_rtPct=parseFloat(this.value)||0;renderRitmoStyle()" style="max-width:120px"></div>
+      <div>${rlab('Ventaja de salida (s)')}<input class="form-input" type="number" value="${_rtDive}" min="0" step="0.5" oninput="_rtDive=parseFloat(this.value)||0;renderRitmoStyle()" style="max-width:120px"></div>
+    </div>` : ''}
+    <div id="an-ritmo">${ritmoBody()}</div>`;
   document.getElementById('style-analysis-content').innerHTML = `
-    ${yrBar}${metasBox}${cards}${lvp}
+    ${yrBar}${cards}
     <div class="section-title" style="margin-top:20px">📈 Evolución de tiempos${enAnio}</div>
     ${styleGoals.length ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
       <span style="font-size:12px;color:var(--text3);font-weight:600">Metas personales:</span>
@@ -3628,7 +3407,9 @@ function showStyleAnalysis(style, year) {
       <span style="font-size:11px;color:var(--text3);margin-left:4px">← clic para mostrar/ocultar</span>
     </div>` : ''}
     <div class="chart-container" style="height:260px"><canvas id="chart-evolution"></canvas></div>
-    ${splitsSection}`;
+    ${splitsSection}
+    ${ritmoSection}
+    ${potHtml(style)}`;
   _asplitsRecs = splitRecs; // datos para el gráfico de parciales (y su toggle)
   setTimeout(() => {
     const ctx = document.getElementById('chart-evolution');
@@ -3674,6 +3455,97 @@ const MIN_LINES_PLUGIN = { id: 'minLines', afterDatasetsDraw(ch) {
     ctx.setLineDash([]); ctx.globalAlpha = 0.95; ctx.fillStyle = m.col; ctx.font = '600 10.5px "DM Sans", sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(m.txt, ca.right - 4, py - 4); ctx.restore(); });
 } };
+
+// ── 🚀 RITMO OBJETIVO de un estilo (tarjetas). Se redibuja solo el resultado al cambiar meta, margen o salida. ──
+let _rtCtx = null, _rtMeta = null, _rtPct = 5, _rtDive = 0;
+function renderRitmoStyle() { const el = document.getElementById('an-ritmo'); if (el) el.innerHTML = ritmoBody(); }
+function ritmoBody() {
+  if (!_rtCtx) return '';
+  const { style, a, opts } = _rtCtx;
+  if (/^Combinado/i.test(style)) return '<div style="font-size:12.5px;color:var(--text3)">En Combinado el ritmo por largo no aplica: cambia de estilo en cada tramo.</div>';
+  const o = opts.find(x => x.k === _rtMeta) || opts[0];
+  if (!o) return '<div style="font-size:12.5px;color:var(--text3)">No hay mínima ni meta personal para este estilo.</div>';
+  const target = o.t * (1 - _rtPct / 100), dist = styleDistance(style) || 50, isBack = /^Espalda/i.test(style), effDive = isBack ? 0 : _rtDive;
+  const fmtD = x => (x > 0 ? '+' : '−') + Math.abs(x).toFixed(2) + 's';
+  const pool = len => { const seg = Math.max(1, Math.round(dist / len)), each = target / seg;   // tiempo por largo (no es un promedio de resultados)
+    if (effDive > 0 && seg > 1) { const first = each - effDive, rest = (target - first) / (seg - 1); return { v: formatTime(rest), s: `1er ${len}: ${formatTime(first)} · resto ${formatTime(rest)}` }; }
+    return { v: formatTime(each), s: `${seg} × ${len} m` }; };
+  let best50 = null; a.records.forEach(r => (r.splits || []).forEach(sp => { if (best50 == null || sp.split_time < best50) best50 = sp.split_time; }));
+  const obj50 = target / Math.max(1, Math.round(dist / 50)), d50 = best50 != null ? best50 - obj50 : null, dc = d50 != null && d50 > 0.05 ? 'var(--red)' : 'var(--green)';
+  const p50 = pool(50), p25 = pool(25);
+  const c = (l, v, col, s) => `<div class="an-card"><div class="l">${l}</div><div class="v" style="color:${col}">${v}</div><div class="s">${s || ''}</div></div>`;
+  return `<div class="an-cards">
+    ${c('🎯 Meta', formatTime(o.t), 'var(--text)', o.n)}
+    ${c('🏁 Objetivo', formatTime(target), 'var(--cyan)', _rtPct ? `meta −${_rtPct} %` : 'sin margen')}
+    ${c('⏱️ Ritmo actual', best50 != null ? formatTime(best50) : '—', 'var(--text)', best50 != null ? `mejor 50 · 25 m: ${formatTime(best50 / 2)}` : 'sin parciales')}
+    ${c('Δ Por cada 50', d50 != null ? fmtD(d50) : '—', d50 != null ? dc : 'var(--text3)', d50 != null ? `por cada 25: ${fmtD(d50 / 2)}` : 'para llegar')}
+    ${c('🏊 Piscina 50 m', p50.v, 'var(--teal)', p50.s)}
+    ${c('🏊 Piscina 25 m', p25.v, 'var(--teal)', p25.s)}
+    ${c('💨 Velocidad', (dist / target).toFixed(2) + ' m/s', 'var(--text)', isBack && _rtDive > 0 ? 'espalda: sin ventaja de salida' : '')}
+  </div>`;
+}
+
+// ── ✨ POTENCIAL de un estilo (antes subpestaña). El cálculo usa TODA la familia del estilo por detrás:
+// el potencial sale del nivel en puntos FINA de todas sus distancias, y la proyección de las distancias vecinas. ──
+const POT_FAM = [
+  {name:'Libre',steps:[['Libre 50m',50],['Libre 100m',100],['Libre 200m',200],['Libre 400m',400],['Libre 800m',800],['Libre 1500m',1500]]},
+  {name:'Espalda',steps:[['Espalda 50m',50],['Espalda 100m',100],['Espalda 200m',200]]},
+  {name:'Pecho',steps:[['Pecho 50m',50],['Pecho 100m',100],['Pecho 200m',200]]},
+  {name:'Mariposa',steps:[['Mariposa 50m',50],['Mariposa 100m',100],['Mariposa 200m',200]]},
+  {name:'Combinado',steps:[['Combinado 200m',200],['Combinado 400m',400]]}
+];
+const POT_UP = {50:[2,5],100:[2,10],200:[2,12.5],400:[2,15],800:[1.875,20]}, POT_DN = {1500:[8/15,10.67],800:[.5,7.5],400:[.5,6.25],200:[.5,5],100:[.5,2.5]};
+// tiempos base FINA (1000 pts, oficiales)
+const POT_FINA = { 'Libre 50m':23.67,'Libre 100m':51.71,'Libre 200m':112.98,'Libre 400m':236.40,'Libre 800m':484.79,'Libre 1500m':920.48,
+  'Espalda 50m':26.98,'Espalda 100m':57.45,'Espalda 200m':123.35,'Pecho 50m':29.30,'Pecho 100m':64.13,'Pecho 200m':138.95,
+  'Mariposa 50m':24.43,'Mariposa 100m':55.48,'Mariposa 200m':121.81,'Combinado 200m':126.12,'Combinado 400m':266.36 };
+function potCalc(style) {
+  const fam = POT_FAM.find(f => f.steps.some(s => s[0] === style)); if (!fam) return null;
+  const sa = (currentAnalysis && currentAnalysis.style_analysis) || {};
+  const recsOf = k => ((sa[k] && sa[k].records) || []).filter(r => _anYear === 'all' || (r.tournament_date || '').startsWith(_anYear));
+  const best = k => { const rs = recsOf(k); return rs.length ? Math.min(...rs.map(r => r.time_seconds)) : null; };
+  const steps = fam.steps, dists = steps.map(s => s[1]), real = {};
+  steps.forEach(([k, d]) => { const b = best(k); if (b != null) real[d] = b; });
+  const have = dists.filter(d => real[d] != null), up = {}, dn = {};
+  if (have.length) { const lo = Math.min(...have), hi = Math.max(...have);
+    up[lo] = real[lo]; for (let i = dists.indexOf(lo) + 1; i < dists.length; i++) { const pd = dists[i-1], [m, ad] = POT_UP[pd]; up[dists[i]] = up[pd] * m + ad; }
+    dn[hi] = real[hi]; for (let i = dists.indexOf(hi) - 1; i >= 0; i--) { const nd = dists[i+1], [m, s] = POT_DN[nd]; dn[dists[i]] = dn[nd] * m - s; } }
+  const fh = steps.filter(([k]) => best(k) != null && POT_FINA[k]);
+  const gAvg = fh.length ? fh.reduce((s, [k]) => s + 1000 * Math.pow(POT_FINA[k] / best(k), 3), 0) / fh.length : null;
+  const rows = steps.map(([k, d]) => { const rs = recsOf(k).filter(r => r.splits && r.splits.length), sr = rs.length ? rs.reduce((x, y) => x.time_seconds < y.time_seconds ? x : y) : null;
+    const mh = anMinimas(k).find(m => m.lbl === 'FECNA' && m.actual);
+    return { sk: k, has: !!sa[k], label: k.replace(fam.name + ' ', ''), dist: d, marca: best(k),
+      pot: (gAvg && POT_FINA[k]) ? POT_FINA[k] * Math.pow(1000 / gAvg, 1/3) : null, up: up[d] ?? null, dn: dn[d] ?? null,
+      min: mh ? mh.v : null, splits: sr ? sr.splits.map(s => s.split_time) : null }; });
+  return { name: fam.name, gAvg, rows };
+}
+function potHtml(style) {
+  const P = potCalc(style); if (!P) return '';
+  const r = P.rows.find(x => x.sk === style); if (!r) return '';
+  const pctOf = x => (x.marca != null && x.pot != null) ? (x.marca - x.pot) / x.pot * 100 : null;
+  const hue = d => 120 * (1 - Math.min(Math.max(0, d) / 3, 1));
+  // fila delgada con las demás distancias de la familia (tocar una = ver ese estilo)
+  const strip = P.rows.filter(x => x.marca != null || x.pot != null).map(x => { const d = pctOf(x), h = d != null ? hue(d) : null, on = x.sk === style;
+    return `<button class="pot-chip${on ? ' on' : ''}"${!on && x.has ? ` onclick="showStyleAnalysis('${x.sk}','${_anYear}')"` : ''} style="border-left-color:${h != null ? `hsl(${h.toFixed(0)},55%,55%)` : 'var(--border)'}" title="${x.marca != null ? 'Tu marca ' + formatTime(x.marca) : 'Sin marca'}${x.pot != null ? ' · potencial ' + formatTime(x.pot) : ''}"><b>${x.label}</b> <span style="color:${h != null ? `hsl(${h.toFixed(0)},55%,36%)` : 'var(--text3)'}">${d == null ? '—' : (Math.abs(d) < 0.05 ? '0.0' : d < 0 ? '−' + Math.abs(d).toFixed(1) : '+' + d.toFixed(1)) + '%'}</span></button>`; }).join('');
+  const nSeg = r.dist ? Math.max(1, Math.round(r.dist / 50)) : 1;
+  const ideaP = (r.pot != null && typeof idealSplits50 === 'function') ? idealSplits50(style, r.pot, nSeg) : null;
+  const ideaM = (r.min != null && typeof idealSplits50 === 'function') ? idealSplits50(style, r.min, nSeg) : null;
+  const d = pctOf(r), pctTxt = d == null ? '' : (d <= 0.05 ? '✨ ' + Math.abs(d).toFixed(1) + '% por debajo' : '+' + d.toFixed(1) + '% · faltan ' + formatTime(r.marca - r.pot));
+  let h = `<div class="pot-dtl-top">Tu marca <b>${r.marca != null ? formatTime(r.marca) : '—'}</b> · Potencial <b>${r.pot != null ? formatTime(r.pot) : '—'}</b>${pctTxt ? ' · ' + pctTxt : ''}</div>`;
+  if (ideaP || ideaM || r.splits) {
+    h += `<div class="pot-dtl-sec">Parciales (cada 50 m)</div><div class="table-wrap"><table style="width:100%;font-size:12.5px"><thead><tr><th style="text-align:left">Tramo</th>${r.splits ? '<th style="text-align:center">Tu mejor con parciales</th>' : ''}${ideaP ? '<th style="text-align:center">Ideal · potencial</th>' : ''}${ideaM ? '<th style="text-align:center">Ideal · mínima</th>' : ''}</tr></thead><tbody>`;
+    for (let i = 0; i < nSeg; i++) h += `<tr><td>${(i+1)*50} m</td>${r.splits ? `<td style="text-align:center">${r.splits[i] != null ? r.splits[i].toFixed(2) : '—'}</td>` : ''}${ideaP ? `<td style="text-align:center">${ideaP[i].toFixed(2)}</td>` : ''}${ideaM ? `<td style="text-align:center">${ideaM[i].toFixed(2)}</td>` : ''}</tr>`;
+    h += '</tbody></table></div>';
+  } else h += '<div style="color:var(--text3);font-size:12.5px;margin-top:6px">Esta prueba no tiene parciales para mostrar.</div>';
+  const ctx = []; if (r.up != null) ctx.push('desde velocidad ↑ ' + formatTime(r.up)); if (r.dn != null) ctx.push('desde fondo ↓ ' + formatTime(r.dn)); if (r.min != null) ctx.push('mín FECNA ' + formatTime(r.min));
+  if (ctx.length) h += `<div class="pot-dtl-ctx">${ctx.join(' · ')}</div>`;
+  return `<div class="section-title" style="margin-top:22px">✨ Potencial${_anYear === 'all' ? '' : ' · ' + _anYear}</div>
+    <div class="pot-detail-panel" style="margin-bottom:0">
+      <div class="pot-desc" style="margin-bottom:10px">Qué tan cerca está de su <b>potencial</b>: lo que le corresponde según su nivel en puntos en todas las distancias de ${P.name}. El <b>%</b> dice cuánto le falta, o si ya va <b>por debajo</b> ✨.</div>
+      <div class="pot-strip"><span>${P.name} · nivel ${P.gAvg ? `<b>${Math.round(P.gAvg)} pts</b>` : '—'}:</span>${strip}</div>
+      ${h}
+    </div>`;
+}
 function renderAnalysisSplitsChart() {
   const sc = document.getElementById('chart-style-splits');
   if (!sc || !_asplitsRecs.length) return;
@@ -3730,24 +3602,18 @@ async function exportPDF() {
   if (!sid || !currentAnalysis) { showToast('Selecciona un nadador para exportar', 'error'); return; }
   const { swimmer, style_analysis, total_records, total_competitions } = currentAnalysis;
   const cat = getCategory(swimmer.birthdate);
-  const section = ['estilo','ritmo','potencial'].includes(currentAnalysisSection) ? currentAnalysisSection : 'estilo';
-  // Por Estilo: el estilo y el AÑO elegidos en pantalla
+  // El estilo y el AÑO elegidos en pantalla (Análisis es una sola vista: Por estilo)
   const activeStylePill = document.querySelector('.style-pill.active');
-  let selectedStyle = null;
-  if (section === 'estilo') {
-    selectedStyle = activeStylePill ? activeStylePill.textContent.trim() : null;
-    if (!selectedStyle) { showToast('Elige un estilo primero (toca uno en «Por Estilo»)', 'error'); return; }
-  }
-  const anio = (section === 'estilo' && _anStyle === selectedStyle && _anYear !== 'all') ? _anYear : null;
-  // Capturar como imagen lo visible de la sub-pestaña
+  const selectedStyle = activeStylePill ? activeStylePill.textContent.trim() : null;
+  if (!selectedStyle) { showToast('Elige un estilo primero', 'error'); return; }
+  const anio = (_anStyle === selectedStyle && _anYear !== 'all') ? _anYear : null;
+  // Gráficas como imagen; Ritmo objetivo y Potencial como foto de lo que se ve
   const imgOf = id => { const c = document.getElementById(id); return c ? c.toDataURL('image/png') : null; };
-  const snap = async id => { const el = document.getElementById(id); if (!el || !el.innerHTML.trim()) return null;
+  const snap = async el => { if (!el || !el.innerHTML.trim()) return null;
     try { return (await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true })).toDataURL('image/png'); } catch(e){ return null; } };
-  let chartImgData = null, splitsImgData = null, secImgData = null;
-  if (section === 'estilo') { chartImgData = imgOf('chart-evolution'); splitsImgData = imgOf('chart-style-splits'); }
-  if (section === 'ritmo') secImgData = await snap('ritmo-content');
-  if (section === 'potencial') secImgData = await snap('potencial-content');
-  const sectionLabel = { estilo: (selectedStyle || 'Por Estilo') + (anio ? ' ' + anio : ''), ritmo: 'Ritmo Objetivo', potencial: 'Potencial' }[section];
+  const chartImgData = imgOf('chart-evolution'), splitsImgData = imgOf('chart-style-splits');
+  const ritmoImgData = await snap(document.getElementById('an-ritmo')), potImgData = await snap(document.querySelector('#style-analysis-content .pot-detail-panel'));
+  const sectionLabel = selectedStyle + (anio ? ' ' + anio : '');
   window._pdfLabel = sectionLabel;
   const GCOLS = ['#1a6fc4','#d4880a','#7b61c4','#c44a1a','#0897a7'];
   const header = `<div style="background:linear-gradient(135deg,#1c3050,#1a6fc4);color:white;padding:24px 28px;border-radius:12px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">
@@ -3784,30 +3650,29 @@ async function exportPDF() {
     const metas = anMinimas(s).map(m => ({ n: m.lbl + ' ' + m.edad + ' años', t: m.v, c: m.col }))
       .concat(a.goal_comparison.map((g,i) => ({ n: '🎯 ' + g.goal_name, t: g.goal_time, c: GCOLS[i%GCOLS.length] })));
     const recsWithSplits = a.records.filter(r => r.splits?.length).reverse();
-    let lvp = '';
+    let lvp = ['📊 Último vs penúltimo', '#8299b0', '—'];
     if (n >= 2) { const p = a.records[n-2], d = p.time_seconds - ult.time_seconds;
-      lvp = `<div style="padding:8px 12px;background:#f5f8fc;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px;font-size:11px">📊 <b>Último vs penúltimo:</b> ${formatTime(p.time_seconds)} (${p.tournament_name}) → <b>${formatTime(ult.time_seconds)}</b> (${ult.tournament_name}) · <b style="color:${d>0.005?'#1a8a45':d<-0.005?'#d93025':'#8299b0'}">${Math.abs(d)<=0.005?'igual':(d>0?'bajó −':'subió +')+Math.abs(d).toFixed(2)+' s'}</b></div>`; }
+      lvp = ['📊 Último vs penúltimo', d>0.005?'#1a8a45':d<-0.005?'#d93025':'#8299b0', Math.abs(d)<=0.005?'igual':(d>0?'bajó −':'subió +')+Math.abs(d).toFixed(2)+' s']; }
+    const tile = (lb, c, v, bg, bd) => `<div style="padding:10px;background:${bg||'#f5f8fc'};border-radius:8px;border:1px solid ${bd||'#dce5ef'};text-align:center">
+          <div style="font-size:9px;color:#8299b0;text-transform:uppercase">${lb}</div>
+          <div style="font-size:14px;font-weight:800;color:${c};margin-top:4px">${v}</div></div>`;
     return `
-      ${metas.length ? sub('🎯 Comparación con metas' + (anio ? ' (mejor de ' + anio + ': ' + formatTime(a.best) + ')' : ' (tu mejor: ' + formatTime(a.best) + ')')) + `
-      <div style="display:grid;grid-template-columns:repeat(${Math.min(metas.length,4)},1fr);gap:8px;margin-bottom:14px">
-        ${metas.map(m => { const d = a.best - m.t, ok = d <= 0.005; return `<div style="padding:10px 12px;border-radius:8px;border:2px solid ${ok?'rgba(26,138,69,0.35)':m.c+'55'};background:${ok?'rgba(26,138,69,0.06)':'rgba(26,47,76,0.03)'}">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px">
+        ${tile('🏆 Mejor','#1a8a45',formatTime(a.best))}${tile('📊 Consistencia',cvColor,cv?cv.label+' · CV '+a.cv.toFixed(1)+'%':'—')}
+        ${tile('⏱️ Último','#1c2d3e',formatTime(ult.time_seconds))}${tile('📈 Tendencia',impColor,n>=2?(a.improvement>=0?'Mejorando':'Por mejorar')+' · racha '+a.best_streak:'—')}
+        ${tile(...lvp)}
+      </div>
+      ${metas.length ? `<div style="display:grid;grid-template-columns:repeat(${Math.min(metas.length,5)},1fr);gap:8px;margin-bottom:14px">
+        ${metas.map(m => { const d = a.best - m.t, ok = d <= 0.005; return `<div style="padding:10px 12px;border-radius:8px;border:2px solid ${ok?'rgba(26,138,69,0.35)':'rgba(217,48,37,0.30)'};background:${ok?'rgba(26,138,69,0.06)':'rgba(217,48,37,0.04)'}">
           <div style="font-size:10px;font-weight:700;color:${m.c};text-transform:uppercase">${m.n}</div>
-          <div style="font-size:16px;font-weight:900;color:#4a627a;margin-top:2px">${formatTime(m.t)}</div>
+          <div style="font-size:16px;font-weight:900;color:${ok?'#1a8a45':'#d93025'};margin-top:2px">${formatTime(m.t)}</div>
           <div style="font-size:11px;font-weight:700;color:${ok?'#1a8a45':'#d93025'};margin-top:4px">${ok?`✅ ${formatTime(Math.abs(d))}s por debajo`:`⏳ Faltan ${formatTime(Math.abs(d))}s`}</div>
         </div>`; }).join('')}
       </div>` : ''}
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:8px">
-        ${[['🏆 Mejor','#1a8a45',formatTime(a.best)],['📉 Peor','#d93025',formatTime(a.worst)],['📊 Consistencia',cvColor,cv?cv.label+' · CV '+a.cv.toFixed(1)+'%':'—'],
-           ['⏱️ Último','#1c2d3e',formatTime(ult.time_seconds)],['🔮 Predicción','#1a6fc4',a.prediction?formatTime(a.prediction):'—']
-        ].map(([lb,c,v])=>`<div style="padding:10px;background:#f5f8fc;border-radius:8px;border:1px solid #dce5ef;text-align:center">
-          <div style="font-size:9px;color:#8299b0;text-transform:uppercase">${lb}</div>
-          <div style="font-size:14px;font-weight:800;color:${c};margin-top:4px">${v}</div>
-        </div>`).join('')}
-      </div>
-      <div style="font-size:11px;font-weight:700;color:${impColor};margin-bottom:12px">${a.improvement>=0?'📈 Tendencia mejorando':'📉 Tendencia por mejorar'} · Mejor racha: ${a.best_streak}</div>
-      ${lvp}
       ${chartImgData ? sub('📈 Evolución de tiempos') + `<img src="${chartImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
       ${splitsImgData ? sub('⚑ Comparación de parciales') + `<img src="${splitsImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
+      ${ritmoImgData ? sub('🚀 Ritmo objetivo') + `<img src="${ritmoImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
+      ${potImgData ? sub('✨ Potencial') + `<img src="${potImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef;margin-bottom:14px">` : ''}
       ${sub('📋 Historial (más reciente arriba)')}
       <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:14px">
         <thead><tr style="background:#f5f8fc"><th style="padding:5px 8px;text-align:left;border-bottom:1px solid #dce5ef;color:#8299b0">Torneo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Fecha</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Tiempo</th><th style="padding:5px 8px;text-align:center;border-bottom:1px solid #dce5ef;color:#8299b0">Parciales</th></tr></thead>
@@ -3820,12 +3685,7 @@ async function exportPDF() {
       </table>
       ${recsWithSplits.length ? sub('⚑ Parciales') + recsWithSplits.map(r=>{const sp=r.splits.map(x=>x.split_time);const mid=sp.reduce((x,y)=>x+y,0)/sp.length;const strat=sp[0]<mid?'🚀 Salida rápida':sp[sp.length-1]<sp[0]?'🔄 Negative Split':'➡️ Ritmo constante';return`<div style="padding:8px 12px;background:#f5f8fc;border-radius:6px;border:1px solid #dce5ef;margin-bottom:6px;font-size:11px"><strong>${r.tournament_name}</strong> — ${strat}<br><span style="color:#4a627a">${sp.map((x,i)=>`${(i+1)*50}m: ${x.toFixed(2)}s`).join('  •  ')}</span></div>`;}).join('') : ''}`;
   };
-  const sectionTitle = (t) => `<div style="font-size:14px;font-weight:800;margin:16px 0 8px;color:#1c3050;padding-bottom:5px;border-bottom:2px solid #dce5ef">${t}</div>`;
-  let bodyHTML;
-  if (section === 'estilo') bodyHTML = profileBlock + styleDetailBlock(selectedStyle);
-  else bodyHTML = profileBlock + sectionTitle(section === 'ritmo' ? '🚀 Ritmo Objetivo por Parcial' : '✨ Potencial')
-      + (secImgData ? `<img src="${secImgData}" style="width:100%;border-radius:8px;border:1px solid #dce5ef">`
-                    : `<div style="font-size:12px;color:#8299b0">${section === 'ritmo' ? 'Selecciona una meta en «Ritmo Objetivo» para incluir el detalle.' : 'No hay datos de potencial para mostrar.'}</div>`);
+  const bodyHTML = profileBlock + styleDetailBlock(selectedStyle);
   const footer = `<div style="margin-top:16px;padding:10px 14px;background:#f5f8fc;border-radius:8px;font-size:10px;color:#8299b0;text-align:center;border:1px solid #dce5ef">Generado por SwimTracker Pro • ${new Date().toLocaleDateString('es-ES')} · ${sectionLabel}</div>`;
   document.getElementById('pdf-content').innerHTML = `<div style="font-family:'DM Sans',sans-serif;color:#1c2d3e;max-width:820px;margin:0 auto;padding:4px">${header}${bodyHTML}${footer}</div>`;
   openModal('pdf-modal');
