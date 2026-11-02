@@ -1,0 +1,8 @@
+{
+  "name": "swimtracker-pro",
+  "private": true,
+  "description": "SwimTracker Pro: app web (index.html) + funciones de Vercel en api/. postgres = solo para el visor FECNA (api/fecna.js, solo lectura).",
+  "dependencies": {
+    "postgres": "3.4.5"
+  }
+}

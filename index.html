@@ -282,6 +282,12 @@ tr:last-child td { border-bottom:none; }
 .an-card .v { font-family:var(--font-head); font-size:20px; letter-spacing:.5px; margin-top:4px; }
 .an-card .s { font-size:11px; color:var(--text3); margin-top:3px; line-height:1.35; }
 @media (max-width:560px){ .an-cards { grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .an-card { padding:10px 11px; } .an-card .v { font-size:18px; } }
+.fecna-tag { display:inline-block; margin-top:6px; font-size:10px; font-weight:800; letter-spacing:.6px; color:#1a6fc4; background:rgba(26,111,196,0.10); border:1px solid rgba(26,111,196,0.30); border-radius:10px; padding:1px 8px; }
+.fecna-x { position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%; border:1px solid var(--border); background:var(--bg3); color:var(--text3); cursor:pointer; font-size:12px; line-height:1; }
+.fecna-x:hover { color:var(--red); border-color:var(--red); }
+.fecna-row { display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--border); font-size:13.5px; }
+.fecna-sub { font-size:11.5px; color:var(--text3); }
+.fecna-hint { font-size:12.5px; color:var(--text3); padding:8px 2px; }
 .an-card.ok { background:rgba(26,138,69,0.08); border-color:rgba(26,138,69,0.35); }
 .an-card.no { background:rgba(217,48,37,0.06); border-color:rgba(217,48,37,0.30); }
 /* barrita de Último vs penúltimo: centro = igual; verde a la derecha = bajó; roja a la izquierda = subió */
@@ -694,13 +700,17 @@ tr:last-child td { border-bottom:none; }
       <div class="page-title">👥 NADADORES</div>
       <div class="page-subtitle">Perfiles y datos del equipo</div>
     </div>
-    <button class="btn btn-primary" onclick="openSwimmerModal()">+ Nuevo Nadador</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-secondary" onclick="abrirBuscarFecna()">🔍 Ver nadador de Narvales</button>
+      <button class="btn btn-primary" onclick="openSwimmerModal()">+ Nuevo Nadador</button>
+    </div>
   </div>
   <div id="swimmers-grid" class="swimmer-grid"></div>
   <div id="swimmers-empty" class="empty-state" style="display:none">
     <div class="empty-icon">🏊</div>
     <p>No hay nadadores registrados.<br>Agrega el primero haciendo clic en "Nuevo Nadador".</p>
   </div>
+  <div id="fecna-sec"></div>
 </div>
 
 <!-- 2. TORNEOS -->
@@ -1066,6 +1076,19 @@ tr:last-child td { border-bottom:none; }
   </div>
 </div>
 
+<div class="modal-overlay" id="fecna-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div class="modal-title">🔍 Ver nadador de Narvales</div>
+      <button class="modal-close" onclick="closeModal('fecna-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.55">Busca en la base FECNA y agrégalo para <b>ver</b> su historia en Análisis. Es <b>solo lectura</b>: no se le registran tiempos y no toca los datos de Danna.</div>
+      <input class="form-input" id="fecna-q" placeholder="Nombre o apellido…" autocomplete="off" oninput="buscarFecnaDiferido()">
+      <div id="fecna-res" style="margin-top:12px;max-height:52vh;overflow:auto"></div>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="dup-modal">
   <div class="modal" style="max-width:430px">
     <div class="modal-header">
@@ -1563,6 +1586,12 @@ function setupListeners() {
     times = getTimesJoined(); renderTimes();
     maybeShowLastMark();
     try{ renderObligMetas(); }catch(e){}
+  });
+
+  // Nadadores FECNA vistos (lista aparte, solo lectura: no se mezcla con swimmers)
+  fbDB.ref('fecna_vistos').on('value', snap => {
+    fecnaVistos = snapToArray(snap).sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+    renderFecnaVistos(); refreshAnalysisSelect();
   });
 
   // Tournaments
@@ -3192,14 +3221,17 @@ function styleStats(style, recs) {
   let streak = 0, best_streak = 0;
   for (let i = 1; i < n; i++) { if (timeVals[i] < timeVals[i-1]) { streak++; best_streak = Math.max(best_streak, streak); } else streak = 0; }
   const goal_comparison = [];
-  goals.forEach(g => { const gt = (g.times || {})[style]; if (gt) goal_comparison.push({ goal_name: g.name, goal_time: gt, diff: best - gt, achieved: best - gt <= 0 }); });
+  anGoals().forEach(g => { const gt = (g.times || {})[style]; if (gt) goal_comparison.push({ goal_name: g.name, goal_time: gt, diff: best - gt, achieved: best - gt <= 0 }); });
   return { records: sorted, best, worst, cv, best_record: sorted[timeVals.indexOf(best)], worst_record: sorted[timeVals.indexOf(worst)],
     improvement, prediction, best_streak, goal_comparison, count: n };
 }
 function computeAnalysis(swimmerId) {
   const swimmer = swimmers.find(s => String(s.id) === String(swimmerId));
   if (!swimmer) return null;
-  const records = getTimesJoined(swimmerId);
+  _anFecna = false;
+  return computeAnalysisFrom(swimmer, getTimesJoined(swimmerId));
+}
+function computeAnalysisFrom(swimmer, records) {
   const styles_data = {};
   records.forEach(r => { (styles_data[r.style] = styles_data[r.style] || []).push(r); });
   const style_analysis = {};
@@ -3218,8 +3250,9 @@ function refreshAnalysisSelect() {
   const sel = document.getElementById('analysis-swimmer');
   const cur = sel.value;
   sel.innerHTML = '<option value="">— Seleccionar nadador —</option>' +
-    swimmers.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
-  if (cur) { sel.value = cur; loadAnalysis(); }
+    swimmers.map(s => `<option value="${s.id}">${s.name}</option>`).join('') +
+    (fecnaVistos.length ? '<optgroup label="Nadadores FECNA (solo lectura)">' + fecnaVistos.map(f => `<option value="fecna:${f.id}">${fecnaNombre(f.nombre)}</option>`).join('') + '</optgroup>' : '');
+  if (cur && [...sel.options].some(o => o.value === cur)) { sel.value = cur; loadAnalysis(); }
 }
 function loadAnalysis() {
   const sid = document.getElementById('analysis-swimmer').value;
@@ -3228,6 +3261,7 @@ function loadAnalysis() {
     document.getElementById('analysis-empty').style.display = '';
     return;
   }
+  if (sid.startsWith('fecna:')) { loadFecnaAnalysis(sid.slice(6)); return; }
   currentAnalysis = computeAnalysis(sid);
   if (currentAnalysis) renderAnalysis(currentAnalysis);
 }
@@ -3262,11 +3296,11 @@ function renderAnalysis(data) {
       <div class="swimmer-avatar" style="width:64px;height:64px;font-size:30px;flex-shrink:0">${swimmer.photo ? `<img src="${swimmer.photo}">` : '🏊'}</div>
       <div style="flex:1;min-width:160px">
         <div style="font-family:var(--font-head);font-size:24px;letter-spacing:1px;line-height:1.1">${swimmer.name}</div>
-        <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${age ? `<span style="color:var(--text3);font-size:13px">${age} años</span>` : ''}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${swimmer.fecna ? '<span class="fecna-tag" style="margin-top:0">FECNA · solo lectura</span>' : ''}${age ? `<span style="color:var(--text3);font-size:13px">${age} años</span>` : ''}</div>
       </div>
       <div class="an-kpis">
         <span id="an-cuenta" style="display:contents">${kpi('🏆', total_competitions, 'Competencias', 'todos los estilos')}${kpi('⏱️', total_records, 'Registros', 'todos los estilos')}</span>
-        ${swimmer.height && swimmer.weight ? kpi('📏', imc, 'IMC — ' + imcLabel(imc) + ' ' + imcTip, `${swimmer.height} cm · ${swimmer.weight} kg${swimmer.wingspan ? ` · Env. ${swimmer.wingspan} cm` : ''}`) : ''}
+        ${swimmer.fecna ? kpi('📏', '—', 'IMC', 'la FECNA no tiene medidas') : ''}${swimmer.height && swimmer.weight ? kpi('📏', imc, 'IMC — ' + imcLabel(imc) + ' ' + imcTip, `${swimmer.height} cm · ${swimmer.weight} kg${swimmer.wingspan ? ` · Env. ${swimmer.wingspan} cm` : ''}`) : ''}
       </div>
     </div>`;
   const styles = Object.keys(style_analysis).sort((a,b)=>{const ia=ALL_STYLES.indexOf(a),ib=ALL_STYLES.indexOf(b);return (ia<0?999:ia)-(ib<0?999:ib);});
@@ -3299,6 +3333,89 @@ function idealSplits50(styleKey,totalSec,nSeg){
   const out=[]; for(let i=1;i<=nSeg;i++) out.push((_interpCum(cum,i/nSeg)-_interpCum(cum,(i-1)/nSeg))*totalSec);
   return out;
 }
+// ════════════════════════════════════════════════════════════
+// VISOR FECNA — nadadores de Narvales desde la base FECNA (SOLO LECTURA)
+// ════════════════════════════════════════════════════════════
+// STP se usa como VISOR: la lista de los que se agregan va en un nodo APARTE de Firebase (`fecna_vistos`: solo
+// número FECNA, nombre, sexo y nacimiento); sus marcas se leen de /api/fecna cada vez que se abren y NUNCA se
+// guardan. No entran a `swimmers`, `tournaments` ni `time_records` (los datos de Danna no se tocan). Lo que la
+// FECNA no tiene (parciales, foto, medidas, metas personales) sale con "—".
+let fecnaVistos = [], _fecnaCache = {}, _anFecna = false;
+const FECNA_PID = { 2:'Libre 50m',3:'Libre 100m',4:'Libre 200m',5:'Libre 400m',6:'Libre 800m',7:'Libre 1500m',9:'Espalda 50m',10:'Espalda 100m',11:'Espalda 200m',
+  13:'Pecho 50m',14:'Pecho 100m',15:'Pecho 200m',17:'Mariposa 50m',18:'Mariposa 100m',19:'Mariposa 200m',21:'Combinado 200m',22:'Combinado 400m' };
+function anGoals() { return _anFecna ? [] : goals; }   // las metas personales son de Danna: a los de la FECNA no se les muestran
+function fecnaNombre(n) { const low = new Set(['DE','DEL','LA','LAS','LOS','Y']); return String(n || '').trim().split(/\s+/).map(w => low.has(w) ? w.toLowerCase() : /^[IVXL]+$|\d/.test(w) ? w : w.charAt(0) + w.slice(1).toLowerCase()).join(' '); }   // números romanos y '1°' quedan igual
+async function fecnaApi(qs) {
+  const u = fbAuth.currentUser; if (!u) throw new Error('Inicia sesión primero');
+  const r = await fetch('/api/fecna?' + qs, { headers: { Authorization: 'Bearer ' + await u.getIdToken() }, cache: 'no-store' });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || ('error ' + r.status));
+  return j;
+}
+function renderFecnaVistos() {
+  const el = document.getElementById('fecna-sec'); if (!el) return;
+  if (!fecnaVistos.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="section-title" style="margin-top:22px">🔍 Nadadores FECNA <span style="font-weight:400;color:var(--text3);font-size:11px">— solo lectura, datos de la base FECNA</span></div>
+    <div class="swimmer-grid">${fecnaVistos.map(f => { const age = getAge(f.nac);
+      return `<div class="swimmer-card" onclick="verFecna('${f.id}')" style="position:relative">
+        <button class="fecna-x" title="Quitar de la lista (no borra nada de la FECNA)" onclick="event.stopPropagation();quitarFecna('${f.id}')">✕</button>
+        <div class="swimmer-avatar">🏊</div>
+        <div class="swimmer-name">${fecnaNombre(f.nombre)}</div>
+        <div class="swimmer-meta">${age ? age + ' años' : '—'} · ${f.genero === 'M' ? 'Masculino' : 'Femenino'}</div>
+        <div class="category-badge">${getCategory(f.nac)}</div>
+        <div><span class="fecna-tag">FECNA</span></div>
+      </div>`; }).join('')}</div>`;
+}
+function abrirBuscarFecna() { document.getElementById('fecna-q').value = ''; document.getElementById('fecna-res').innerHTML = '<div class="fecna-hint">Escribe parte del nombre o apellido (solo nadadores de Narvales).</div>'; openModal('fecna-modal'); setTimeout(() => document.getElementById('fecna-q').focus(), 50); }
+let _fecnaT = null, _fecnaRes = [];
+function buscarFecnaDiferido() { clearTimeout(_fecnaT); _fecnaT = setTimeout(buscarFecna, 350); }
+async function buscarFecna() {
+  const q = document.getElementById('fecna-q').value.trim(), out = document.getElementById('fecna-res');
+  if (q.length < 2) { out.innerHTML = '<div class="fecna-hint">Escribe al menos 2 letras.</div>'; return; }
+  out.innerHTML = '<div class="fecna-hint">Buscando…</div>';
+  try {
+    const { nadadores } = await fecnaApi('q=' + encodeURIComponent(q));
+    if (document.getElementById('fecna-q').value.trim() !== q) return;   // ya escribió otra cosa
+    if (!nadadores.length) { out.innerHTML = '<div class="fecna-hint">No hay nadadores de Narvales con ese nombre en la base FECNA.</div>'; return; }
+    _fecnaRes = nadadores;
+    out.innerHTML = nadadores.map((n, i) => { const ya = fecnaVistos.some(f => String(f.id) === String(n.id)), age = getAge(n.nac);
+      return `<div class="fecna-row"><div style="flex:1;min-width:0"><div style="font-weight:700">${fecnaNombre(n.nada)}</div>
+        <div class="fecna-sub">${n.nac ? n.nac.slice(0, 4) : '—'} · ${age ? age + ' años · ' + getCategory(n.nac) : '—'} · ${n.genero === 'M' ? 'M' : 'F'} · ${n.marcas} marcas · última ${n.ultima || '—'}</div></div>
+        ${ya ? '<span class="fecna-sub">✓ ya está</span>' : `<button class="btn btn-primary btn-sm" onclick="agregarFecna(${i})">Agregar</button>`}</div>`; }).join('');
+  } catch (e) { out.innerHTML = '<div class="fecna-hint" style="color:var(--red)">⚠️ ' + e.message + '</div>'; }
+}
+async function agregarFecna(i) {
+  const r = _fecnaRes[i]; if (!r) return;
+  const n = { id: r.id, nombre: r.nada, genero: r.genero, nac: r.nac };
+  try {
+    await fbDB.ref('fecna_vistos/' + n.id).set({ id: String(n.id), nombre: n.nombre, genero: n.genero || null, nac: n.nac || null, agregado: new Date().toISOString() });
+    closeModal('fecna-modal'); showToast(fecnaNombre(n.nombre) + ' agregado ✓', 'success');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+async function quitarFecna(id) {
+  const f = fecnaVistos.find(x => String(x.id) === String(id));
+  if (!confirm('¿Quitar a ' + fecnaNombre(f ? f.nombre : '') + ' de la lista? (No borra nada de la FECNA; se puede volver a agregar.)')) return;
+  try { await fbDB.ref('fecna_vistos/' + id).remove(); } catch (e) { showToast(e.message, 'error'); }
+}
+function verFecna(id) { switchTab('analisis'); const sel = document.getElementById('analysis-swimmer'); sel.value = 'fecna:' + id; loadAnalysis(); }
+// Análisis de un nadador FECNA: sus marcas de la base con la misma forma que los registros de STP (sin parciales)
+async function loadFecnaAnalysis(id) {
+  const f = fecnaVistos.find(x => String(x.id) === String(id));
+  document.getElementById('analysis-content').style.display = 'none';
+  const empty = document.getElementById('analysis-empty'); empty.style.display = '';
+  empty.innerHTML = '<div class="empty-icon">⏳</div><p>Trayendo sus marcas de la base FECNA…</p>';
+  try {
+    const d = _fecnaCache[id] || (_fecnaCache[id] = await fecnaApi('id=' + encodeURIComponent(id)));
+    if (document.getElementById('analysis-swimmer').value !== 'fecna:' + id) return;   // cambió de nadador mientras cargaba
+    const sw = { id: 'fecna:' + id, name: fecnaNombre(d.info.nada || (f && f.nombre)), birthdate: d.info.nac, gender: d.info.genero, liga: d.info.liga, fecna: true };
+    const recs = d.marcas.filter(m => FECNA_PID[m.pid]).map((m, i) => ({ id: 'f' + i, swimmer_id: sw.id, tournament_id: 'f' + m.tid,
+      tournament_name: fecnaNombre(m.torneo), tournament_date: m.fecha, style: FECNA_PID[m.pid], time_seconds: m.seg, splits: [] }));
+    empty.innerHTML = '<div class="empty-icon">📊</div><p>Selecciona un nadador para ver su análisis de rendimiento.</p>';
+    _anFecna = true; currentAnalysis = computeAnalysisFrom(sw, recs);
+    renderAnalysis(currentAnalysis);
+  } catch (e) { empty.innerHTML = '<div class="empty-icon">⚠️</div><p>No se pudieron traer sus marcas: ' + e.message + '</p>'; }
+}
+
 // Recuadro del perfil (también lo usa el conteo por estilo)
 function anKpi(ic, v, lb, sub) { return `<div class="an-kpi"><span class="an-kpi-ic">${ic}</span><div><div class="an-kpi-v">${v}</div><div class="an-kpi-l">${lb}</div>${sub ? `<div class="an-kpi-s">${sub}</div>` : ''}</div></div>`; }
 // Conteo del perfil para un estilo: COMPETENCIAS = de ese estilo en todos los años (el año no las cambia);
@@ -3313,10 +3430,10 @@ function anCuenta(style, year) { const el = document.getElementById('an-cuenta')
 function anMinimas(style) {
   const sw = (currentAnalysis && currentAnalysis.swimmer) || (typeof obligSwimmer === 'function' ? obligSwimmer() : null);
   const yr = new Date().getFullYear(), by = (sw && sw.birthdate) ? new Date(sw.birthdate).getFullYear() : (yr - 13);
-  const aN = yr - by, out = [];
+  const aN = yr - by, out = [], sexo = sw && sw.gender === 'M' ? 'M' : 'F';
   const cat = a => (typeof nacCatForAge === 'function') ? nacCatForAge(a) : String(a);
   [['FECNA', NAC_DEFAULT, '#b7860b'], ['Liga', LIGA_BOG, '#2f7fd8']].forEach(([lbl, T, col]) => [aN, aN + 1].forEach(a => {
-    const v = (((T && T.F) || {})[cat(a)] || {})[style]; if (v != null) out.push({ lbl, edad: a, actual: a === aN, v, col }); }));
+    const v = (((T && T[sexo]) || {})[cat(a)] || {})[style]; if (v != null) out.push({ lbl, edad: a, actual: a === aN, v, col }); }));
   return out;
 }
 let _anStyle = null, _anYear = 'all';
@@ -3361,7 +3478,7 @@ function showStyleAnalysis(style, year) {
   _anGoalLines = [];
   destroyChart('evolution');
   const evolData = a.records.map(r => ({ x: r.tournament_date, y: r.time_seconds, label: r.tournament_name }));
-  const styleGoals = goals.map((g,i) => { const t = (g.times||{})[style]; return t ? { name: g.name, time: t, color: GOAL_PALETTE[i%GOAL_PALETTE.length] } : null; }).filter(Boolean);
+  const styleGoals = anGoals().map((g,i) => { const t = (g.times||{})[style]; return t ? { name: g.name, time: t, color: GOAL_PALETTE[i%GOAL_PALETTE.length] } : null; }).filter(Boolean);
   // ── Parciales: solo el año elegido, la tabla con el ÚLTIMO torneo de primero ──
   let splitsSection = '';
   const splitRecs = a.records.filter(r => r.splits?.length);
@@ -3582,13 +3699,10 @@ function renderAnalysisSplitsChart() {
     const _style=_asplitsRecs[0] && _asplitsRecs[0].style;
     const _maxSeg=Math.max(..._asplitsRecs.map(r=>r.splits.length));
     const _acum=splitsChartMode==='acum';
-    const _sw=(currentAnalysis&&currentAnalysis.swimmer)||(typeof obligSwimmer==='function'?obligSwimmer():null);
-    const _byr=(_sw&&_sw.birthdate)?new Date(_sw.birthdate).getFullYear():(new Date().getFullYear()-13);
-    const _cat=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byr):null;
     const _addIdeal=(lbl,col,min)=>{ if(min==null||!_style) return; const seg=idealSplits50(_style,min,_maxSeg); if(!seg) return;
       let data; if(_acum){ let acc=0; data=[0].concat(seg.map(v=>{acc+=v; return +acc.toFixed(2);})); } else data=seg.map(v=>+v.toFixed(3));
       datasets.push({ label:'✨ '+lbl+' '+formatTime(min), _rot:lbl.replace('Ideal ','')+' '+formatTime(min), data, borderColor:col, backgroundColor:'transparent', borderWidth:1.3, borderDash:[4,3], pointRadius:0, tension:0, fill:false, order:0 }); };
-    if(_cat){ _addIdeal('Ideal FECNA','#b7860b',((NAC_DEFAULT.F||{})[_cat]||{})[_style]); _addIdeal('Ideal Liga','#0e7c86',((LIGA_BOG.F||{})[_cat]||{})[_style]); }
+    anMinimas(_style).filter(m => m.actual).forEach(m => _addIdeal('Ideal ' + m.lbl, m.lbl === 'FECNA' ? '#b7860b' : '#0e7c86', m.v));   // según edad y sexo
   }catch(e){}
   analysisCharts['stylesplits'] = new Chart(sc.getContext('2d'), {
     type:'line', data:{ labels, datasets },

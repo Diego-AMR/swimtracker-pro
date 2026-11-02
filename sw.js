@@ -1,6 +1,6 @@
 // SwimTracker Pro Service Worker
 // Sube la versión cuando cambies la app para forzar la actualización del cache.
-const CACHE = 'swimtracker-v7-32';
+const CACHE = 'swimtracker-v7-33';
 const APP_SHELL = [
   './',
   'index.html',
@@ -35,6 +35,9 @@ self.addEventListener('fetch', e => {
       url.hostname.includes('googleapis.com') || url.hostname.includes('firebase')) {
     return;
   }
+
+  // Visor FECNA: siempre en vivo y nunca en caché (datos de menores, con sesión).
+  if (url.origin === location.origin && url.pathname.startsWith('/api/fecna')) return;
 
   // App shell (mismo origen): network-first con respaldo al cache (offline).
   if (url.origin === location.origin) {
