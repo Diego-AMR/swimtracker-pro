@@ -3265,7 +3265,7 @@ function renderAnalysis(data) {
         <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${age ? `<span style="color:var(--text3);font-size:13px">${age} años</span>` : ''}</div>
       </div>
       <div class="an-kpis">
-        <span id="an-cuenta">${kpi('🏆', total_competitions, 'Competencias', 'todos los estilos')}${kpi('⏱️', total_records, 'Registros', 'todos los estilos')}</span>
+        <span id="an-cuenta" style="display:contents">${kpi('🏆', total_competitions, 'Competencias', 'todos los estilos')}${kpi('⏱️', total_records, 'Registros', 'todos los estilos')}</span>
         ${swimmer.height && swimmer.weight ? kpi('📏', imc, 'IMC — ' + imcLabel(imc) + ' ' + imcTip, `${swimmer.height} cm · ${swimmer.weight} kg${swimmer.wingspan ? ` · Env. ${swimmer.wingspan} cm` : ''}`) : ''}
       </div>
     </div>`;
