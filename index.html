@@ -3255,7 +3255,7 @@ function renderAnalysis(data) {
   const cat = getCategory(swimmer.birthdate);
   const imc = calcIMC(swimmer.weight, swimmer.height);
   // PERFIL de lado a lado (antes subpestaña Resumen); la explicación del IMC va en el ⓘ (mouse o toque)
-  const kpi = (ic, v, lb, sub) => `<div class="an-kpi"><span class="an-kpi-ic">${ic}</span><div><div class="an-kpi-v">${v}</div><div class="an-kpi-l">${lb}</div>${sub ? `<div class="an-kpi-s">${sub}</div>` : ''}</div></div>`;
+  const kpi = anKpi;
   const imcTip = `<span class="info-tip" tabindex="0">ⓘ<span class="tipbox"><strong>IMC</strong> = peso ÷ altura². Es una referencia general; en deportistas es solo orientativo (la masa muscular lo sube sin que sea grasa).<br><strong>Envergadura</strong> (brazos extendidos, punta a punta): si es mayor que la altura suele dar ventaja en la brazada.<br><span style="opacity:.75">Otros datos (frecuencia cardíaca, talla de pie…) se agregan al editar el nadador.</span></span></span>`;
   document.getElementById('analysis-profile').innerHTML = `
     <div class="an-prof">
@@ -3265,7 +3265,7 @@ function renderAnalysis(data) {
         <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap"><span class="category-badge">${cat}</span>${age ? `<span style="color:var(--text3);font-size:13px">${age} años</span>` : ''}</div>
       </div>
       <div class="an-kpis">
-        ${kpi('🏆', total_competitions, 'Competencias')}${kpi('⏱️', total_records, 'Registros')}
+        <span id="an-cuenta">${kpi('🏆', total_competitions, 'Competencias', 'todos los estilos')}${kpi('⏱️', total_records, 'Registros', 'todos los estilos')}</span>
         ${swimmer.height && swimmer.weight ? kpi('📏', imc, 'IMC — ' + imcLabel(imc) + ' ' + imcTip, `${swimmer.height} cm · ${swimmer.weight} kg${swimmer.wingspan ? ` · Env. ${swimmer.wingspan} cm` : ''}`) : ''}
       </div>
     </div>`;
@@ -3299,6 +3299,12 @@ function idealSplits50(styleKey,totalSec,nSeg){
   const out=[]; for(let i=1;i<=nSeg;i++) out.push((_interpCum(cum,i/nSeg)-_interpCum(cum,(i-1)/nSeg))*totalSec);
   return out;
 }
+// Recuadro del perfil (también lo usa el conteo por estilo)
+function anKpi(ic, v, lb, sub) { return `<div class="an-kpi"><span class="an-kpi-ic">${ic}</span><div><div class="an-kpi-v">${v}</div><div class="an-kpi-l">${lb}</div>${sub ? `<div class="an-kpi-s">${sub}</div>` : ''}</div></div>`; }
+// Conteo del perfil para un estilo: competencias y registros de ESE estilo en todos los años (el filtro de año no lo toca)
+function anCuenta(style) { const el = document.getElementById('an-cuenta'); if (!el || !currentAnalysis) return;
+  const recs = (currentAnalysis.style_analysis[style] || {}).records || [];
+  el.innerHTML = anKpi('🏆', new Set(recs.map(r => r.tournament_id)).size, 'Competencias', style) + anKpi('⏱️', recs.length, 'Registros', style); }
 // Mínimas obligadas de la nadadora (FECNA + Liga) para la edad de este año y la del siguiente; solo las que EXISTEN
 // (la Liga arranca en 14 años: a los 13 no sale, y cuando cumple 14 aparece sola).
 function anMinimas(style) {
@@ -3318,6 +3324,7 @@ function showStyleAnalysis(style, year) {
   const all = currentAnalysis.style_analysis[style];
   if (!all) return;
   _anStyle = style; _anYear = year || 'all';   // al elegir el estilo siempre arranca en "Todos los años"
+  anCuenta(style);
   const years = [...new Set(all.records.map(r => (r.tournament_date || '').slice(0, 4)).filter(Boolean))].sort().reverse();
   if (_anYear !== 'all' && !years.includes(_anYear)) _anYear = 'all';
   const a = _anYear === 'all' ? all : styleStats(style, all.records.filter(r => (r.tournament_date || '').startsWith(_anYear)));
@@ -3378,7 +3385,7 @@ function showStyleAnalysis(style, year) {
     splitsSection = `
       <div class="section-title" style="margin-top:20px">⚑ Análisis de Parciales (50&nbsp;m)${enAnio}</div>
       <div style="font-size:11.5px;color:var(--text3);margin-bottom:12px;line-height:1.65">Cada línea del gráfico y cada fila de la tabla es una competencia (la más reciente arriba); cada tramo (50m, 100m…) es el tiempo de ese largo. En la tabla, <span style="color:var(--green);font-weight:600">verde</span> = tu 50 más rápido de esa prueba y <span style="color:var(--red);font-weight:600">rojo</span> = el más lento. La <strong>estrategia</strong> resume cómo repartiste el esfuerzo: 🚀 salida rápida, 🔄 negative split (2ª mitad más veloz, lo ideal) o ➡️ ritmo constante.<br>La fila <strong style="color:#b7860b">✨ Ideal</strong> muestra el ritmo por tramo (modelo Mundial 2019) para <strong>cumplir la mínima</strong> — compárala con tus 50s para ver si sales muy rápido o muy lento.</div>
-      <div id="asplits-mode-toggle">${splitsModeToggle()}</div>
+      <div id="asplits-mode-toggle" style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start">${splitsModeToggle()}<button class="btn btn-sm ${_splitsSolo ? 'btn-primary' : 'btn-secondary'}" id="btn-solo-ultimo" onclick="toggleSoloUltimo()">🎯 Solo el último</button></div>
       <div class="chart-container" style="height:280px;margin:4px 0 18px"><canvas id="chart-style-splits"></canvas></div>
       <div class="table-wrap"><table>
         <thead><tr><th>Competencia</th><th style="text-align:center">Total</th>${headCols}<th style="text-align:center">Estrategia</th></tr></thead>
@@ -3481,7 +3488,6 @@ function ritmoBody() {
     ${c('Δ Por cada 50', d50 != null ? fmtD(d50) : '—', d50 != null ? dc : 'var(--text3)', d50 != null ? `por cada 25: ${fmtD(d50 / 2)}` : 'para llegar')}
     ${c('🏊 Piscina 50 m', p50.v, 'var(--teal)', p50.s)}
     ${c('🏊 Piscina 25 m', p25.v, 'var(--teal)', p25.s)}
-    ${c('💨 Velocidad', (dist / target).toFixed(2) + ' m/s', 'var(--text)', isBack && _rtDive > 0 ? 'espalda: sin ventaja de salida' : '')}
   </div>`;
 }
 
@@ -3546,12 +3552,22 @@ function potHtml(style) {
       ${h}
     </div>`;
 }
+// "Solo el último": deja visible solo la competencia más reciente (las demás quedan tachadas en la leyenda) + la ideal
+let _splitsSolo = false;
+function toggleSoloUltimo() { _splitsSolo = !_splitsSolo; const b = document.getElementById('btn-solo-ultimo');
+  if (b) { b.classList.toggle('btn-primary', _splitsSolo); b.classList.toggle('btn-secondary', !_splitsSolo); } renderAnalysisSplitsChart(); }
+// rótulo de la línea ideal ("FECNA 1:09.23") al final de la línea, como en Evolución
+const IDEAL_LBL_PLUGIN = { id: 'idealLbl', afterDatasetsDraw(ch) { const { ctx, chartArea: ca } = ch;
+  ch.data.datasets.forEach((ds, i) => { if (!ds._rot || !ch.isDatasetVisible(i)) return; const pts = ch.getDatasetMeta(i).data, pt = pts[pts.length - 1]; if (!pt) return;
+    ctx.save(); ctx.fillStyle = ds.borderColor; ctx.font = '600 10.5px "DM Sans", sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(ds._rot, Math.min(pt.x, ca.right) - 4, pt.y + 14); ctx.restore(); }); } };
 function renderAnalysisSplitsChart() {
   const sc = document.getElementById('chart-style-splits');
+  destroyChart('stylesplits');   // también si el estilo nuevo no tiene parciales
   if (!sc || !_asplitsRecs.length) return;
-  destroyChart('stylesplits');
   const SCOL = ['#1a6fc4','#0897a7','#d4880a','#7b61c4','#c44a1a','#1a8a45','#d93025','#e8821a','#6b4fdb'];
   const { labels, datasets } = splitsChartData(_asplitsRecs, r => r.tournament_name || '?', SCOL);
+  if (_splitsSolo) datasets.forEach((d, i) => { d.hidden = i < datasets.length - 1; });   // _asplitsRecs va del más viejo al más reciente
   // línea(s) IDEAL (muy finitas, punteadas) según la mínima obligada FECNA/Liga
   try{
     const _style=_asplitsRecs[0] && _asplitsRecs[0].style;
@@ -3562,7 +3578,7 @@ function renderAnalysisSplitsChart() {
     const _cat=(typeof nacCatForAge==='function')?nacCatForAge(new Date().getFullYear()-_byr):null;
     const _addIdeal=(lbl,col,min)=>{ if(min==null||!_style) return; const seg=idealSplits50(_style,min,_maxSeg); if(!seg) return;
       let data; if(_acum){ let acc=0; data=[0].concat(seg.map(v=>{acc+=v; return +acc.toFixed(2);})); } else data=seg.map(v=>+v.toFixed(3));
-      datasets.push({ label:'✨ '+lbl, data, borderColor:col, backgroundColor:'transparent', borderWidth:1.3, borderDash:[4,3], pointRadius:0, tension:0, fill:false, order:0 }); };
+      datasets.push({ label:'✨ '+lbl+' '+formatTime(min), _rot:lbl.replace('Ideal ','')+' '+formatTime(min), data, borderColor:col, backgroundColor:'transparent', borderWidth:1.3, borderDash:[4,3], pointRadius:0, tension:0, fill:false, order:0 }); };
     if(_cat){ _addIdeal('Ideal FECNA','#b7860b',((NAC_DEFAULT.F||{})[_cat]||{})[_style]); _addIdeal('Ideal Liga','#0e7c86',((LIGA_BOG.F||{})[_cat]||{})[_style]); }
   }catch(e){}
   analysisCharts['stylesplits'] = new Chart(sc.getContext('2d'), {
@@ -3571,7 +3587,8 @@ function renderAnalysisSplitsChart() {
       plugins:{ legend:{display:true,position:'top',labels:{color:'#4a627a',usePointStyle:true,font:{size:11}}},
         tooltip: splitsTooltip() },
       scales:{ x:{ticks:{color:'#8299b0'},grid:{color:'rgba(220,229,239,0.8)'}},
-        y: splitsYOpts() } }
+        y: splitsYOpts() } },
+    plugins: [IDEAL_LBL_PLUGIN]
   });
 }
 function toggleGoalLine(goalName, styleKey) {
