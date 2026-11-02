@@ -3357,7 +3357,8 @@ function showStyleAnalysis(style, year) {
     </div>`;
   // ── Evolución: mínimas que le aplican HOY siempre visibles (línea finita + rótulo, como la Suite); metas personales con botón ──
   const minsHoy = mins.filter(m => m.actual);
-  _anMinLines = minsHoy.map(m => ({ v: m.v, col: m.col, txt: m.lbl + ' ' + formatTime(m.v) }));
+  _anMinLines = minsHoy.map(m => ({ v: m.v, col: m.col, txt: m.lbl + ' ' + formatTime(m.v), best: a.best }));
+  _anGoalLines = [];
   destroyChart('evolution');
   const evolData = a.records.map(r => ({ x: r.tournament_date, y: r.time_seconds, label: r.tournament_name }));
   const styleGoals = goals.map((g,i) => { const t = (g.times||{})[style]; return t ? { name: g.name, time: t, color: GOAL_PALETTE[i%GOAL_PALETTE.length] } : null; }).filter(Boolean);
@@ -3424,7 +3425,7 @@ function showStyleAnalysis(style, year) {
   setTimeout(() => {
     const ctx = document.getElementById('chart-evolution');
     if (!ctx) return;
-    const vals = evolData.map(d => d.y).concat(_anMinLines.map(m => m.v));
+    const vals = evolData.map(d => d.y);   // la escala sigue SOLO sus tiempos (las líneas lejanas se pegan al borde)
     const lo = Math.min(...vals), hi = Math.max(...vals), pad = Math.max(0.5, (hi - lo) * 0.08);
     analysisCharts['evolution'] = new Chart(ctx.getContext('2d'), {
       type: 'line',
@@ -3457,13 +3458,18 @@ function showStyleAnalysis(style, year) {
 // Líneas de MÍNIMA en Evolución: finitas, punteadas, con su rótulo ("FECNA 45.12"), siempre visibles. Se dibujan
 // sobre la escala (no son una serie): no salen en la leyenda y funcionan aunque haya un solo tiempo.
 let _anMinLines = [];
+let _anGoalLines = [];   // metas personales prendidas con su botón (se dibujan igual que las mínimas)
 const MIN_LINES_PLUGIN = { id: 'minLines', afterDatasetsDraw(ch) {
   const { ctx, chartArea: ca, scales: { y } } = ch; if (!ca || !y) return;
-  _anMinLines.forEach(m => { const py = y.getPixelForValue(m.v); if (py < ca.top - 1 || py > ca.bottom + 1) return;
-    ctx.save(); ctx.strokeStyle = m.col; ctx.globalAlpha = 0.75; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  let abajo = 0, arriba = 0;
+  _anMinLines.concat(_anGoalLines).forEach(m => {
+    let py = y.getPixelForValue(m.v), txt = m.txt, borde = 0;
+    if (py > ca.bottom) { borde = 1; py = ca.bottom - 3 - abajo * 14; abajo++; txt += ' ↓' + (m.best != null && m.best > m.v ? ' faltan ' + (m.best - m.v).toFixed(2) + ' s' : ''); }
+    else if (py < ca.top) { borde = -1; py = ca.top + 3 + arriba * 14; arriba++; txt += ' ↑' + (m.best != null && m.best <= m.v ? ' ya la logró' : ''); }
+    ctx.save(); ctx.strokeStyle = m.col; ctx.globalAlpha = borde ? 0.45 : 0.75; ctx.lineWidth = m.grueso || 1; ctx.setLineDash(m.dash || [4, 4]);
     ctx.beginPath(); ctx.moveTo(ca.left, py); ctx.lineTo(ca.right, py); ctx.stroke();
     ctx.setLineDash([]); ctx.globalAlpha = 0.95; ctx.fillStyle = m.col; ctx.font = '600 10.5px "DM Sans", sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(m.txt, ca.right - 4, py - 4); ctx.restore(); });
+    ctx.fillText(txt, ca.right - 4, borde === -1 ? py + 12 : py - 4); ctx.restore(); });
 } };
 
 // ── 🚀 RITMO OBJETIVO de un estilo (tarjetas). Se redibuja solo el resultado al cambiar meta, margen o salida. ──
@@ -3603,13 +3609,13 @@ function toggleGoalLine(goalName, styleKey) {
   const goalTime = (goalObj.times||{})[styleKey];
   if (!goalTime) return;
   const gColor = GOAL_PALETTE[goals.indexOf(goalObj) % GOAL_PALETTE.length];
-  const existing = chart.data.datasets.findIndex(d => d.label === goalName);
-  if (existing >= 0) {
-    chart.data.datasets.splice(existing, 1);
+  const i = _anGoalLines.findIndex(g => g.name === goalName);
+  if (i >= 0) {
+    _anGoalLines.splice(i, 1);
     if (btn) { btn.style.background='transparent'; btn.style.borderStyle='solid'; }
   } else {
-    chart.data.datasets.push({ label:goalName, data:Array(chart.data.labels.length).fill(goalTime),
-      borderColor:gColor, borderDash:[8,4], borderWidth:2.5, pointRadius:0, fill:false, tension:0, order:2 });
+    const best = (_anMinLines[0] && _anMinLines[0].best) ?? Math.min(...chart.data.datasets[0].data);
+    _anGoalLines.push({ name: goalName, v: goalTime, col: gColor, txt: '🎯 ' + goalName + ' ' + formatTime(goalTime), best, dash: [8, 4], grueso: 2 });
     if (btn) { btn.style.background=gColor+'20'; btn.style.borderStyle='dashed'; }
   }
   chart.update();
